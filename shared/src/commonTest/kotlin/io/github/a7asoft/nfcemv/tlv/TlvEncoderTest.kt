@@ -49,4 +49,27 @@ class TlvEncoderTest {
         }
         assertFailsWith<IllegalStateException> { TlvEncoder.encode(node) }
     }
+
+    @Test
+    fun `encodes an empty list as an empty ByteArray`() {
+        val out = TlvEncoder.encode(emptyList())
+        assertEquals(0, out.size)
+    }
+
+    @Test
+    fun `encodes multiple top-level primitives in source order`() {
+        val a = Tlv.Primitive(Tag.fromHex("57"), byteArrayOf(0x10))
+        val b = Tlv.Primitive(Tag.fromHex("5A"), byteArrayOf(0x20))
+        val out = TlvEncoder.encode(listOf(a, b))
+        assertContentEquals(
+            byteArrayOf(0x57, 0x01, 0x10, 0x5A, 0x01, 0x20),
+            out,
+        )
+    }
+
+    @Test
+    fun `single-element list overload matches single-node overload`() {
+        val node = Tlv.Primitive(Tag.fromHex("57"), byteArrayOf(0x10, 0x20))
+        assertContentEquals(TlvEncoder.encode(node), TlvEncoder.encode(listOf(node)))
+    }
 }
