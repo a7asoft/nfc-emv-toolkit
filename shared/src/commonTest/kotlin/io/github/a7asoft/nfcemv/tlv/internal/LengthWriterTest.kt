@@ -160,4 +160,15 @@ class LengthWriterTest {
         val dst = ByteArray(3)
         assertFailsWith<IllegalArgumentException> { writeLength(0x100, dst, offset = 1) }
     }
+
+    @Test
+    fun `writeLength fits exactly into lengthOctets bytes for every boundary value`() {
+        listOf(0, 0x7F, 0x80, 0xFF, 0x100, 0xFFFF, 0x10000, 0x1000000, Int.MAX_VALUE)
+            .forEach { value ->
+                val expected = lengthOctets(value)
+                val dst = ByteArray(expected)
+                val end = writeLength(value, dst, offset = 0)
+                assertEquals(expected, end, "writeLength end mismatch for $value")
+            }
+    }
 }
