@@ -82,15 +82,31 @@ class EmvFieldExtractorsTest {
     }
 
     @Test
-    fun `extractPan surfaces PanRejected on a malformed nibble`() {
+    fun `extractPan surfaces MalformedPanNibble at the actual offending offset`() {
+        // Inject 0xA at nibble position 3 (third nibble of the second byte).
         val node = Tlv.Primitive(
             io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5A"),
             byteArrayOf(0x41, 0x1A, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11),
         )
         val result = extractPan(node)
         val err = assertIs<ExtractResult.Err>(result)
-        val panErr = assertIs<EmvCardError.PanRejected>(err.error)
-        assertEquals(PanError.NonDigitCharacters, panErr.cause)
+        val malformed = assertIs<EmvCardError.MalformedPanNibble>(err.error)
+        assertEquals(3, malformed.offset)
+    }
+
+    @Test
+    fun `extractPan surfaces MalformedPanNibble for non-trailing F at offset 4`() {
+        // 0xF at nibble position 4 (mid-string), final nibble is 1 (not F).
+        // Stripping logic only strips a trailing 0xF, so this F at offset 4
+        // is correctly flagged as malformed.
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5A"),
+            byteArrayOf(0x41, 0x11, 0xF1.toByte(), 0x11, 0x11, 0x11, 0x11, 0x11),
+        )
+        val result = extractPan(node)
+        val err = assertIs<ExtractResult.Err>(result)
+        val malformed = assertIs<EmvCardError.MalformedPanNibble>(err.error)
+        assertEquals(4, malformed.offset)
     }
 
     // ---- Expiry ----

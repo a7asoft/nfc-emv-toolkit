@@ -46,10 +46,12 @@ internal fun extractAid(node: Tlv.Primitive): ExtractResult<Aid> {
  */
 internal fun extractPan(node: Tlv.Primitive): ExtractResult<Pan> {
     val bytes = node.copyValue()
-    val digits = unpackPanDigits(bytes)
-    return when (val parsed = Pan.parse(digits)) {
-        is PanResult.Ok -> ExtractResult.Ok(parsed.pan)
-        is PanResult.Err -> ExtractResult.Err(EmvCardError.PanRejected(parsed.error))
+    return when (val unpacked = unpackPanDigits(bytes)) {
+        is UnpackResult.Err -> ExtractResult.Err(EmvCardError.MalformedPanNibble(offset = unpacked.offset))
+        is UnpackResult.Ok -> when (val parsed = Pan.parse(unpacked.digits)) {
+            is PanResult.Ok -> ExtractResult.Ok(parsed.pan)
+            is PanResult.Err -> ExtractResult.Err(EmvCardError.PanRejected(parsed.error))
+        }
     }
 }
 
@@ -124,14 +126,23 @@ internal fun extractTrack2(node: Tlv.Primitive): ExtractResult<Track2> =
         is Track2Result.Err -> ExtractResult.Err(EmvCardError.Track2Rejected(parsed.error))
     }
 
-private fun unpackPanDigits(bytes: ByteArray): String {
+private sealed interface UnpackResult {
+    data class Ok(val digits: String) : UnpackResult
+    data class Err(val offset: Int) : UnpackResult
+}
+
+private fun unpackPanDigits(bytes: ByteArray): UnpackResult {
     val totalNibbles = bytes.nibbleCount()
-    if (totalNibbles == 0) return ""
+    if (totalNibbles == 0) return UnpackResult.Ok("")
     val effective =
         if (bytes.nibbleAt(totalNibbles - 1) == PAD_NIBBLE) totalNibbles - 1 else totalNibbles
-    return buildString(effective) {
-        for (i in 0 until effective) {
-            append('0' + bytes.nibbleAt(i))
-        }
+    for (i in 0 until effective) {
+        val n = bytes.nibbleAt(i)
+        if (n !in 0..9) return UnpackResult.Err(offset = i)
     }
+    return UnpackResult.Ok(
+        buildString(effective) {
+            for (i in 0 until effective) append('0' + bytes.nibbleAt(i))
+        },
+    )
 }

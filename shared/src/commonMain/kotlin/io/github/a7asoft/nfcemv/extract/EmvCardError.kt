@@ -51,4 +51,17 @@ public sealed interface EmvCardError {
 
     /** Tag `4F` AID had a length outside the valid `5..16` byte range. */
     public data class InvalidAid(val byteCount: Int) : EmvCardError
+
+    /**
+     * Tag `5A` PAN BCD encoding contained a malformed nibble at the
+     * given offset (any of `0xA..0xE` in any position, or `0xF` in a
+     * non-trailing position). EMV Book 3 §A.1 mandates BCD digits
+     * `0..9` with at most one trailing `F` pad nibble.
+     *
+     * Distinct from [PanRejected] (`NonDigitCharacters`): this variant
+     * fires BEFORE the unpacked digit string reaches `Pan.parse`, so
+     * the offset reported is the actual offending nibble position
+     * rather than a derived character index.
+     */
+    public data class MalformedPanNibble(val offset: Int) : EmvCardError
 }

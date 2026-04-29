@@ -151,6 +151,7 @@ public object EmvParser {
         is EmvCardError.InvalidExpiryFormat -> "EmvCard expiry malformed: ${error.nibbleCount} nibbles"
         is EmvCardError.InvalidExpiryMonth -> "EmvCard expiry month out of range: ${error.month}"
         is EmvCardError.InvalidAid -> "EmvCard AID byte length out of range: ${error.byteCount}"
+        is EmvCardError.MalformedPanNibble -> "EmvCard PAN malformed BCD nibble at offset ${error.offset}"
     }
 
     private fun describePanError(cause: PanError): String = when (cause) {
