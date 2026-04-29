@@ -144,4 +144,54 @@ class EmvParserTest {
         val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(raw)))
         assertEquals(EmvCardError.InvalidExpiryMonth(month = 13), err.error)
     }
+
+    @Test
+    fun `parseOrThrow returns the EmvCard for the canonical fixture`() {
+        val card = EmvParser.parseOrThrow(listOf(canonicalRecord))
+        assertEquals("4111111111111111", card.pan.unmasked())
+    }
+
+    @Test
+    fun `parseOrThrow throws IllegalArgumentException on EmptyInput with PCI-safe message`() {
+        val ex = kotlin.test.assertFailsWith<IllegalArgumentException> {
+            EmvParser.parseOrThrow(emptyList())
+        }
+        assertEquals("EmvCard input is empty", ex.message)
+    }
+
+    @Test
+    fun `parseOrThrow IAE on Luhn fail does not embed the raw PAN`() {
+        val raw = byteArrayOf(
+            0x70, 0x19,
+            0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+            0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x12,
+            0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        )
+        val ex = kotlin.test.assertFailsWith<IllegalArgumentException> {
+            EmvParser.parseOrThrow(listOf(raw))
+        }
+        val msg = ex.message ?: ""
+        kotlin.test.assertFalse("4111111111111112" in msg)
+        kotlin.test.assertFalse("411111" in msg)
+        kotlin.test.assertFalse("1112" in msg)
+        assertEquals("EmvCard PAN rejected: LuhnCheckFailed", msg)
+    }
+
+    @Test
+    fun `EmvCard toString from a parsed canonical fixture never embeds the raw PAN`() {
+        val card = EmvParser.parseOrThrow(listOf(canonicalRecord))
+        kotlin.test.assertFalse("4111111111111111" in card.toString())
+    }
+
+    @Test
+    fun `EmvCard toString from a parsed canonical fixture never embeds the raw cardholder name`() {
+        val card = EmvParser.parseOrThrow(listOf(canonicalRecord))
+        kotlin.test.assertFalse("VISA TEST" in card.toString())
+    }
+
+    @Test
+    fun `EmvCard toString from a parsed canonical fixture reports cardholder name as 9 chars placeholder`() {
+        val card = EmvParser.parseOrThrow(listOf(canonicalRecord))
+        kotlin.test.assertTrue("<9 chars>" in card.toString())
+    }
 }
