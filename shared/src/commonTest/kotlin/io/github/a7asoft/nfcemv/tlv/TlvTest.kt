@@ -68,6 +68,29 @@ class TlvTest {
     }
 
     @Test
+    fun `Primitive writeValueInto copies bytes directly into the destination`() {
+        val node = Tlv.Primitive(Tag.fromHex("5A"), byteArrayOf(0x10, 0x20, 0x30))
+        val dst = ByteArray(5)
+        dst[0] = 0xAA.toByte()
+        dst[4] = 0xBB.toByte()
+        val end = node.writeValueInto(dst, offset = 1)
+        assertEquals(4, end)
+        assertContentEquals(
+            byteArrayOf(0xAA.toByte(), 0x10, 0x20, 0x30, 0xBB.toByte()),
+            dst,
+        )
+    }
+
+    @Test
+    fun `Primitive writeValueInto does not expose the stored array`() {
+        val node = Tlv.Primitive(Tag.fromHex("5A"), byteArrayOf(0x10, 0x20, 0x30))
+        val dst = ByteArray(3)
+        node.writeValueInto(dst, offset = 0)
+        dst[0] = 0x00
+        assertEquals(0x10.toByte(), node.copyValue()[0])
+    }
+
+    @Test
     fun `constructed toString reports child count`() {
         val tlv = Tlv.Constructed(
             Tag.fromHex("70"),

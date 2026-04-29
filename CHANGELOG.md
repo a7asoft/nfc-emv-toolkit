@@ -14,6 +14,14 @@ All notable changes to this project will be documented here. The format follows 
 - `TlvDecoder.parse` (returns sealed result) and `TlvDecoder.parseOrThrow` (throws on first violation). Both honor the same option set.
 - 116 tests on `commonMain`: happy paths for primitive / constructed / nested, every error variant, EMV padding behavior, documented X.690 deviation cases (e.g. `9F02`, `BF0C`), 10,000-iteration deterministic fuzz, OOM-resistance regression with pinned `UnexpectedEof`, PCI-safety regressions for tags `5A` / `57` / `9F26` with exact-form `toString` assertions.
 
+### Added — BER-TLV encoder (#2)
+- `TlvEncoder.encode(node: Tlv): ByteArray` and `TlvEncoder.encode(nodes: List<Tlv>): ByteArray` — the only public surface, mirrors `TlvDecoder`.
+- DER-canonical output: definite length, minimal length octets. No options.
+- Two-pass exact-allocation strategy: one pass computes the size, second pass fills a single pre-allocated `ByteArray`. No intermediate buffers.
+- Tag bytes are preserved verbatim from the source `Tlv` tree, so EMV deviations like `9F02` and `BF0C` round-trip byte-for-byte at the tag level.
+- Defense in depth: hardcoded `MAX_DEPTH = 64` guard mirrors `TlvOptions.maxDepth` upper bound; trees deeper than that surface as `IllegalStateException`.
+- Round-trip invariant: for every input accepted by the decoder, `decode(encode(parsed.tlvs)) == parsed.tlvs`. Pinned by deterministic 5,000-iteration fuzz and a fixture suite (FCI Visa, Track2, ARQC, nested depth 3, multi-primitive).
+
 #### Removed before release
 - An earlier draft included a `rejectTrailingBytes` option intended to catch APDU responses passed in with SW1 SW2 still attached. Removed because at the BER-TLV layer `90 00` decodes as a valid empty primitive, not as trailing bytes — SW detection belongs to the transport layer.
 - Wizard-generated scaffold (`Greeting.kt`, `Platform.kt`, `SharedCommonTest.example`) cleaned up.

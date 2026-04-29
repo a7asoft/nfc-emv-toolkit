@@ -6,7 +6,7 @@ Pure-Kotlin core for the nfc-emv-toolkit. Lives in `commonMain` and ships with n
 
 | Package | Purpose |
 |---------|---------|
-| `io.github.a7asoft.nfcemv.tlv` | BER-TLV decoder (this milestone) |
+| `io.github.a7asoft.nfcemv.tlv` | BER-TLV decoder + encoder (this milestone) |
 | `io.github.a7asoft.nfcemv.tlv.internal` | Reader cursor, tag/length/node decoders, padding skipper. Internal — do not depend on these symbols. |
 
 Future packages (later issues): `emv` (tag dictionary), `brand` (AID + BIN brand resolution), `extract` (PAN, Track2, expiry), `validation` (Luhn, format checks).
@@ -24,7 +24,7 @@ when (val result = TlvDecoder.parse(response)) {
 }
 
 fun printTlv(tlv: Tlv): Unit = when (tlv) {
-    is Tlv.Primitive   -> println("${tlv.tag}: ${tlv.value.size} bytes")
+    is Tlv.Primitive   -> println("${tlv.tag}: ${tlv.length} bytes")
     is Tlv.Constructed -> { println("${tlv.tag}: ${tlv.children.size} children"); tlv.children.forEach(::printTlv) }
 }
 ```
@@ -62,10 +62,11 @@ All variants implement `TlvError` and carry the byte offset where the problem wa
 |---------|-------|
 | `UnexpectedEof` | Input ended before a tag, length, or value finished |
 | `IndefiniteLengthForbidden` | Length octet was `0x80` (forbidden in EMV) |
-| `InvalidLengthOctet` | Length octet was reserved (`0x85`–`0xFF`) or value too large for `Int` |
+| `InvalidLengthOctet` | First length octet was reserved or unsupported (`0x85`–`0xFF`) |
+| `LengthOverflow` | Long-form length parsed structurally but decoded value exceeds `Int.MAX_VALUE` |
 | `IncompleteTag` | Multi-byte tag started but not terminated before EOF |
 | `TagTooLong` | Multi-byte tag exceeded `maxTagBytes` |
-| `NonMinimalTagEncoding` | Strict mode: first continuation byte was `0x80` (leading zero) |
+| `NonMinimalTagEncoding` | Strict mode: first continuation byte's seven low bits were all zero (`0x00` or `0x80`) per ISO/IEC 8825-1 §8.1.2.4.2(c) |
 | `NonMinimalLengthEncoding` | Strict mode: long-form length used more octets than necessary |
 | `ChildrenLengthMismatch` | Constructed value's children consumed a different number of bytes than declared |
 | `MaxDepthExceeded` | Constructed nesting exceeded `maxDepth` |
@@ -82,9 +83,27 @@ ISO/IEC 8825-1 §8.1.2.4 mandates that tag numbers ≤ 30 use the short single-b
 
 The X.690 leading-zero rule (first continuation byte ≠ `0x80`) **is** enforced in strict mode — that one is universal.
 
+## BER-TLV encoder — quickstart
+
+Re-emit a parsed `Tlv` tree (or a list of trees) as DER-canonical BER-TLV bytes:
+
+```kotlin
+import io.github.a7asoft.nfcemv.tlv.*
+
+val parsed = TlvDecoder.parse(response)
+if (parsed is TlvParseResult.Ok) {
+    val reEmitted: ByteArray = TlvEncoder.encode(parsed.tlvs)
+    forwardToBackend(reEmitted)
+}
+```
+
+The encoder takes no options. Output is always X.690 DER-canonical (definite length, minimal length octets). If the original card response used non-minimal length octets (uncommon), the re-emitted bytes will be shorter but **semantically identical** — a second `TlvDecoder.parse` produces the same `Tlv` tree.
+
+Defense-in-depth: a hardcoded `MAX_DEPTH = 64` guard fires `IllegalStateException` on caller-built trees that exceed it (the decoder's `TlvOptions.maxDepth` defaults to 16; the encoder's higher cap accommodates any tree the decoder accepts).
+
 ## Tests
 
-116 tests on `commonMain` cover happy paths, all error variants, the EMV padding behavior, the documented X.690 deviation, fuzz over 10,000 random buffers (strict + lenient), OOM-resistance regression, and PCI-safety regressions for tags `5A`, `57`, and `9F26`. Run with:
+179 tests on `commonMain` cover happy paths, all error variants, the EMV padding behavior, the documented X.690 deviation, fuzz over 10,000 random buffers (strict + lenient), OOM-resistance regression, PCI-safety regressions for tags `5A`, `57`, and `9F26`, encoder round-trip fixtures, 5,000-iteration encoder fuzz, encoder PCI-safety regressions. Run with:
 
 ```bash
 ./gradlew :shared:testDebugUnitTest
