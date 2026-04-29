@@ -17,7 +17,7 @@ class LuhnTest {
     }
 
     @Test
-    fun `single non-zero digit is not a valid Luhn number unless it is zero`() {
+    fun `single non-zero digit is not a valid Luhn number`() {
         assertFalse("1".isValidLuhn())
         assertFalse("9".isValidLuhn())
     }
@@ -40,8 +40,8 @@ class LuhnTest {
     @Test
     fun `punctuation and unicode are rejected`() {
         assertFalse("4111-1111-1111-1111".isValidLuhn())
-        assertFalse("4111 1111".isValidLuhn()) // non-breaking space
-        assertFalse("4111　1111".isValidLuhn()) // ideographic space
+        assertFalse("4111 1111".isValidLuhn()) // U+00A0 non-breaking space
+        assertFalse("4111　1111".isValidLuhn()) // U+3000 ideographic space
     }
 
     @Test
@@ -93,7 +93,7 @@ class LuhnTest {
     }
 
     @Test
-    fun `8-digit minimum PAN length validates`() {
+    fun `8-digit all-zero string is Luhn-valid`() {
         assertTrue("00000000".isValidLuhn())
     }
 
@@ -110,10 +110,14 @@ class LuhnTest {
     }
 
     @Test
-    fun `leading zeros do not affect validity`() {
+    fun `prepending leading zeros to a valid number preserves Luhn validity`() {
         assertTrue("4111111111111111".isValidLuhn())
         assertTrue("04111111111111111".isValidLuhn())
         assertTrue("00004111111111111111".isValidLuhn())
+    }
+
+    @Test
+    fun `prepending leading zeros to an invalid number does not make it valid`() {
         assertFalse("4111111111111112".isValidLuhn())
         assertFalse("00004111111111111112".isValidLuhn())
     }
@@ -129,7 +133,7 @@ class LuhnTest {
     @Test
     fun `agrees with a reference Luhn implementation on 1000 random digit strings`() {
         val rng = kotlin.random.Random(SEED)
-        repeat(ITERATIONS) {
+        repeat(ITERATIONS) { iteration ->
             val len = rng.nextInt(1, MAX_LENGTH + 1)
             val s = buildString(len) {
                 repeat(len) { append(rng.nextInt(10)) }
@@ -137,7 +141,7 @@ class LuhnTest {
             kotlin.test.assertEquals(
                 referenceLuhn(s),
                 s.isValidLuhn(),
-                "mismatch for input $s",
+                "mismatch at iteration $iteration, length=$len",
             )
         }
     }

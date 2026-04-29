@@ -9,6 +9,11 @@ package io.github.a7asoft.nfcemv.validation
  * multiple of ten. Empty input, embedded whitespace, letters, or any
  * non-digit codepoint all return `false` — no exceptions are thrown.
  *
+ * ASCII digits only: Arabic-Indic (`'٠'..'٩'`), fullwidth (`'０'..'９'`),
+ * and any other non-`'0'..'9'` codepoint are rejected. Use this as a strict
+ * gate on inputs that should be plain ASCII numeric identifiers; do NOT
+ * pre-normalize to ASCII before calling — let the predicate reject.
+ *
  * The function is length-agnostic (this layer does not enforce PAN length
  * bounds; that is the responsibility of `Pan` once it ships per #5).
  *
