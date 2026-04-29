@@ -9,7 +9,7 @@ Pure-Kotlin core for the nfc-emv-toolkit. Lives in `commonMain` and ships with n
 | `io.github.a7asoft.nfcemv.tlv` | BER-TLV decoder + encoder (this milestone) |
 | `io.github.a7asoft.nfcemv.tlv.internal` | Reader cursor, tag/length/node decoders, padding skipper. Internal — do not depend on these symbols. |
 | `io.github.a7asoft.nfcemv.validation` | Luhn check (this milestone) |
-| `io.github.a7asoft.nfcemv.extract` | PAN value class with PCI-safe `toString` (this milestone) |
+| `io.github.a7asoft.nfcemv.extract` | PAN, Track 2, ServiceCode (this milestone) |
 
 Future packages (later issues): `emv` (tag dictionary), `brand` (AID + BIN brand resolution), `extract` (PAN, Track2, expiry), `validation` (Luhn, format checks).
 
@@ -143,6 +143,28 @@ val raw: String = pan.unmasked()  // explicit opt-in to the raw form
 | `LengthOutOfRange`       | Input is not 12 to 19 characters long                             |
 | `NonDigitCharacters`     | Input contains anything other than `'0'..'9'`                     |
 | `LuhnCheckFailed`        | Input is well-formed digits but fails the mod-10 check (#7)       |
+
+### Track 2
+
+Decode the BCD-packed Track 2 Equivalent Data carried in EMV tag `57`:
+
+```kotlin
+import io.github.a7asoft.nfcemv.extract.Track2
+import io.github.a7asoft.nfcemv.extract.Track2Result
+
+when (val result = Track2.parse(tag57Bytes)) {
+    is Track2Result.Ok -> {
+        val t2 = result.track2
+        // t2.pan       — io.github.a7asoft.nfcemv.extract.Pan (masked toString)
+        // t2.expiry    — kotlinx.datetime.YearMonth
+        // t2.serviceCode  — io.github.a7asoft.nfcemv.extract.ServiceCode
+        // t2.unmaskedDiscretionary()  — PCI-scoped raw discretionary digits
+    }
+    is Track2Result.Err -> reportRefusal(result.error)
+}
+```
+
+`Track2.toString` masks the PAN and reports only the discretionary length. Two-digit expiry years are interpreted as 21st century (`YY` ⇒ `20YY`).
 
 ## Tests
 
