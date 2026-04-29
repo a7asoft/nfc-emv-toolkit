@@ -1,0 +1,48 @@
+name: Bug report
+description: Something doesn't work as documented
+labels: ["bug", "triage"]
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - iOS
+        - Both
+        - JVM (parser)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Library version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: card
+    attributes:
+      label: Card brand / issuer (if applicable)
+      description: Just the brand. **Do not paste PAN, track2, or any cryptograms.**
+      placeholder: "Visa, issued by Bank X"
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Minimal code or steps. Sanitize any APDU traces.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true
+  - type: checkboxes
+    id: pci
+    attributes:
+      label: PCI confirmation
+      options:
+        - label: I have not pasted any PAN, full track2, or live cryptogram in this issue.
+          required: true

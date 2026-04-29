@@ -1,0 +1,47 @@
+# Kotlin / Gradle
+*.iml
+.kotlin
+.gradle
+**/build/
+!src/**/build/
+local.properties
+captures
+.externalNativeBuild
+.cxx
+
+# IDE
+.idea
+*.swp
+*.swo
+.vscode/
+.fleet/
+
+# Xcode / Swift
+xcuserdata
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+**/xcshareddata/WorkspaceSettings.xcsettings
+DerivedData/
+.swiftpm/
+.build/
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Secrets
+*.keystore
+*.jks
+secrets.properties
