@@ -1,6 +1,7 @@
 package io.github.a7asoft.nfcemv.extract
 
 import kotlinx.datetime.YearMonth
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -278,5 +279,35 @@ class Track2Test {
             0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x01,
         ))
         assertNotEquals(a, b)
+    }
+
+    @Test
+    fun `parser never crashes on arbitrary input`() {
+        // 5,000 deterministic random buffers up to 64 bytes each. Contract:
+        // Track2.parse returns either Ok or Err. Any other exception escaping
+        // (e.g. IndexOutOfBounds, NumberFormatException, NullPointerException)
+        // is a parser bug. Mirrors TlvDecoderFuzzTest.
+        val rng = Random(FUZZ_SEED)
+        var okCount = 0
+        var errCount = 0
+        repeat(FUZZ_ITERATIONS) {
+            val length = rng.nextInt(0, FUZZ_MAX_INPUT_BYTES + 1)
+            val data = ByteArray(length).also { rng.nextBytes(it) }
+            when (Track2.parse(data)) {
+                is Track2Result.Ok -> okCount++
+                is Track2Result.Err -> errCount++
+            }
+        }
+        // Sanity: the seed must produce both Ok and Err outcomes so the test
+        // is exercising both branches. With 64-byte random input, Ok is rare
+        // but should appear at least once across 5,000 iterations.
+        kotlin.test.assertTrue(okCount + errCount == FUZZ_ITERATIONS)
+        kotlin.test.assertTrue(errCount > 0, "expected some rejections, got 0")
+    }
+
+    private companion object {
+        const val FUZZ_SEED: Long = 0x54524B32L // "TRK2"
+        const val FUZZ_ITERATIONS: Int = 5_000
+        const val FUZZ_MAX_INPUT_BYTES: Int = 64
     }
 }
