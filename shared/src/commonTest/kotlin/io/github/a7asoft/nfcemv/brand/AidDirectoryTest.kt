@@ -85,21 +85,21 @@ class AidDirectoryTest {
 
     @Test
     fun `directory has no duplicate AID entries`() {
-        val aids = AidDirectory.all.map { it.first }
+        val aids = AidDirectory.all.map { it.aid }
         assertEquals(aids.size, aids.toSet().size)
     }
 
     @Test
     fun `lookup resolves every registered AID by its key`() {
-        val mismatches = AidDirectory.all.filter { (aid, brand) ->
-            AidDirectory.lookup(aid) != brand
+        val mismatches = AidDirectory.all.filter { entry ->
+            AidDirectory.lookup(entry.aid) != entry.brand
         }
         assertEquals(emptyList(), mismatches, "lookup mismatch on listed entries")
     }
 
     @Test
     fun `directory covers every non-UNKNOWN brand at least once`() {
-        val covered = AidDirectory.all.map { it.second }.toSet()
+        val covered = AidDirectory.all.map { it.brand }.toSet()
         val missing = EmvBrand.entries.filter { it != EmvBrand.UNKNOWN && it !in covered }
         assertEquals(emptyList(), missing, "brands without an AID entry")
     }
@@ -107,7 +107,7 @@ class AidDirectoryTest {
     @Test
     fun `directory does not register UNKNOWN as a brand for any AID`() {
         kotlin.test.assertFalse(
-            AidDirectory.all.any { it.second == EmvBrand.UNKNOWN },
+            AidDirectory.all.any { it.brand == EmvBrand.UNKNOWN },
             "UNKNOWN must not be a registered brand value",
         )
     }

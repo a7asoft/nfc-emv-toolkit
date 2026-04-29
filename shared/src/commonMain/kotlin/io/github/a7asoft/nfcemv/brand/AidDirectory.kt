@@ -16,40 +16,40 @@ public object AidDirectory {
     /** Returns the brand for [aid], or `null` if no entry is registered. */
     public fun lookup(aid: Aid): EmvBrand? = byAid[aid]
 
-    /** All registered (AID, brand) pairs in source order. */
-    public val all: List<Pair<Aid, EmvBrand>> = listOf(
+    /** All registered entries in source order. */
+    public val all: List<AidEntry> = listOf(
         // Visa
-        Aid.fromHex("A0000000031010") to EmvBrand.VISA,
-        Aid.fromHex("A0000000032010") to EmvBrand.VISA,
-        Aid.fromHex("A0000000033010") to EmvBrand.VISA,
-        Aid.fromHex("A0000000038010") to EmvBrand.VISA,
-        Aid.fromHex("A0000000039010") to EmvBrand.VISA,
+        AidEntry(Aid.fromHex("A0000000031010"), EmvBrand.VISA),     // Visa Credit / Debit
+        AidEntry(Aid.fromHex("A0000000032010"), EmvBrand.VISA),     // Visa Electron
+        AidEntry(Aid.fromHex("A0000000033010"), EmvBrand.VISA),     // Visa Interlink
+        AidEntry(Aid.fromHex("A0000000038010"), EmvBrand.VISA),     // Visa Plus
+        AidEntry(Aid.fromHex("A0000000039010"), EmvBrand.VISA),     // Visa V Pay
         // Mastercard
-        Aid.fromHex("A0000000041010") to EmvBrand.MASTERCARD,
-        Aid.fromHex("A0000000043060") to EmvBrand.MAESTRO,
-        Aid.fromHex("A0000000046000") to EmvBrand.MASTERCARD,
-        Aid.fromHex("A0000000049999") to EmvBrand.MASTERCARD,
+        AidEntry(Aid.fromHex("A0000000041010"), EmvBrand.MASTERCARD),  // Mastercard Credit / Debit
+        AidEntry(Aid.fromHex("A0000000043060"), EmvBrand.MAESTRO),     // Maestro
+        AidEntry(Aid.fromHex("A0000000046000"), EmvBrand.MASTERCARD),  // Cirrus
+        // (dropped: A0000000049999 — Mastercard internal test AID, not a production identifier)
         // American Express
-        Aid.fromHex("A00000002501") to EmvBrand.AMERICAN_EXPRESS,
-        Aid.fromHex("A000000025010402") to EmvBrand.AMERICAN_EXPRESS,
-        Aid.fromHex("A000000025010701") to EmvBrand.AMERICAN_EXPRESS,
-        Aid.fromHex("A000000025010801") to EmvBrand.AMERICAN_EXPRESS,
+        // (dropped: A00000002501 — 6-byte truncated stub; EMVCo Amex AIDs are 8 bytes and listed below)
+        AidEntry(Aid.fromHex("A000000025010402"), EmvBrand.AMERICAN_EXPRESS),  // ALIS
+        AidEntry(Aid.fromHex("A000000025010701"), EmvBrand.AMERICAN_EXPRESS),  // ExpressPay
+        AidEntry(Aid.fromHex("A000000025010801"), EmvBrand.AMERICAN_EXPRESS),  // Centurion
         // Discover
-        Aid.fromHex("A0000003241010") to EmvBrand.DISCOVER,
-        Aid.fromHex("A0000003242010") to EmvBrand.DISCOVER,
-        // Diners Club
-        Aid.fromHex("A0000001523010") to EmvBrand.DINERS_CLUB,
-        Aid.fromHex("A0000001524010") to EmvBrand.DINERS_CLUB,
+        AidEntry(Aid.fromHex("A0000003241010"), EmvBrand.DISCOVER),        // Discover Common Debit
+        AidEntry(Aid.fromHex("A0000003242010"), EmvBrand.DISCOVER),        // Discover D-PAS
+        // Diners Club (uses Diners' own RID A000000152, not Discover's RID)
+        AidEntry(Aid.fromHex("A0000001523010"), EmvBrand.DINERS_CLUB),
+        AidEntry(Aid.fromHex("A0000001524010"), EmvBrand.DINERS_CLUB),
         // JCB
-        Aid.fromHex("A0000000651010") to EmvBrand.JCB,
+        AidEntry(Aid.fromHex("A0000000651010"), EmvBrand.JCB),
         // UnionPay
-        Aid.fromHex("A000000333010101") to EmvBrand.UNIONPAY,
-        Aid.fromHex("A000000333010102") to EmvBrand.UNIONPAY,
-        Aid.fromHex("A000000333010103") to EmvBrand.UNIONPAY,
-        Aid.fromHex("A000000333010106") to EmvBrand.UNIONPAY,
+        AidEntry(Aid.fromHex("A000000333010101"), EmvBrand.UNIONPAY),  // Credit
+        AidEntry(Aid.fromHex("A000000333010102"), EmvBrand.UNIONPAY),  // Debit
+        AidEntry(Aid.fromHex("A000000333010103"), EmvBrand.UNIONPAY),  // Quasi-credit
+        AidEntry(Aid.fromHex("A000000333010106"), EmvBrand.UNIONPAY),  // Electronic Cash
         // Interac
-        Aid.fromHex("A0000002771010") to EmvBrand.INTERAC,
+        AidEntry(Aid.fromHex("A0000002771010"), EmvBrand.INTERAC),
     )
 
-    private val byAid: Map<Aid, EmvBrand> = all.associate { it }
+    private val byAid: Map<Aid, EmvBrand> = all.associate { it.aid to it.brand }
 }
