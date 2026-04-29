@@ -40,6 +40,17 @@ public sealed interface Tlv {
         /** Returns a fresh defensive copy of the value bytes. */
         public fun copyValue(): ByteArray = storedValue.copyOf()
 
+        /**
+         * Copy this primitive's value bytes directly into [dst] starting at
+         * [offset]. The encoder uses this to avoid the double-copy that
+         * `copyValue()` + `copyInto` would produce. Returns the offset just
+         * past the last byte written.
+         */
+        internal fun writeValueInto(dst: ByteArray, offset: Int): Int {
+            storedValue.copyInto(dst, destinationOffset = offset)
+            return offset + storedValue.size
+        }
+
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is Primitive) return false

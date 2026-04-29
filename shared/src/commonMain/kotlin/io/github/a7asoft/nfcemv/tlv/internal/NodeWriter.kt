@@ -37,9 +37,7 @@ private fun Tlv.matchesPCBit(): Boolean = when (this) {
 
 private fun writePrimitiveBody(node: Tlv.Primitive, dst: ByteArray, offset: Int): Int {
     val afterLength = writeLength(node.length, dst, offset)
-    val value = node.copyValue()
-    value.copyInto(dst, afterLength)
-    return afterLength + value.size
+    return node.writeValueInto(dst, afterLength)
 }
 
 private fun writeConstructedBody(node: Tlv.Constructed, dst: ByteArray, offset: Int, depth: Int): Int {
