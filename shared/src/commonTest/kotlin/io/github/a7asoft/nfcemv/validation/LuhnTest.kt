@@ -125,4 +125,40 @@ class LuhnTest {
         assertTrue("000".isValidLuhn())
         assertTrue("0000000000000000".isValidLuhn())
     }
+
+    @Test
+    fun `agrees with a reference Luhn implementation on 1000 random digit strings`() {
+        val rng = kotlin.random.Random(SEED)
+        repeat(ITERATIONS) {
+            val len = rng.nextInt(1, MAX_LENGTH + 1)
+            val s = buildString(len) {
+                repeat(len) { append(rng.nextInt(10)) }
+            }
+            kotlin.test.assertEquals(
+                referenceLuhn(s),
+                s.isValidLuhn(),
+                "mismatch for input $s",
+            )
+        }
+    }
+
+    private fun referenceLuhn(s: String): Boolean {
+        if (s.isEmpty()) return false
+        val digits = s.reversed().map { it - '0' }
+        val sum = digits.withIndex().sumOf { (i, d) ->
+            if (i % 2 == 1) {
+                val doubled = d * 2
+                if (doubled > 9) doubled - 9 else doubled
+            } else {
+                d
+            }
+        }
+        return sum % 10 == 0
+    }
+
+    private companion object {
+        const val SEED: Long = 0x4C55484EL
+        const val ITERATIONS: Int = 1_000
+        const val MAX_LENGTH: Int = 24
+    }
 }
