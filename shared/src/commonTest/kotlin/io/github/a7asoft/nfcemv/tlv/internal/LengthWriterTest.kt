@@ -18,4 +18,17 @@ class LengthWriterTest {
         assertEquals(1, end)
         assertContentEquals(byteArrayOf(0x00), dst)
     }
+
+    @Test
+    fun `writeLength encodes 0x7F as a single 0x7F byte`() {
+        val dst = ByteArray(1)
+        val end = writeLength(0x7F, dst, 0)
+        assertEquals(1, end)
+        assertContentEquals(byteArrayOf(0x7F), dst)
+    }
+
+    @Test
+    fun `lengthOctets is 1 for length 0x7F`() {
+        assertEquals(1, lengthOctets(0x7F))
+    }
 }
