@@ -35,6 +35,7 @@ public object TlvEncoder {
     /** Encode a list of top-level [Tlv] nodes as a concatenated stream. */
     public fun encode(nodes: List<Tlv>): ByteArray {
         val total = nodes.sumOf { encodedSize(it) }
+        require(total >= 0) { "Total encoded size overflows Int" }
         val dst = ByteArray(total)
         val end = nodes.fold(0) { pos, node -> writeNode(node, dst, pos, depth = 0) }
         check(end == total) { "Encoder size mismatch: predicted=$total actual=$end" }
