@@ -1,5 +1,6 @@
 package io.github.a7asoft.nfcemv.extract
 
+import io.github.a7asoft.nfcemv.brand.Aid
 import io.github.a7asoft.nfcemv.brand.BrandResolver
 import io.github.a7asoft.nfcemv.extract.internal.ExtractResult
 import io.github.a7asoft.nfcemv.extract.internal.extractAid
@@ -13,8 +14,10 @@ import io.github.a7asoft.nfcemv.tlv.Strictness
 import io.github.a7asoft.nfcemv.tlv.Tag
 import io.github.a7asoft.nfcemv.tlv.Tlv
 import io.github.a7asoft.nfcemv.tlv.TlvDecoder
+import io.github.a7asoft.nfcemv.tlv.TlvError
 import io.github.a7asoft.nfcemv.tlv.TlvOptions
 import io.github.a7asoft.nfcemv.tlv.TlvParseResult
+import kotlinx.datetime.YearMonth
 
 /**
  * Top-level EMV card composer.
@@ -26,14 +29,42 @@ import io.github.a7asoft.nfcemv.tlv.TlvParseResult
  * composes an [EmvCard] with the brand resolved through
  * [BrandResolver.resolveBrand].
  *
- * TLV decoding uses lenient strictness so cards that emit non-minimal
- * length encodings (rare but observed in the wild) still parse.
- *
  * Two API styles:
  * - [parse] returns a sealed [EmvCardResult] (mirrors `Pan.parse`,
  *   `Track2.parse`, `TlvDecoder.parse`).
  * - [parseOrThrow] throws [IllegalArgumentException] on the first
  *   detected violation.
+ *
+ * ### TLV decoding mode
+ *
+ * Hardcoded to [Strictness.Lenient]: real cards have been observed
+ * emitting non-minimal length encodings, and a strict reader would
+ * falsely reject them. Caller-overridable strictness is intentionally
+ * out of scope for v0.1.x; if a diagnostic / lab use case needs strict
+ * mode, decode externally with [TlvDecoder.parse] first and feed the
+ * result through bespoke extractors.
+ *
+ * ### Out-of-scope behaviors (deferred — caller responsibility)
+ *
+ * - **PSE / PPSE flow.** Caller MUST supply only one application's
+ *   records. Mixing record streams from multiple applications causes
+ *   `findFirst` to cross-pollinate fields between unrelated AIDs.
+ * - **Multiple AIDs / Application Priority Indicator (tag `87`).**
+ *   When more than one `4F` is present, the first DFS-order match
+ *   wins. EMV Book 1 §12.4 priority handling is not implemented.
+ * - **Tag `9F6B` Mastercard Track 2 fallback.** When tag `57` is
+ *   absent, the parser does NOT consult `9F6B`; `track2` becomes
+ *   `null`. Callers handling Mastercard contactless must rewrite
+ *   `9F6B` to `57` upstream.
+ * - **PAN agreement between `5A` and `57`.** EMV mandates the same
+ *   PAN in both; this parser does NOT cross-check. A mismatch is
+ *   silently kept (caller responsibility to verify).
+ * - **Two-digit year mapping.** Tags `5F24` (and `Track2.expiry`)
+ *   are mapped `YY ⇒ 20YY` (21st-century convention). Cards
+ *   expiring 2100+ would mis-map; out of scope for v0.1.x.
+ *
+ * Each of these has an explicit pinning test (or a documentation note)
+ * so a future implementation does not silently regress.
  */
 public object EmvParser {
 
@@ -46,69 +77,37 @@ public object EmvParser {
     private val TAG_TRACK2 = Tag.fromHex("57")
 
     /**
-     * Parse [apduResponses] into an [EmvCardResult].
-     *
-     * Empty input surfaces as [EmvCardError.EmptyInput]. TLV decode
-     * failures, missing required tags, or per-field validation errors
-     * surface as their respective [EmvCardError] variants without
-     * embedding any raw card-derived bytes.
+     * Parse [apduResponses] (each ByteArray = one APDU response data
+     * field with SW1 SW2 already stripped) into an [EmvCardResult].
      */
     public fun parse(apduResponses: List<ByteArray>): EmvCardResult {
         if (apduResponses.isEmpty()) return EmvCardResult.Err(EmvCardError.EmptyInput)
-
         val nodes = when (val outcome = decodeAll(apduResponses)) {
-            is DecodeOutcome.Err -> return EmvCardResult.Err(outcome.error)
             is DecodeOutcome.Ok -> outcome.nodes
+            is DecodeOutcome.Err -> return EmvCardResult.Err(outcome.error)
         }
-
-        val aidNode = findRequired(nodes, TAG_AID) ?: return missing("4F")
-        val aid = when (val r = extractAid(aidNode)) {
-            is ExtractResult.Ok -> r.value
-            is ExtractResult.Err -> return EmvCardResult.Err(r.error)
+        val required = when (val r = extractRequiredFields(nodes)) {
+            is RequiredOutcome.Ok -> r.fields
+            is RequiredOutcome.Err -> return EmvCardResult.Err(r.error)
         }
-
-        val panNode = findRequired(nodes, TAG_PAN) ?: return missing("5A")
-        val pan = when (val r = extractPan(panNode)) {
-            is ExtractResult.Ok -> r.value
-            is ExtractResult.Err -> return EmvCardResult.Err(r.error)
+        val optional = when (val r = extractOptionalFields(nodes)) {
+            is OptionalOutcome.Ok -> r.fields
+            is OptionalOutcome.Err -> return EmvCardResult.Err(r.error)
         }
-
-        val expiryNode = findRequired(nodes, TAG_EXPIRY) ?: return missing("5F24")
-        val expiry = when (val r = extractExpiry(expiryNode)) {
-            is ExtractResult.Ok -> r.value
-            is ExtractResult.Err -> return EmvCardResult.Err(r.error)
-        }
-
-        val cardholderName = (findFirst(nodes, TAG_CARDHOLDER) as? Tlv.Primitive)
-            ?.let { extractCardholderName(it) }
-        val applicationLabel = (findFirst(nodes, TAG_LABEL) as? Tlv.Primitive)
-            ?.let { extractApplicationLabel(it) }
-
-        val track2Node = findFirst(nodes, TAG_TRACK2) as? Tlv.Primitive
-        val track2 = if (track2Node == null) {
-            null
-        } else {
-            when (val r = extractTrack2(track2Node)) {
-                is ExtractResult.Ok -> r.value
-                is ExtractResult.Err -> return EmvCardResult.Err(r.error)
-            }
-        }
-
-        val brand = BrandResolver.resolveBrand(aid = aid, pan = pan)
-
+        val brand = BrandResolver.resolveBrand(aid = required.aid, pan = required.pan)
         return EmvCardResult.Ok(
             EmvCard(
-                pan = pan, expiry = expiry, cardholderName = cardholderName,
-                brand = brand, applicationLabel = applicationLabel,
-                track2 = track2, aid = aid,
+                pan = required.pan, expiry = required.expiry,
+                cardholderName = optional.cardholderName, brand = brand,
+                applicationLabel = optional.applicationLabel,
+                track2 = optional.track2, aid = required.aid,
             ),
         )
     }
 
     /**
-     * Parse [apduResponses] or throw [IllegalArgumentException] on the
-     * first detected violation. Exception messages embed only static
-     * structural metadata and are exact-form pinned by tests.
+     * Parse [apduResponses] into an [EmvCard], or throw
+     * [IllegalArgumentException] on the first detected violation.
      */
     public fun parseOrThrow(apduResponses: List<ByteArray>): EmvCard =
         when (val result = parse(apduResponses)) {
@@ -116,31 +115,80 @@ public object EmvParser {
             is EmvCardResult.Err -> throw IllegalArgumentException(messageFor(result.error))
         }
 
+    // ----- private orchestrators -----
+
+    private data class RequiredFields(val aid: Aid, val pan: Pan, val expiry: YearMonth)
+
+    private data class OptionalFields(
+        val cardholderName: String?,
+        val applicationLabel: String?,
+        val track2: Track2?,
+    )
+
     private sealed interface DecodeOutcome {
         data class Ok(val nodes: List<Tlv>) : DecodeOutcome
         data class Err(val error: EmvCardError) : DecodeOutcome
     }
 
-    // why: bounded local accumulator; mutableListOf never escapes this
-    // function. Canonical pattern per CLAUDE.md §5.4.
+    private sealed interface RequiredOutcome {
+        data class Ok(val fields: RequiredFields) : RequiredOutcome
+        data class Err(val error: EmvCardError) : RequiredOutcome
+    }
+
+    private sealed interface OptionalOutcome {
+        data class Ok(val fields: OptionalFields) : OptionalOutcome
+        data class Err(val error: EmvCardError) : OptionalOutcome
+    }
+
     private fun decodeAll(apduResponses: List<ByteArray>): DecodeOutcome {
         val collected = mutableListOf<Tlv>()
         for (response in apduResponses) {
             when (val parsed = TlvDecoder.parse(response, LENIENT)) {
                 is TlvParseResult.Ok -> collected.addAll(parsed.tlvs)
-                is TlvParseResult.Err -> return DecodeOutcome.Err(
-                    EmvCardError.TlvDecodeFailed(cause = parsed.error),
-                )
+                is TlvParseResult.Err -> return DecodeOutcome.Err(EmvCardError.TlvDecodeFailed(parsed.error))
             }
         }
         return DecodeOutcome.Ok(collected)
     }
 
-    private fun findRequired(nodes: List<Tlv>, tag: Tag): Tlv.Primitive? =
-        findFirst(nodes, tag) as? Tlv.Primitive
+    private fun extractRequiredFields(nodes: List<Tlv>): RequiredOutcome {
+        val aidNode = findFirst(nodes, TAG_AID) as? Tlv.Primitive
+            ?: return RequiredOutcome.Err(EmvCardError.MissingRequiredTag("4F"))
+        val aid = when (val r = extractAid(aidNode)) {
+            is ExtractResult.Ok -> r.value
+            is ExtractResult.Err -> return RequiredOutcome.Err(r.error)
+        }
+        val panNode = findFirst(nodes, TAG_PAN) as? Tlv.Primitive
+            ?: return RequiredOutcome.Err(EmvCardError.MissingRequiredTag("5A"))
+        val pan = when (val r = extractPan(panNode)) {
+            is ExtractResult.Ok -> r.value
+            is ExtractResult.Err -> return RequiredOutcome.Err(r.error)
+        }
+        val expiryNode = findFirst(nodes, TAG_EXPIRY) as? Tlv.Primitive
+            ?: return RequiredOutcome.Err(EmvCardError.MissingRequiredTag("5F24"))
+        val expiry = when (val r = extractExpiry(expiryNode)) {
+            is ExtractResult.Ok -> r.value
+            is ExtractResult.Err -> return RequiredOutcome.Err(r.error)
+        }
+        return RequiredOutcome.Ok(RequiredFields(aid, pan, expiry))
+    }
 
-    private fun missing(tagHex: String): EmvCardResult.Err =
-        EmvCardResult.Err(EmvCardError.MissingRequiredTag(tagHex = tagHex))
+    private fun extractOptionalFields(nodes: List<Tlv>): OptionalOutcome {
+        val cardholderName = (findFirst(nodes, TAG_CARDHOLDER) as? Tlv.Primitive)?.let { extractCardholderName(it) }
+        val applicationLabel = (findFirst(nodes, TAG_LABEL) as? Tlv.Primitive)?.let { extractApplicationLabel(it) }
+        val track2Node = findFirst(nodes, TAG_TRACK2) as? Tlv.Primitive
+        val track2 = if (track2Node == null) {
+            null
+        } else {
+            when (val r = extractTrack2(track2Node)) {
+                is ExtractResult.Ok -> r.value
+                is ExtractResult.Err -> return OptionalOutcome.Err(r.error)
+            }
+        }
+        return OptionalOutcome.Ok(OptionalFields(cardholderName, applicationLabel, track2))
+    }
+
+    // ----- IAE message rendering -----
 
     private fun messageFor(error: EmvCardError): String = when (error) {
         EmvCardError.EmptyInput -> "EmvCard input is empty"
@@ -171,19 +219,16 @@ public object EmvParser {
         Track2Error.MalformedFPadding -> "MalformedFPadding"
     }
 
-    // why: explicit when over the TlvError catalogue avoids
-    // ::class.simpleName, which is fragile under R8 and Kotlin/Native.
-    // The message strings here are the contract pinned by tests.
-    private fun describeTlvError(cause: io.github.a7asoft.nfcemv.tlv.TlvError): String = when (cause) {
-        is io.github.a7asoft.nfcemv.tlv.TlvError.UnexpectedEof -> "UnexpectedEof"
-        is io.github.a7asoft.nfcemv.tlv.TlvError.IndefiniteLengthForbidden -> "IndefiniteLengthForbidden"
-        is io.github.a7asoft.nfcemv.tlv.TlvError.InvalidLengthOctet -> "InvalidLengthOctet"
-        is io.github.a7asoft.nfcemv.tlv.TlvError.LengthOverflow -> "LengthOverflow"
-        is io.github.a7asoft.nfcemv.tlv.TlvError.IncompleteTag -> "IncompleteTag"
-        is io.github.a7asoft.nfcemv.tlv.TlvError.TagTooLong -> "TagTooLong"
-        is io.github.a7asoft.nfcemv.tlv.TlvError.NonMinimalTagEncoding -> "NonMinimalTagEncoding"
-        is io.github.a7asoft.nfcemv.tlv.TlvError.NonMinimalLengthEncoding -> "NonMinimalLengthEncoding"
-        is io.github.a7asoft.nfcemv.tlv.TlvError.ChildrenLengthMismatch -> "ChildrenLengthMismatch"
-        is io.github.a7asoft.nfcemv.tlv.TlvError.MaxDepthExceeded -> "MaxDepthExceeded"
+    private fun describeTlvError(cause: TlvError): String = when (cause) {
+        is TlvError.UnexpectedEof -> "UnexpectedEof"
+        is TlvError.IndefiniteLengthForbidden -> "IndefiniteLengthForbidden"
+        is TlvError.InvalidLengthOctet -> "InvalidLengthOctet"
+        is TlvError.IncompleteTag -> "IncompleteTag"
+        is TlvError.TagTooLong -> "TagTooLong"
+        is TlvError.NonMinimalTagEncoding -> "NonMinimalTagEncoding"
+        is TlvError.NonMinimalLengthEncoding -> "NonMinimalLengthEncoding"
+        is TlvError.ChildrenLengthMismatch -> "ChildrenLengthMismatch"
+        is TlvError.MaxDepthExceeded -> "MaxDepthExceeded"
+        is TlvError.LengthOverflow -> "LengthOverflow"
     }
 }
