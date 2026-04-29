@@ -83,4 +83,44 @@ class LengthWriterTest {
     fun `lengthOctets is 3 for length 0xFFFF`() {
         assertEquals(3, lengthOctets(0xFFFF))
     }
+
+    @Test
+    fun `writeLength encodes 0x10000 as 0x83 0x01 0x00 0x00`() {
+        val dst = ByteArray(4)
+        val end = writeLength(0x10000, dst, 0)
+        assertEquals(4, end)
+        assertContentEquals(byteArrayOf(0x83.toByte(), 0x01, 0x00, 0x00), dst)
+    }
+
+    @Test
+    fun `writeLength encodes 0x1000000 as 0x84 0x01 0x00 0x00 0x00`() {
+        val dst = ByteArray(5)
+        val end = writeLength(0x1000000, dst, 0)
+        assertEquals(5, end)
+        assertContentEquals(
+            byteArrayOf(0x84.toByte(), 0x01, 0x00, 0x00, 0x00),
+            dst,
+        )
+    }
+
+    @Test
+    fun `writeLength encodes Int MAX_VALUE as 0x84 0x7F 0xFF 0xFF 0xFF`() {
+        val dst = ByteArray(5)
+        val end = writeLength(Int.MAX_VALUE, dst, 0)
+        assertEquals(5, end)
+        assertContentEquals(
+            byteArrayOf(0x84.toByte(), 0x7F, 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()),
+            dst,
+        )
+    }
+
+    @Test
+    fun `lengthOctets is 4 for length 0x10000`() {
+        assertEquals(4, lengthOctets(0x10000))
+    }
+
+    @Test
+    fun `lengthOctets is 5 for length Int MAX_VALUE`() {
+        assertEquals(5, lengthOctets(Int.MAX_VALUE))
+    }
 }
