@@ -60,4 +60,19 @@ class EmvTagsTest {
         assertEquals(EmvTagLength.Fixed(8), info.length)
         assertEquals(TagSensitivity.PCI, info.sensitivity)
     }
+
+    @Test
+    fun `lookup returns null for an unknown tag`() {
+        kotlin.test.assertNull(EmvTags.lookup(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("99")))
+    }
+
+    @Test
+    fun `lookup returns the entry for tag 9F26 ARQC`() {
+        val info = EmvTags.lookup(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("9F26"))
+        kotlin.test.assertNotNull(info)
+        assertEquals("Application Cryptogram", info!!.name)
+        assertEquals(EmvTagFormat.B, info.format)
+        assertEquals(EmvTagLength.Fixed(8), info.length)
+        assertEquals(TagSensitivity.PCI, info.sensitivity)
+    }
 }
