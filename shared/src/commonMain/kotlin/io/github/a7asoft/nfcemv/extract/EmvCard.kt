@@ -44,11 +44,9 @@ public data class EmvCard internal constructor(
     public val aid: Aid,
 ) {
     override fun toString(): String =
-        "EmvCard(pan=$pan, expiry=$expiry, cardholderName=${maskName(cardholderName)}, " +
+        "EmvCard(pan=$pan, expiry=$expiry, cardholderName=${maskCardholderName(cardholderName)}, " +
             "brand=$brand, applicationLabel=$applicationLabel, track2=$track2, aid=$aid)"
-
-    private companion object {
-        private fun maskName(name: String?): String =
-            if (name == null) "null" else "<${name.length} chars>"
-    }
 }
+
+private fun maskCardholderName(name: String?): String =
+    if (name == null) "null" else "<${name.length} chars>"

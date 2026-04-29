@@ -28,11 +28,10 @@ internal sealed interface ExtractResult<out T> {
  * surfaces as [EmvCardError.InvalidAid].
  */
 internal fun extractAid(node: Tlv.Primitive): ExtractResult<Aid> {
-    val bytes = node.copyValue()
-    if (bytes.size !in MIN_AID_BYTES..MAX_AID_BYTES) {
-        return ExtractResult.Err(EmvCardError.InvalidAid(byteCount = bytes.size))
+    if (node.length !in MIN_AID_BYTES..MAX_AID_BYTES) {
+        return ExtractResult.Err(EmvCardError.InvalidAid(byteCount = node.length))
     }
-    return ExtractResult.Ok(Aid.fromBytes(bytes))
+    return ExtractResult.Ok(Aid.fromBytes(node.copyValue()))
 }
 
 /**
