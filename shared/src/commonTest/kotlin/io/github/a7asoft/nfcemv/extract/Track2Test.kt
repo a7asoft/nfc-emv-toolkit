@@ -33,4 +33,42 @@ class Track2Test {
         assertEquals("0000", track2.unmaskedDiscretionary())
         assertEquals(4, track2.discretionaryLength)
     }
+
+    @Test
+    fun `parse rejects empty input with EmptyInput`() {
+        val err = assertIs<Track2Result.Err>(Track2.parse(byteArrayOf()))
+        assertEquals(Track2Error.EmptyInput, err.error)
+    }
+
+    @Test
+    fun `parse rejects input without a D separator with MissingSeparator`() {
+        val raw = byteArrayOf(0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11)
+        val err = assertIs<Track2Result.Err>(Track2.parse(raw))
+        assertEquals(Track2Error.MissingSeparator, err.error)
+    }
+
+    @Test
+    fun `parse rejects PAN that fails Luhn with PanRejected wrapping LuhnCheckFailed`() {
+        val raw = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x12,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+        )
+        val err = assertIs<Track2Result.Err>(Track2.parse(raw))
+        val cause = assertIs<Track2Error.PanRejected>(err.error).cause
+        assertEquals(PanError.LuhnCheckFailed, cause)
+    }
+
+    @Test
+    fun `parse rejects too-short PAN with PanRejected wrapping LengthOutOfRange`() {
+        // 11-digit PAN (11 nibbles) → less than Pan minimum 12.
+        // 11 + 1(D) + 4(YYMM) + 3(SSS) = 19 nibbles → +F pad = 20 → 10 bytes.
+        // Bytes: 11 11 11 11 11 1D 28 12 20 1F
+        val raw = byteArrayOf(
+            0x11, 0x11, 0x11, 0x11, 0x11,
+            0x1D.toByte(), 0x28, 0x12, 0x20, 0x1F.toByte(),
+        )
+        val err = assertIs<Track2Result.Err>(Track2.parse(raw))
+        val cause = assertIs<Track2Error.PanRejected>(err.error).cause
+        assertEquals(PanError.LengthOutOfRange(length = 11), cause)
+    }
 }
