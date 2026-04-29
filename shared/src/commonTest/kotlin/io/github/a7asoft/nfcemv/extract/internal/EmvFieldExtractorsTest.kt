@@ -205,4 +205,32 @@ class EmvFieldExtractorsTest {
         )
         assertEquals(null, extractApplicationLabel(node))
     }
+
+    // ---- Track 2 ----
+
+    @Test
+    fun `extractTrack2 returns Track2 for a canonical Visa fixture`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"),
+            byteArrayOf(
+                0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+                0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+            ),
+        )
+        val result = extractTrack2(node)
+        val ok = assertIs<ExtractResult.Ok<io.github.a7asoft.nfcemv.extract.Track2>>(result)
+        assertEquals("4111111111111111", ok.value.pan.unmasked())
+    }
+
+    @Test
+    fun `extractTrack2 surfaces Track2Rejected on a missing separator`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"),
+            byteArrayOf(0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11),
+        )
+        val result = extractTrack2(node)
+        val err = assertIs<ExtractResult.Err>(result)
+        val t2err = assertIs<EmvCardError.Track2Rejected>(err.error)
+        assertEquals(io.github.a7asoft.nfcemv.extract.Track2Error.MissingSeparator, t2err.cause)
+    }
 }

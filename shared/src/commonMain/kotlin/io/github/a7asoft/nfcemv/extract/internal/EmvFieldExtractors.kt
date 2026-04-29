@@ -4,6 +4,8 @@ import io.github.a7asoft.nfcemv.brand.Aid
 import io.github.a7asoft.nfcemv.extract.EmvCardError
 import io.github.a7asoft.nfcemv.extract.Pan
 import io.github.a7asoft.nfcemv.extract.PanResult
+import io.github.a7asoft.nfcemv.extract.Track2
+import io.github.a7asoft.nfcemv.extract.Track2Result
 import io.github.a7asoft.nfcemv.tlv.Tlv
 import kotlinx.datetime.YearMonth
 
@@ -111,6 +113,16 @@ private fun decodeTrimmedAscii(bytes: ByteArray): String? {
     val text = bytes.decodeToString().trimEnd(' ')
     return text.ifEmpty { null }
 }
+
+/**
+ * Decode tag `57` (Track 2 Equivalent Data) by delegating to
+ * [Track2.parse]. Failures wrap as [EmvCardError.Track2Rejected].
+ */
+internal fun extractTrack2(node: Tlv.Primitive): ExtractResult<Track2> =
+    when (val parsed = Track2.parse(node.copyValue())) {
+        is Track2Result.Ok -> ExtractResult.Ok(parsed.track2)
+        is Track2Result.Err -> ExtractResult.Err(EmvCardError.Track2Rejected(parsed.error))
+    }
 
 private fun unpackPanDigits(bytes: ByteArray): String {
     val totalNibbles = bytes.nibbleCount()
