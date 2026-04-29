@@ -84,6 +84,23 @@ class TlvEncoderRoundTripTest {
         assertContentEquals(input, encoded)
     }
 
+    @Test
+    fun `non-minimal-length input under lenient strictness re-emits as shorter byte-canonical form`() {
+        // Input uses 0x81 0x05 long-form length (non-minimal — 5 fits in short form).
+        // Strict mode rejects this; lenient accepts. Encoder always emits minimal,
+        // so the re-emitted bytes are exactly one byte shorter (0x05 vs 0x81 0x05)
+        // but the parsed Tlv tree is identical.
+        val nonMinimal = byteArrayOf(0x57, 0x81.toByte(), 0x05, 0x10, 0x20, 0x30, 0x40, 0x50)
+        val parsed = assertIs<TlvParseResult.Ok>(
+            TlvDecoder.parse(nonMinimal, TlvOptions(strictness = Strictness.Lenient)),
+        )
+        val encoded = TlvEncoder.encode(parsed.tlvs)
+        assertContentEquals(byteArrayOf(0x57, 0x05, 0x10, 0x20, 0x30, 0x40, 0x50), encoded)
+        assertEquals(nonMinimal.size - 1, encoded.size)
+        val reparsed = assertIs<TlvParseResult.Ok>(TlvDecoder.parse(encoded))
+        assertEquals(parsed.tlvs, reparsed.tlvs)
+    }
+
     private fun roundTrip(input: ByteArray) {
         val firstParse = assertIs<TlvParseResult.Ok>(TlvDecoder.parse(input))
         val encoded = TlvEncoder.encode(firstParse.tlvs)
