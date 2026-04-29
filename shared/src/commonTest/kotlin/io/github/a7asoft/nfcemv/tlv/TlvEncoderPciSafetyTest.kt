@@ -19,13 +19,19 @@ import kotlin.test.assertFalse
 class TlvEncoderPciSafetyTest {
 
     @Test
-    fun `encoding tag 5A produces correct bytes and the source Primitive still masks toString`() {
+    fun `encoding tag 5A produces correct bytes`() {
         // 5A 08 41 11 11 11 11 11 11 11 — fake test PAN
         val pan = byteArrayOf(0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11)
         val node = Tlv.Primitive(Tag.fromHex("5A"), pan)
         val out = TlvEncoder.encode(node)
         assertContentEquals(byteArrayOf(0x5A, 0x08) + pan, out)
-        // Source node toString remains masked even after encoding.
+    }
+
+    @Test
+    fun `Primitive toString for tag 5A stays masked after encode`() {
+        val pan = byteArrayOf(0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11)
+        val node = Tlv.Primitive(Tag.fromHex("5A"), pan)
+        TlvEncoder.encode(node)
         assertEquals("Primitive(tag=5A, length=8)", node.toString())
     }
 
@@ -53,5 +59,51 @@ class TlvEncoderPciSafetyTest {
         source[0] = 0x00
         val out = TlvEncoder.encode(node)
         assertEquals(0x41.toByte(), out[2])
+    }
+
+    @Test
+    fun `encoding tag 57 produces correct bytes`() {
+        // 57 0A 41 11 11 11 11 11 11 11 D2 80 — fake Track2
+        val track2 = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0xD2.toByte(), 0x80.toByte(),
+        )
+        val node = Tlv.Primitive(Tag.fromHex("57"), track2)
+        val out = TlvEncoder.encode(node)
+        assertContentEquals(byteArrayOf(0x57, 0x0A) + track2, out)
+    }
+
+    @Test
+    fun `Primitive toString for tag 57 stays masked after encode`() {
+        val node = Tlv.Primitive(
+            Tag.fromHex("57"),
+            byteArrayOf(0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0xD2.toByte(), 0x80.toByte()),
+        )
+        TlvEncoder.encode(node)
+        assertEquals("Primitive(tag=57, length=10)", node.toString())
+    }
+
+    @Test
+    fun `encoding tag 9F26 produces correct bytes`() {
+        // 9F 26 08 DE AD BE EF CA FE BA BE — fake ARQC
+        val arqc = byteArrayOf(
+            0xDE.toByte(), 0xAD.toByte(), 0xBE.toByte(), 0xEF.toByte(),
+            0xCA.toByte(), 0xFE.toByte(), 0xBA.toByte(), 0xBE.toByte(),
+        )
+        val node = Tlv.Primitive(Tag.fromHex("9F26"), arqc)
+        val out = TlvEncoder.encode(node)
+        assertContentEquals(byteArrayOf(0x9F.toByte(), 0x26, 0x08) + arqc, out)
+    }
+
+    @Test
+    fun `Primitive toString for tag 9F26 stays masked after encode`() {
+        val node = Tlv.Primitive(
+            Tag.fromHex("9F26"),
+            byteArrayOf(
+                0xDE.toByte(), 0xAD.toByte(), 0xBE.toByte(), 0xEF.toByte(),
+                0xCA.toByte(), 0xFE.toByte(), 0xBA.toByte(), 0xBE.toByte(),
+            ),
+        )
+        TlvEncoder.encode(node)
+        assertEquals("Primitive(tag=9F26, length=8)", node.toString())
     }
 }
