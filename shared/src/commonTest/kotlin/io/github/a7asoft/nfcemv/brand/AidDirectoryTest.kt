@@ -24,4 +24,14 @@ class AidDirectoryTest {
     fun `EmvBrand displayName is human-readable for AMERICAN_EXPRESS`() {
         assertEquals("American Express", EmvBrand.AMERICAN_EXPRESS.displayName)
     }
+
+    @Test
+    fun `lookup returns null for an unknown AID`() {
+        kotlin.test.assertNull(AidDirectory.lookup(Aid.fromHex("A0000000FF1010")))
+    }
+
+    @Test
+    fun `lookup resolves the canonical Visa Credit Debit AID`() {
+        assertEquals(EmvBrand.VISA, AidDirectory.lookup(Aid.fromHex("A0000000031010")))
+    }
 }
