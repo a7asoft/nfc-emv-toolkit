@@ -77,4 +77,31 @@ class PanTest {
         val rendered = pan.toString()
         assertFalse("111111" in rendered.removePrefix("411111").removeSuffix("1111"))
     }
+
+    @Test
+    fun `string interpolation produces the masked form`() {
+        val pan = Pan("4111111111111111")
+        assertEquals("411111******1111", "$pan")
+    }
+
+    @Test
+    fun `string interpolation in a sentence includes only the masked form`() {
+        val pan = Pan("4111111111111111")
+        assertEquals(
+            "Card 411111******1111 was authorised.",
+            "Card $pan was authorised.",
+        )
+    }
+
+    @Test
+    fun `unmasked returns the raw digit string verbatim`() {
+        val raw = "4111111111111111"
+        assertEquals(raw, Pan(raw).unmasked())
+    }
+
+    @Test
+    fun `unmasked round-trip preserves leading zeros`() {
+        val raw = "0004111111111111111"
+        assertEquals(raw, Pan(raw).unmasked())
+    }
 }
