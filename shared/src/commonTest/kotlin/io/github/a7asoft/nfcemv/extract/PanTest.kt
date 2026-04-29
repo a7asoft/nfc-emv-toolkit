@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 
 class PanTest {
 
@@ -103,5 +104,34 @@ class PanTest {
     fun `unmasked round-trip preserves leading zeros`() {
         val raw = "0004111111111111111"
         assertEquals(raw, Pan(raw).unmasked())
+    }
+
+    @Test
+    fun `two Pan instances with the same digits are equal`() {
+        assertEquals(Pan("4111111111111111"), Pan("4111111111111111"))
+    }
+
+    @Test
+    fun `two Pan instances with different digits are not equal`() {
+        assertNotEquals(
+            Pan("4111111111111111"),
+            Pan("5555555555554444"),
+        )
+    }
+
+    @Test
+    fun `equal Pan instances share the same hashCode`() {
+        assertEquals(
+            Pan("4111111111111111").hashCode(),
+            Pan("4111111111111111").hashCode(),
+        )
+    }
+
+    @Test
+    fun `Pan equality treats leading-zero-padded forms as distinct`() {
+        assertNotEquals(
+            Pan("4111111111111111"),
+            Pan("0004111111111111111"),
+        )
     }
 }
