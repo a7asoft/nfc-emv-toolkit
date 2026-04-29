@@ -3,7 +3,6 @@ package io.github.a7asoft.nfcemv.tlv
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 class TlvTest {
 
@@ -37,12 +36,9 @@ class TlvTest {
     }
 
     @Test
-    fun `primitive toString reports length but not value`() {
+    fun `primitive toString reports tag and length only - exact form`() {
         val tlv = Tlv.Primitive(Tag.fromHex("5A"), byteArrayOf(0x41, 0x11, 0x11, 0x11))
-        val text = tlv.toString()
-        assertTrue("length=4" in text)
-        assertTrue("4111" !in text)
-        assertTrue("0x41" !in text)
+        assertEquals("Primitive(tag=5A, length=4)", tlv.toString())
     }
 
     @Test

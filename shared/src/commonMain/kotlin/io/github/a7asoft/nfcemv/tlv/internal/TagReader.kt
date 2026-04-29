@@ -1,5 +1,6 @@
 package io.github.a7asoft.nfcemv.tlv.internal
 
+import io.github.a7asoft.nfcemv.tlv.Strictness
 import io.github.a7asoft.nfcemv.tlv.Tag
 import io.github.a7asoft.nfcemv.tlv.TlvError
 import io.github.a7asoft.nfcemv.tlv.TlvOptions
@@ -44,14 +45,17 @@ private fun readMultiByteTag(
     startOffset: Int,
     options: TlvOptions,
 ): Tag {
-    val bytes = mutableListOf(firstByte)
+    val buffer = ByteArray(options.maxTagBytes)
+    buffer[0] = firstByte
+    var size = 1
     do {
-        ensureRoomForContinuation(bytes.size, options.maxTagBytes, startOffset)
+        ensureRoomForContinuation(size, options.maxTagBytes, startOffset)
         val next = readContinuation(reader, startOffset)
-        validateLeadingZero(bytes.size, next, options.strict, startOffset)
-        bytes.add(next)
+        validateLeadingZero(size, next, options.strictness, startOffset)
+        buffer[size] = next
+        size++
     } while (hasMoreContinuations(next))
-    return Tag.ofBytes(bytes.toByteArray())
+    return Tag.ofBytes(buffer.copyOf(size))
 }
 
 private fun ensureRoomForContinuation(currentSize: Int, maxBytes: Int, startOffset: Int) {
@@ -65,8 +69,8 @@ private fun readContinuation(reader: TlvReader, startOffset: Int): Byte {
     return reader.read()
 }
 
-private fun validateLeadingZero(currentSize: Int, next: Byte, strict: Boolean, startOffset: Int) {
-    if (!strict) return
+private fun validateLeadingZero(currentSize: Int, next: Byte, strictness: Strictness, startOffset: Int) {
+    if (strictness !== Strictness.Strict) return
     if (currentSize != 1) return
     if ((next.toInt() and 0xFF) == NON_MINIMAL_FIRST_CONTINUATION) {
         throw TlvParseException(TlvError.NonMinimalTagEncoding(startOffset))

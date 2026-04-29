@@ -56,14 +56,6 @@ class TlvReaderTest {
     }
 
     @Test
-    fun `skip advances without copying`() {
-        val r = TlvReader(byteArrayOf(0x10, 0x20, 0x30))
-        r.skip(2)
-        assertEquals(2, r.pos)
-        assertEquals(0x30.toByte(), r.peek())
-    }
-
-    @Test
     fun `peek on eof throws UnexpectedEof at current offset`() {
         val r = TlvReader(byteArrayOf(0x10))
         r.read()
@@ -87,22 +79,9 @@ class TlvReaderTest {
     }
 
     @Test
-    fun `skip beyond remaining throws UnexpectedEof`() {
-        val r = TlvReader(byteArrayOf(0x10))
-        val ex = assertFailsWith<TlvParseException> { r.skip(5) }
-        assertEquals(TlvError.UnexpectedEof(0), ex.error)
-    }
-
-    @Test
     fun `readBytes negative count throws IAE`() {
         val r = TlvReader(byteArrayOf(0x10))
         assertFailsWith<IllegalArgumentException> { r.readBytes(-1) }
-    }
-
-    @Test
-    fun `skip negative count throws IAE`() {
-        val r = TlvReader(byteArrayOf(0x10))
-        assertFailsWith<IllegalArgumentException> { r.skip(-1) }
     }
 
     @Test

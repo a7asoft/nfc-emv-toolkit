@@ -43,15 +43,15 @@ Defaults are tuned for real EMV cards:
 
 | Option | Default | Effect |
 |--------|---------|--------|
-| `strict` | `true` | Reject non-minimal multi-byte tag continuation (first byte = `0x80`) and non-minimal long-form length encodings |
-| `tolerateZeroPadding` | `true` | Skip `0x00` bytes between top-level / constructed children, per EMV Specification Update Bulletin 69 |
+| `strictness` | `Strictness.Strict` | Reject non-minimal multi-byte tag continuation (first byte = `0x80`) and non-minimal long-form length encodings |
+| `paddingPolicy` | `PaddingPolicy.Tolerated` | Skip `0x00` bytes between top-level / constructed children, per EMV Specification Update Bulletin 69 |
 | `maxTagBytes` | `4` | Hard cap on multi-byte tag length (EMV uses ≤ 2 in practice) |
 | `maxDepth` | `16` | Hard cap on constructed-tag nesting |
 
 Override via `TlvOptions(...)`:
 
 ```kotlin
-val tlvs = TlvDecoder.parseOrThrow(input, TlvOptions(strict = false))
+val tlvs = TlvDecoder.parseOrThrow(input, TlvOptions(strictness = Strictness.Lenient))
 ```
 
 ## Error catalogue
@@ -84,7 +84,7 @@ The X.690 leading-zero rule (first continuation byte ≠ `0x80`) **is** enforced
 
 ## Tests
 
-109 tests on `commonMain` cover happy paths, all error variants, the EMV padding behavior, fuzz over 10,000 random buffers (strict + lenient), and PCI-safety regressions. Run with:
+116 tests on `commonMain` cover happy paths, all error variants, the EMV padding behavior, the documented X.690 deviation, fuzz over 10,000 random buffers (strict + lenient), OOM-resistance regression, and PCI-safety regressions for tags `5A`, `57`, and `9F26`. Run with:
 
 ```bash
 ./gradlew :shared:testDebugUnitTest

@@ -1,5 +1,6 @@
 package io.github.a7asoft.nfcemv.tlv.internal
 
+import io.github.a7asoft.nfcemv.tlv.Strictness
 import io.github.a7asoft.nfcemv.tlv.TlvError
 import io.github.a7asoft.nfcemv.tlv.TlvOptions
 import io.github.a7asoft.nfcemv.tlv.TlvParseException
@@ -10,8 +11,8 @@ import kotlin.test.assertIs
 
 class LengthReaderTest {
 
-    private val strict = TlvOptions(strict = true)
-    private val lenient = TlvOptions(strict = false)
+    private val strict = TlvOptions(strictness = Strictness.Strict)
+    private val lenient = TlvOptions(strictness = Strictness.Lenient)
 
     @Test
     fun `short form zero`() {

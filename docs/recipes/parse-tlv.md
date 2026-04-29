@@ -71,16 +71,16 @@ val tlvs: List<Tlv> = try {
 
 ## Lenient mode
 
-If you observe a card that emits non-minimal tag continuations or non-minimal length encodings (uncommon but possible with older issuers), drop strict mode:
+If you observe a card that emits non-minimal tag continuations or non-minimal length encodings (uncommon but possible with older issuers), switch strictness:
 
 ```kotlin
-val tlvs = TlvDecoder.parseOrThrow(response, TlvOptions(strict = false))
+val tlvs = TlvDecoder.parseOrThrow(response, TlvOptions(strictness = Strictness.Lenient))
 ```
 
-EMV zero-padding tolerance stays on — turn it off only for diagnostic dumps:
+EMV zero-padding tolerance stays on — switch padding policy only for diagnostic dumps where every byte must be parsed literally:
 
 ```kotlin
-val tlvs = TlvDecoder.parseOrThrow(response, TlvOptions(tolerateZeroPadding = false))
+val tlvs = TlvDecoder.parseOrThrow(response, TlvOptions(paddingPolicy = PaddingPolicy.Rejected))
 ```
 
 ## Common pitfall: forgot to strip SW1 SW2

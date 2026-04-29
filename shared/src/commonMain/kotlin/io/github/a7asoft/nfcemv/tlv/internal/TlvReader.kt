@@ -33,20 +33,10 @@ internal class TlvReader(
     }
 
     fun readBytes(n: Int): ByteArray {
-        requireNonNegative(n)
+        require(n >= 0) { "Count must be non-negative: $n" }
         if (remaining < n) throw TlvParseException(TlvError.UnexpectedEof(pos))
         val out = src.copyOfRange(pos, pos + n)
         pos += n
         return out
-    }
-
-    fun skip(n: Int) {
-        requireNonNegative(n)
-        if (remaining < n) throw TlvParseException(TlvError.UnexpectedEof(pos))
-        pos += n
-    }
-
-    private fun requireNonNegative(n: Int) {
-        require(n >= 0) { "Count must be non-negative: $n" }
     }
 }

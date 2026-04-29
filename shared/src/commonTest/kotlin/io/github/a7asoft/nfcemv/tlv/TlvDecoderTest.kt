@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 class TlvDecoderTest {
 
     private val opts = TlvOptions()
-    private val noPadding = opts.copy(tolerateZeroPadding = false)
+    private val noPadding = opts.copy(paddingPolicy = PaddingPolicy.Rejected)
 
     @Test
     fun `empty input returns empty list`() {

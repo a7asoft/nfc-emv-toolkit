@@ -1,5 +1,6 @@
 package io.github.a7asoft.nfcemv.tlv
 
+import io.github.a7asoft.nfcemv.tlv.internal.ParseContext
 import io.github.a7asoft.nfcemv.tlv.internal.TlvReader
 import io.github.a7asoft.nfcemv.tlv.internal.readNode
 import io.github.a7asoft.nfcemv.tlv.internal.skipZeroPaddingToEof
@@ -44,12 +45,14 @@ public object TlvDecoder {
         decodeAll(input, options)
 
     private fun decodeAll(input: ByteArray, options: TlvOptions): List<Tlv> {
-        val reader = TlvReader(input)
+        val ctx = ParseContext(reader = TlvReader(input), options = options, depth = 0)
         val nodes = mutableListOf<Tlv>()
-        while (!reader.isEof) {
-            if (options.tolerateZeroPadding) skipZeroPaddingToEof(reader)
-            if (reader.isEof) break
-            nodes.add(readNode(reader, options, depth = 0))
+        while (!ctx.reader.isEof) {
+            if (options.paddingPolicy === PaddingPolicy.Tolerated) {
+                skipZeroPaddingToEof(ctx.reader)
+            }
+            if (ctx.reader.isEof) break
+            nodes.add(readNode(ctx))
         }
         return nodes
     }

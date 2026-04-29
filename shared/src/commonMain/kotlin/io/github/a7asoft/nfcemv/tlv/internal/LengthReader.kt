@@ -1,5 +1,6 @@
 package io.github.a7asoft.nfcemv.tlv.internal
 
+import io.github.a7asoft.nfcemv.tlv.Strictness
 import io.github.a7asoft.nfcemv.tlv.TlvError
 import io.github.a7asoft.nfcemv.tlv.TlvOptions
 import io.github.a7asoft.nfcemv.tlv.TlvParseException
@@ -30,7 +31,7 @@ internal fun readLength(reader: TlvReader, options: TlvOptions): Int {
 
 private fun readLongForm(reader: TlvReader, octets: Int, startOffset: Int, options: TlvOptions): Int {
     val value = readBigEndian(reader, octets)
-    if (options.strict && minimalOctetsFor(value) < octets) {
+    if (isStrictlyNonMinimal(options, value, octets)) {
         throw TlvParseException(TlvError.NonMinimalLengthEncoding(startOffset))
     }
     if (value > Int.MAX_VALUE) {
@@ -38,6 +39,9 @@ private fun readLongForm(reader: TlvReader, octets: Int, startOffset: Int, optio
     }
     return value.toInt()
 }
+
+private fun isStrictlyNonMinimal(options: TlvOptions, value: Long, octets: Int): Boolean =
+    options.strictness === Strictness.Strict && minimalOctetsFor(value) < octets
 
 private fun readBigEndian(reader: TlvReader, octets: Int): Long {
     var value = 0L
@@ -47,12 +51,10 @@ private fun readBigEndian(reader: TlvReader, octets: Int): Long {
     return value
 }
 
-private fun minimalOctetsFor(value: Long): Int = when {
-    value <= 0x7F -> 0
-    value <= 0xFF -> 1
-    value <= 0xFFFF -> 2
-    value <= 0xFFFFFF -> 3
-    else -> 4
+private fun minimalOctetsFor(value: Long): Int {
+    if (value <= 0x7F) return 0
+    val significantBits = Long.SIZE_BITS - value.countLeadingZeroBits()
+    return (significantBits + 7) / 8
 }
 
 private fun indefinite(offset: Int) = TlvParseException(TlvError.IndefiniteLengthForbidden(offset))

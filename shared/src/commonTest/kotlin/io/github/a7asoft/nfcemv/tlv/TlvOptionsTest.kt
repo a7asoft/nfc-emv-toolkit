@@ -3,15 +3,14 @@ package io.github.a7asoft.nfcemv.tlv
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 class TlvOptionsTest {
 
     @Test
-    fun `defaults are strict and tolerant of zero padding`() {
+    fun `defaults are strict and tolerate zero padding`() {
         val opts = TlvOptions()
-        assertTrue(opts.strict)
-        assertTrue(opts.tolerateZeroPadding)
+        assertEquals(Strictness.Strict, opts.strictness)
+        assertEquals(PaddingPolicy.Tolerated, opts.paddingPolicy)
         assertEquals(4, opts.maxTagBytes)
         assertEquals(16, opts.maxDepth)
     }

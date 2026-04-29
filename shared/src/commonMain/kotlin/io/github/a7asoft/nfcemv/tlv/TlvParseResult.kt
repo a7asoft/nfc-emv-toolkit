@@ -3,9 +3,8 @@ package io.github.a7asoft.nfcemv.tlv
 /**
  * Outcome of [TlvDecoder.parse].
  *
- * Public APIs do not return [kotlin.Result] (discouraged by JetBrains for
- * library boundaries); a custom sealed type makes exhaustive `when`
- * destructuring possible without a compiler opt-in.
+ * A sealed type allows callers to exhaustively destructure the success and
+ * failure cases without using exceptions for control flow.
  */
 public sealed interface TlvParseResult {
     /** Successful decode. */
