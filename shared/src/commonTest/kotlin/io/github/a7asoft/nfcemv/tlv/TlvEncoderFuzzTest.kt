@@ -9,7 +9,7 @@ import kotlin.test.assertIs
  * Property: for every byte buffer the decoder accepts, encoding the
  * resulting tree and decoding the encoded output MUST yield an equal tree.
  *
- * Strategy: run 5,000 deterministic random buffers through the decoder; for
+ * Strategy: run 20,000 deterministic random buffers through the decoder; for
  * each buffer that produces an `Ok`, assert the round-trip property. Inputs
  * that produce an `Err` are skipped — they are not the encoder's domain.
  */
@@ -32,12 +32,16 @@ class TlvEncoderFuzzTest {
         }
         // Sanity check that the seed actually produces some accepted inputs;
         // otherwise this test would silently pass while exercising nothing.
-        kotlin.test.assertTrue(roundTripped > 0, "no round-trips exercised")
+        kotlin.test.assertTrue(
+            roundTripped >= MIN_ROUND_TRIPS,
+            "expected at least $MIN_ROUND_TRIPS round-trips, exercised $roundTripped",
+        )
     }
 
     private companion object {
         const val SEED: Long = 0x454E5201L
-        const val ITERATIONS: Int = 5_000
+        const val ITERATIONS: Int = 20_000
         const val MAX_INPUT_BYTES: Int = 256
+        const val MIN_ROUND_TRIPS: Int = 50
     }
 }
