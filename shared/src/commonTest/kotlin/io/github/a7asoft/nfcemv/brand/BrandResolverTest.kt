@@ -116,4 +116,41 @@ class BrandResolverTest {
         }
         assertEquals(emptyList(), mismatches, "anchor AIDs that misresolve")
     }
+
+    @Test
+    fun `resolveBrand return value never embeds the raw PAN`() {
+        val raw = "4111111111111111"
+        val pan = Pan.parseOrThrow(raw)
+        val brand = BrandResolver.resolveBrand(aid = null, pan = pan)
+        assertEquals(EmvBrand.VISA, brand)
+        kotlin.test.assertFalse(raw in brand.displayName, "raw PAN leaked into displayName")
+        kotlin.test.assertFalse(raw in brand.name, "raw PAN leaked into enum name")
+    }
+
+    @Test
+    fun `resolveBrand IllegalArgumentException paths do not embed raw PAN`() {
+        val raw = "4111111111111112"
+        val ex = kotlin.test.assertFailsWith<IllegalArgumentException> {
+            BrandResolver.resolveBrand(aid = null, pan = Pan.parseOrThrow(raw))
+        }
+        kotlin.test.assertFalse(raw in (ex.message ?: ""), "raw PAN leaked in IAE")
+    }
+
+    @Test
+    fun `resolveBrand returns UNKNOWN when AID is null and PAN BIN does not match`() {
+        val pan = Pan.parseOrThrow("9000000000000019")
+        assertEquals(EmvBrand.UNKNOWN, BrandResolver.resolveBrand(aid = null, pan = pan))
+    }
+
+    @Test
+    fun `resolveBrand classifies a Maestro 6759 prefix PAN`() {
+        val pan = Pan.parseOrThrow("6759000000000000")
+        assertEquals(EmvBrand.MAESTRO, BrandResolver.resolveBrand(aid = null, pan = pan))
+    }
+
+    @Test
+    fun `resolveBrand returns UNKNOWN for a 3500 prefix outside JCB range 3528 to 3589`() {
+        val pan = Pan.parseOrThrow("3500000000000009")
+        assertEquals(EmvBrand.UNKNOWN, BrandResolver.resolveBrand(aid = null, pan = pan))
+    }
 }
