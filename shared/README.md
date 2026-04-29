@@ -8,6 +8,7 @@ Pure-Kotlin core for the nfc-emv-toolkit. Lives in `commonMain` and ships with n
 |---------|---------|
 | `io.github.a7asoft.nfcemv.tlv` | BER-TLV decoder + encoder (this milestone) |
 | `io.github.a7asoft.nfcemv.tlv.internal` | Reader cursor, tag/length/node decoders, padding skipper. Internal — do not depend on these symbols. |
+| `io.github.a7asoft.nfcemv.validation` | Luhn check (this milestone) |
 
 Future packages (later issues): `emv` (tag dictionary), `brand` (AID + BIN brand resolution), `extract` (PAN, Track2, expiry), `validation` (Luhn, format checks).
 
@@ -100,6 +101,18 @@ if (parsed is TlvParseResult.Ok) {
 The encoder takes no options. Output is always X.690 DER-canonical (definite length, minimal length octets). If the original card response used non-minimal length octets (uncommon), the re-emitted bytes will be shorter but **semantically identical** — a second `TlvDecoder.parse` produces the same `Tlv` tree.
 
 Defense-in-depth: a hardcoded `MAX_DEPTH = 64` guard fires `IllegalStateException` on caller-built trees that exceed it (the decoder's `TlvOptions.maxDepth` defaults to 16; the encoder's higher cap accommodates any tree the decoder accepts).
+
+## Validation
+
+`String.isValidLuhn(): Boolean` — Luhn / mod-10 checksum per ISO/IEC 7812-1 Annex B. Predicate; never throws. Use to gate untrusted PAN inputs before constructing `Pan` (#5 once it ships).
+
+```kotlin
+import io.github.a7asoft.nfcemv.validation.isValidLuhn
+
+if ("4111111111111111".isValidLuhn()) {
+    // proceed
+}
+```
 
 ## Tests
 
