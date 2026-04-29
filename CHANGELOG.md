@@ -50,6 +50,12 @@ All notable changes to this project will be documented here. The format follows 
 - `ServiceCode` is a `@JvmInline value class` validating exactly three ASCII digits; service codes are categorical metadata, not PCI data, so `toString` returns the raw form.
 - New dependency: `org.jetbrains.kotlinx:kotlinx-datetime` (commonMain).
 
+### Added — EMV tag dictionary (#3)
+- New package `io.github.a7asoft.nfcemv.emv` with `EmvTagFormat`, `EmvTagLength` (sealed `Fixed` / `Variable`), `TagSensitivity` (`PCI` / `PUBLIC`), `EmvTagInfo`, and the `EmvTags` lookup object.
+- 27 entries covering EMV Book 3 / Book 4 staples plus contactless-kernel additions: AID, App Label, Track 2, PAN, Cardholder Name, Expiration / Effective Date, Country / Currency / Language, PAN Sequence, AIP, DF Name, CDOL1 / CDOL2, AFL, Amount, IAD, Preferred Name, ARQC, CID, ATC, Unpredictable Number, Signed Dynamic, Track 2 (Mastercard), CTQ, FCI Issuer Discretionary Data.
+- Each entry carries human-readable name, EMV format code (`N` / `AN` / `B` / `CN`), `Fixed(n)` or `Variable(maxBytes)` length, and a binary `PCI` / `PUBLIC` sensitivity flag. Names are paraphrased from EMV specs; no third-party listing is copied verbatim.
+- O(1) lookup via `EmvTags.lookup(tag)` (returns `null` for unknown tags); `EmvTags.all` returns entries in source order.
+
 ### Added — engineering setup
 - `CLAUDE.md` engineering rules (architecture, SOLID, code style, testing discipline §6.1).
 - `.claude/agents/` project-scoped reviewers: `emv-nfc-expert`, `pci-security-reviewer`.
