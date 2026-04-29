@@ -3,7 +3,10 @@ package io.github.a7asoft.nfcemv.extract
 import kotlinx.datetime.YearMonth
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 
 class Track2Test {
 
@@ -203,5 +206,77 @@ class Track2Test {
         assertEquals("201", ok.track2.serviceCode.toString())
         assertEquals(19, ok.track2.discretionaryLength)
         assertEquals("1234567890123456789", ok.track2.unmaskedDiscretionary())
+    }
+
+    @Test
+    fun `toString masks the PAN and reports only discretionary length`() {
+        val track2 = Track2.parseOrThrow(visaFixture)
+        assertEquals(
+            "Track2(pan=411111******1111, expiry=2028-12, service=201, discretionary.size=4)",
+            track2.toString(),
+        )
+    }
+
+    @Test
+    fun `toString never embeds raw discretionary digits`() {
+        val track2 = Track2.parseOrThrow(visaFixture)
+        val rendered = track2.toString()
+        val tail = rendered.removePrefix(
+            "Track2(pan=411111******1111, expiry=2028-12, service=201, discretionary.size=",
+        )
+        assertFalse("0000" in tail)
+    }
+
+    @Test
+    fun `unmaskedDiscretionary returns the raw digits verbatim`() {
+        val track2 = Track2.parseOrThrow(visaFixture)
+        assertEquals("0000", track2.unmaskedDiscretionary())
+    }
+
+    @Test
+    fun `parseOrThrow rejects empty input with IllegalArgumentException`() {
+        assertFailsWith<IllegalArgumentException> { Track2.parseOrThrow(byteArrayOf()) }
+    }
+
+    @Test
+    fun `parseOrThrow rejects invalid month with IllegalArgumentException`() {
+        val raw = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x32, 0x01, 0x00, 0x00,
+        )
+        val ex = assertFailsWith<IllegalArgumentException> { Track2.parseOrThrow(raw) }
+        assertEquals("Track2 expiry month out of range: 13", ex.message)
+    }
+
+    @Test
+    fun `parseOrThrow IllegalArgumentException message embeds no raw digits`() {
+        val raw = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x12,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+        )
+        val ex = assertFailsWith<IllegalArgumentException> { Track2.parseOrThrow(raw) }
+        val msg = ex.message ?: ""
+        assertFalse("4111111111111112" in msg)
+        assertFalse("411111" in msg)
+        assertFalse("1112" in msg)
+        assertEquals("Track2 PAN rejected: LuhnCheckFailed", msg)
+    }
+
+    @Test
+    fun `equality compares all four fields`() {
+        val a = Track2.parseOrThrow(visaFixture)
+        val b = Track2.parseOrThrow(visaFixture)
+        assertEquals(a, b)
+        assertEquals(a.hashCode(), b.hashCode())
+    }
+
+    @Test
+    fun `equality differs when discretionary differs`() {
+        val a = Track2.parseOrThrow(visaFixture)
+        val b = Track2.parseOrThrow(byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x01,
+        ))
+        assertNotEquals(a, b)
     }
 }
