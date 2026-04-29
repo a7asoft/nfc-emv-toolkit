@@ -194,4 +194,39 @@ class EmvParserTest {
         val card = EmvParser.parseOrThrow(listOf(canonicalRecord))
         kotlin.test.assertTrue("<9 chars>" in card.toString())
     }
+
+    @Test
+    fun `parser never crashes on arbitrary List of ByteArray input`() {
+        // 1,000 deterministic random buffers of varying sizes and counts.
+        // Contract: parse returns either Ok or Err — no other exception
+        // (IndexOutOfBounds, NumberFormatException, IllegalStateException
+        // from internal invariants) escapes. Mirrors TlvDecoderFuzzTest
+        // and Track2 fuzz patterns.
+        val rng = kotlin.random.Random(FUZZ_SEED)
+        var okCount = 0
+        var errCount = 0
+        repeat(FUZZ_ITERATIONS) {
+            val responseCount = rng.nextInt(0, FUZZ_MAX_RESPONSES + 1)
+            val responses = List(responseCount) {
+                val len = rng.nextInt(0, FUZZ_MAX_INPUT_BYTES + 1)
+                ByteArray(len).also { rng.nextBytes(it) }
+            }
+            when (EmvParser.parse(responses)) {
+                is EmvCardResult.Ok -> okCount++
+                is EmvCardResult.Err -> errCount++
+            }
+        }
+        kotlin.test.assertTrue(okCount + errCount == FUZZ_ITERATIONS)
+        // Sanity: random bytes almost never produce a valid EmvCard but
+        // they MUST resolve to typed Err. Pin that errCount > 0 to confirm
+        // the test exercises the Err branch.
+        kotlin.test.assertTrue(errCount > 0, "expected some rejections, got 0")
+    }
+
+    private companion object {
+        const val FUZZ_SEED: Long = 0x454D5643L // "EMVC"
+        const val FUZZ_ITERATIONS: Int = 1_000
+        const val FUZZ_MAX_RESPONSES: Int = 4
+        const val FUZZ_MAX_INPUT_BYTES: Int = 64
+    }
 }
