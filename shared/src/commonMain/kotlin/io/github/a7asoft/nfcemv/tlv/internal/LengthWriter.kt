@@ -24,6 +24,9 @@ internal fun lengthOctets(value: Int): Int {
  */
 internal fun writeLength(value: Int, dst: ByteArray, offset: Int): Int {
     require(value >= 0) { "Length must be non-negative: $value" }
+    require(offset + lengthOctets(value) <= dst.size) {
+        "Destination too small: offset=$offset, needed=${lengthOctets(value)}, capacity=${dst.size}"
+    }
     if (value <= SHORT_FORM_MAX) {
         dst[offset] = value.toByte()
         return offset + 1

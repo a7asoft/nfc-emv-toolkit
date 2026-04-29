@@ -148,4 +148,16 @@ class LengthWriterTest {
     fun `lengthOctets rejects negative input`() {
         assertFailsWith<IllegalArgumentException> { lengthOctets(-1) }
     }
+
+    @Test
+    fun `writeLength rejects insufficient destination space`() {
+        val dst = ByteArray(2)
+        assertFailsWith<IllegalArgumentException> { writeLength(0x100, dst, offset = 0) }
+    }
+
+    @Test
+    fun `writeLength rejects offset that pushes past dst end`() {
+        val dst = ByteArray(3)
+        assertFailsWith<IllegalArgumentException> { writeLength(0x100, dst, offset = 1) }
+    }
 }
