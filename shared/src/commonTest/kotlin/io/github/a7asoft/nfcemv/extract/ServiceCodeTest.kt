@@ -12,11 +12,10 @@ class ServiceCodeTest {
     }
 
     @Test
-    fun `accepts other valid ISO 7813 codes`() {
-        ServiceCode("101")
-        ServiceCode("502")
-        ServiceCode("000")
-        ServiceCode("999")
+    fun `accepts other valid ISO 7813 codes and round-trips them through toString`() {
+        listOf("101", "502", "000", "999").forEach { code ->
+            kotlin.test.assertEquals(code, ServiceCode(code).toString())
+        }
     }
 
     @Test

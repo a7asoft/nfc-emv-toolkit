@@ -32,4 +32,21 @@ class BcdNibblesTest {
         assertEquals(0x8, bytes.nibbleAt(2))
         assertEquals(0x1, bytes.nibbleAt(3))
     }
+
+    @Test
+    fun `nibbleAt throws IndexOutOfBoundsException on a negative index`() {
+        val bytes = byteArrayOf(0x12, 0x34)
+        kotlin.test.assertFailsWith<IndexOutOfBoundsException> { bytes.nibbleAt(-1) }
+    }
+
+    @Test
+    fun `nibbleAt throws IndexOutOfBoundsException on an out-of-range index`() {
+        val bytes = byteArrayOf(0x12, 0x34) // nibbleCount = 4
+        kotlin.test.assertFailsWith<IndexOutOfBoundsException> { bytes.nibbleAt(4) }
+    }
+
+    @Test
+    fun `nibbleAt throws IndexOutOfBoundsException on an empty array`() {
+        kotlin.test.assertFailsWith<IndexOutOfBoundsException> { byteArrayOf().nibbleAt(0) }
+    }
 }
