@@ -10,6 +10,13 @@ All notable changes to this project will be documented here. The format follows 
 - `EmvCardError` sealed catalogue: `EmptyInput`, `TlvDecodeFailed(cause: TlvError)`, `MissingRequiredTag(tagHex)`, `PanRejected(cause: PanError)`, `Track2Rejected(cause: Track2Error)`, `InvalidExpiryFormat(nibbleCount)`, `InvalidExpiryMonth(month)`, `InvalidAid(byteCount)`. Errors carry only structural metadata; raw bytes never appear.
 - Required tags (`4F`, `5A`, `5F24`) and optional tags (`5F20`, `50`, `57`) are extracted via per-format helpers in `extract/internal/`; PAN segment delegates to `Pan.parse`, Track 2 delegates to `Track2.parse`, brand resolution delegates to `BrandResolver.resolveBrand`. TLV decoding uses `Strictness.Lenient` so cards that emit non-minimal length encodings still parse.
 - `EmvCard.toString` overrides the data class default to mask sensitive fields: PAN through `Pan.toString`, Track 2 through `Track2.toString`, and cardholder name as a length-only placeholder (`<N chars>`). Direct `cardholderName` accessor still returns the raw String — caller MUST NOT log the EmvCard whole. A future `CardholderName` value-class wrapper is tracked separately.
+- Tag `5A` PAN BCD validation: malformed nibbles (`0xA..0xE` in any position; `0xF` in a non-trailing position) surface as the typed `EmvCardError.MalformedPanNibble(offset)` BEFORE reaching `Pan.parse`, so the diagnostic reports the actual offending nibble offset rather than a derived character index.
+- Tags `5F20` and `50` decode as ISO-8859-1 (was UTF-8); cardholder names like `MÜLLER` (Latin-1 `0xDC`) round-trip correctly.
+- `extractAid` validates byte length BEFORE copying the value, eliminating the wasted defensive copy on the error path.
+- 1,000-iteration deterministic property fuzz pinning the parser invariant: every `List<ByteArray>` resolves to a typed `EmvCardResult`, with no other exception escaping (mirrors `TlvDecoderFuzzTest` and `TrackEncoderFuzzTest`).
+- Multi-APDU integration test: `EmvParser.parse` correctly merges fields across multiple `ByteArray` responses.
+- `CENTURY_OFFSET = 2000` two-digit-year mapping is documented as a deliberate v0.1.x deviation from EMV (which leaves century interpretation to the kernel) and pinned by regression tests at YY=00 and YY=99.
+- `EmvParser` KDoc explicitly enumerates out-of-scope behaviors: PSE/PPSE flow, multi-AID with `87` priority, `9F6B` Mastercard Track 2 fallback, PAN agreement between `5A` and `57`, caller-overridable `Strictness`. Each is tracked separately for v0.2.x or later.
 
 ### Added — BER-TLV decoder (#1)
 - `Tag` value class (`@JvmInline`) backed by a packed `Long`. Supports 1–4 byte tags per ISO/IEC 8825-1.
