@@ -5,7 +5,7 @@ package io.github.a7asoft.nfcemv.emv
  * downstream extractor.
  *
  * - [PCI] — value bytes are PCI DSS Cardholder Data (PAN, expiry, name,
- *   service code, sequence number) or Sensitive Authentication Data
+ *   sequence number) or Sensitive Authentication Data
  *   (full Track 2, cryptograms, signed dynamic data, issuer-application
  *   data with cryptographic state). NEVER log, persist, or transmit
  *   raw; route through a typed extractor with masking on `toString`.
