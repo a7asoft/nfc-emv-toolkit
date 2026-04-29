@@ -171,6 +171,28 @@ class EmvFieldExtractorsTest {
         assertEquals(EmvCardError.InvalidExpiryMonth(month = 13), err.error)
     }
 
+    @Test
+    fun `extractExpiry maps YY equal to 00 to year 2000 per the documented v0_1_x deviation`() {
+        val node = Tlv.Primitive(
+            Tag.fromHex("5F24"),
+            byteArrayOf(0x00, 0x01, 0x01),
+        )
+        val result = extractExpiry(node)
+        val ok = assertIs<ExtractResult.Ok<YearMonth>>(result)
+        assertEquals(YearMonth(2000, 1), ok.value)
+    }
+
+    @Test
+    fun `extractExpiry maps YY equal to 99 to year 2099 per the documented v0_1_x deviation`() {
+        val node = Tlv.Primitive(
+            Tag.fromHex("5F24"),
+            byteArrayOf(0x99.toByte(), 0x12, 0x31),
+        )
+        val result = extractExpiry(node)
+        val ok = assertIs<ExtractResult.Ok<YearMonth>>(result)
+        assertEquals(YearMonth(2099, 12), ok.value)
+    }
+
     // ---- Cardholder name + Application label ----
 
     @Test
