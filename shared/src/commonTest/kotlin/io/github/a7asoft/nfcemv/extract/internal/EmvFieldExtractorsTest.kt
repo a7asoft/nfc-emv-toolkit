@@ -149,4 +149,60 @@ class EmvFieldExtractorsTest {
         val err = assertIs<ExtractResult.Err>(result)
         assertEquals(EmvCardError.InvalidExpiryMonth(month = 13), err.error)
     }
+
+    // ---- Cardholder name + Application label ----
+
+    @Test
+    fun `extractCardholderName returns the trimmed ASCII string`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F20"),
+            "VISA TEST".encodeToByteArray(),
+        )
+        assertEquals("VISA TEST", extractCardholderName(node))
+    }
+
+    @Test
+    fun `extractCardholderName strips trailing 0x20 spaces`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F20"),
+            "VISA TEST     ".encodeToByteArray(),
+        )
+        assertEquals("VISA TEST", extractCardholderName(node))
+    }
+
+    @Test
+    fun `extractCardholderName returns null on an all-spaces value`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F20"),
+            "          ".encodeToByteArray(),
+        )
+        assertEquals(null, extractCardholderName(node))
+    }
+
+    @Test
+    fun `extractCardholderName returns null on an empty value`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F20"),
+            byteArrayOf(),
+        )
+        assertEquals(null, extractCardholderName(node))
+    }
+
+    @Test
+    fun `extractApplicationLabel returns the trimmed ASCII string`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("50"),
+            "VISA".encodeToByteArray(),
+        )
+        assertEquals("VISA", extractApplicationLabel(node))
+    }
+
+    @Test
+    fun `extractApplicationLabel returns null on an all-spaces value`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("50"),
+            "    ".encodeToByteArray(),
+        )
+        assertEquals(null, extractApplicationLabel(node))
+    }
 }

@@ -81,6 +81,37 @@ internal fun extractExpiry(node: Tlv.Primitive): ExtractResult<YearMonth> {
     return ExtractResult.Ok(YearMonth(CENTURY_OFFSET + yy, mm))
 }
 
+/**
+ * Decode tag `5F20` (Cardholder Name) — `AN` ASCII bytes,
+ * right-padded with `0x20`. Returns `null` when the value is empty
+ * or contains only spaces.
+ *
+ * The returned `String` carries cardholder personally-identifying
+ * information per PCI DSS Cardholder Data scope. Caller MUST NOT log
+ * it raw; downstream code should route it through a typed extractor
+ * or mask before any persistence / transmission. `EmvCard.toString`
+ * enforces this by emitting a length-only placeholder.
+ */
+internal fun extractCardholderName(node: Tlv.Primitive): String? =
+    decodeTrimmedAscii(node.copyValue())
+
+/**
+ * Decode tag `50` (Application Label) — `AN` ASCII bytes,
+ * right-padded with `0x20`. Returns `null` when the value is empty
+ * or contains only spaces.
+ *
+ * Application Label is operational metadata, not PCI data — safe to
+ * log raw.
+ */
+internal fun extractApplicationLabel(node: Tlv.Primitive): String? =
+    decodeTrimmedAscii(node.copyValue())
+
+private fun decodeTrimmedAscii(bytes: ByteArray): String? {
+    if (bytes.isEmpty()) return null
+    val text = bytes.decodeToString().trimEnd(' ')
+    return text.ifEmpty { null }
+}
+
 private fun unpackPanDigits(bytes: ByteArray): String {
     val totalNibbles = bytes.nibbleCount()
     if (totalNibbles == 0) return ""
