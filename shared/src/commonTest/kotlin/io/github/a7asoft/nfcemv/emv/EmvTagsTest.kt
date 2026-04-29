@@ -140,4 +140,46 @@ class EmvTagsTest {
         val label = EmvTags.lookup(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("50"))!!
         assertEquals(EmvTagFormat.AN, label.format)
     }
+
+    @Test
+    fun `every EmvTagFormat value has at least one entry`() {
+        EmvTagFormat.entries.forEach { format ->
+            kotlin.test.assertTrue(
+                EmvTags.all.any { it.format == format },
+                "no entry uses format $format",
+            )
+        }
+    }
+
+    @Test
+    fun `every TagSensitivity value has at least one entry`() {
+        TagSensitivity.entries.forEach { sensitivity ->
+            kotlin.test.assertTrue(
+                EmvTags.all.any { it.sensitivity == sensitivity },
+                "no entry uses sensitivity $sensitivity",
+            )
+        }
+    }
+
+    @Test
+    fun `dictionary uses both Fixed and Variable length variants`() {
+        kotlin.test.assertTrue(EmvTags.all.any { it.length is EmvTagLength.Fixed }, "no Fixed entry")
+        kotlin.test.assertTrue(EmvTags.all.any { it.length is EmvTagLength.Variable }, "no Variable entry")
+    }
+
+    @Test
+    fun `the PCI bucket covers PAN and Track 2 and ARQC and signed dynamic data`() {
+        val pciTags = EmvTags.all.filter { it.sensitivity == TagSensitivity.PCI }.map { it.tag.toString() }
+        listOf("5A", "57", "9F26", "9F4B", "9F6B").forEach { expected ->
+            kotlin.test.assertTrue(expected in pciTags, "expected $expected in PCI bucket")
+        }
+    }
+
+    @Test
+    fun `the PUBLIC bucket covers AID and AIP and AFL`() {
+        val publicTags = EmvTags.all.filter { it.sensitivity == TagSensitivity.PUBLIC }.map { it.tag.toString() }
+        listOf("4F", "82", "94").forEach { expected ->
+            kotlin.test.assertTrue(expected in publicTags, "expected $expected in PUBLIC bucket")
+        }
+    }
 }
