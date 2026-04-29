@@ -121,4 +121,57 @@ class Track2Test {
         val cause = assertIs<Track2Error.PanRejected>(err.error).cause
         assertEquals(PanError.LengthOutOfRange(length = 11), cause)
     }
+
+    @Test
+    fun `parse rejects truncated service code with ServiceCodeTooShort`() {
+        // 16d PAN + D + 2812 + only 1 service-code nibble → 22 nibbles, 11 bytes.
+        val raw = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x22,
+        )
+        val err = assertIs<Track2Result.Err>(Track2.parse(raw))
+        assertEquals(Track2Error.ServiceCodeTooShort, err.error)
+    }
+
+    @Test
+    fun `parse accepts a fixture with no discretionary digits`() {
+        // PAN(16) + D(1) + YYMM(4) + SSS(3) = 24 nibbles → 12 bytes.
+        val raw = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01,
+        )
+        val ok = assertIs<Track2Result.Ok>(Track2.parse(raw))
+        assertEquals(0, ok.track2.discretionaryLength)
+        assertEquals("", ok.track2.unmaskedDiscretionary())
+    }
+
+    @Test
+    fun `parse accepts a fixture with odd-nibble discretionary using F-pad`() {
+        // PAN(16) + D(1) + 2812(4) + 201(3) + 5(1) + F-pad(1) = 26 nibbles → 13 bytes.
+        val raw = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x5F.toByte(),
+        )
+        val ok = assertIs<Track2Result.Ok>(Track2.parse(raw))
+        assertEquals(1, ok.track2.discretionaryLength)
+        assertEquals("5", ok.track2.unmaskedDiscretionary())
+    }
+
+    @Test
+    fun `parse accepts the maximum 19-digit discretionary`() {
+        // 19 disc digits → 16+1+4+3+19 = 43 nibbles odd → +F pad = 44 → 22 bytes.
+        // disc digits = 1234567890123456789
+        val raw = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(),
+            0x22, 0x01,
+            0x12, 0x34, 0x56, 0x78, 0x90.toByte(),
+            0x12, 0x34, 0x56, 0x78, 0x9F.toByte(),
+        )
+        val ok = assertIs<Track2Result.Ok>(Track2.parse(raw))
+        assertEquals(YearMonth(2028, 12), ok.track2.expiry)
+        assertEquals("201", ok.track2.serviceCode.toString())
+        assertEquals(19, ok.track2.discretionaryLength)
+        assertEquals("1234567890123456789", ok.track2.unmaskedDiscretionary())
+    }
 }
