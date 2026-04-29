@@ -10,8 +10,9 @@ Pure-Kotlin core for the nfc-emv-toolkit. Lives in `commonMain` and ships with n
 | `io.github.a7asoft.nfcemv.tlv.internal` | Reader cursor, tag/length/node decoders, padding skipper. Internal — do not depend on these symbols. |
 | `io.github.a7asoft.nfcemv.validation` | Luhn check (this milestone) |
 | `io.github.a7asoft.nfcemv.extract` | PAN, Track 2, ServiceCode (this milestone) |
+| `io.github.a7asoft.nfcemv.emv` | EMV tag dictionary (this milestone) |
 
-Future packages (later issues): `emv` (tag dictionary), `brand` (AID + BIN brand resolution), `extract` (PAN, Track2, expiry), `validation` (Luhn, format checks).
+Future packages (later issues): `brand` (AID + BIN brand resolution), `extract` (PAN, Track2, expiry), `validation` (Luhn, format checks).
 
 ## BER-TLV decoder — quickstart
 
@@ -165,6 +166,25 @@ when (val result = Track2.parse(tag57Bytes)) {
 ```
 
 `Track2.toString` masks the PAN and reports only the discretionary length. Two-digit expiry years are interpreted as 21st century (`YY` ⇒ `20YY`).
+
+## EMV tag dictionary
+
+Look up human-readable metadata for an EMV tag:
+
+```kotlin
+import io.github.a7asoft.nfcemv.emv.EmvTags
+import io.github.a7asoft.nfcemv.tlv.Tag
+
+val info = EmvTags.lookup(Tag.fromHex("9F26"))
+// info.name           — "Application Cryptogram"
+// info.format         — EmvTagFormat.B
+// info.length         — EmvTagLength.Fixed(8)
+// info.sensitivity    — TagSensitivity.PCI
+```
+
+`EmvTags.lookup` returns `null` for tags not in the dictionary. Use `EmvTags.all` to enumerate all 27 registered entries in source order. Sensitivity is a binary `PCI` / `PUBLIC` flag; `PCI` covers PAN, Track 2, cryptograms, signed dynamic data, IAD, and the cardholder-data trio (name, expiry, sequence number).
+
+Names and metadata are hand-curated from EMV Book 3 / Book 4 / contactless kernels C-2..C-7. Descriptions are paraphrased; no third-party listing has been copied verbatim.
 
 ## Tests
 
