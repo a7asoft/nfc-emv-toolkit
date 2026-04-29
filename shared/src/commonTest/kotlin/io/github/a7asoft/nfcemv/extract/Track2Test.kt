@@ -161,33 +161,33 @@ class Track2Test {
     }
 
     @Test
-    fun `parse rejects an A nibble inside the PAN segment with MalformedBcdNibble at offset`() {
-        // PAN with 'A' at nib 5 → readDigits(0..separator) fails. Impl reports
-        // the segment start (offset = 0) as the surfaced offset.
+    fun `parse rejects an A nibble inside the PAN segment with MalformedBcdNibble at the actual offset`() {
+        // PAN with 'A' (0xA) at nibble position 5. After refactor, scanInput
+        // pre-validates every nibble and reports the actual offset of the
+        // offending value, not the segment start. Replaces the previous
+        // pin of offset=0 per CLAUDE.md §6.1 (the prior pin encoded the
+        // wrong contract).
         val raw = byteArrayOf(
-            0x41, 0x11, 0x1A.toByte(), 0x11, 0x11, 0x11, 0x11, 0x11,
+            0x41, 0x11, 0x1A, 0x11, 0x11, 0x11, 0x11, 0x11,
             0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
         )
         val err = assertIs<Track2Result.Err>(Track2.parse(raw))
         val cause = assertIs<Track2Error.MalformedBcdNibble>(err.error)
-        assertEquals(0, cause.offset)
+        assertEquals(5, cause.offset)
     }
 
     @Test
-    fun `parse rejects an F nibble before the last position with MalformedBcdNibble`() {
-        // F at nib 25 in the discretionary segment, with trailing zeros after
-        // it. The trailing-pad strip leaves F in place; readDigits surfaces
-        // the discretionary segment start (offset = 24) as MalformedBcdNibble.
-        // Per CLAUDE.md §6, this pins the existing parser behavior; the
-        // dedicated MalformedFPadding variant is reserved for future stricter
-        // detection (see KDoc on Track2Error.MalformedFPadding).
+    fun `parse rejects an F nibble before the last position with MalformedFPadding`() {
+        // PAN + D + expiry + service + discretionary "5" + F + extra byte 0x00.
+        // After refactor, scanInput recognises the F at nibble offset 25 as a
+        // non-trailing pad and surfaces MalformedFPadding (instead of the
+        // previous misleading MalformedBcdNibble or MissingSeparator).
         val raw = byteArrayOf(
             0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
             0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x5F.toByte(), 0x00,
         )
         val err = assertIs<Track2Result.Err>(Track2.parse(raw))
-        val cause = assertIs<Track2Error.MalformedBcdNibble>(err.error)
-        assertEquals(24, cause.offset)
+        assertEquals(Track2Error.MalformedFPadding, err.error)
     }
 
     @Test
