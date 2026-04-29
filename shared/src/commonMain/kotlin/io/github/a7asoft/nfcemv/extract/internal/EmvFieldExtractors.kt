@@ -68,8 +68,23 @@ private const val MAX_MONTH: Int = 12
  *
  * Returns a [YearMonth] taking only the `YYMM` portion; the day field
  * is read but discarded (per the issue spec, `EmvCard.expiry` is a
- * month, not a date). Two-digit `YY` is mapped to 21st century
- * (`YY ⇒ 20YY`), matching the `Track2` convention from #6.
+ * month, not a date).
+ *
+ * **Two-digit-year mapping (deliberate deviation from EMV / no spec
+ * guidance):** EMV Book 3 §10.2 / Annex A defines tag `5F24` as `n 6`
+ * `YYMMDD` with no century encoding. Real kernels apply a sliding
+ * window relative to the terminal's current date. This toolkit
+ * intentionally chooses a static 21st-century mapping (`YY ⇒ 20YY`,
+ * range 2000..2099) because:
+ * 1. The toolkit targets EMV-issued cards, all of which post-date 2000.
+ * 2. Sliding-window mapping requires a clock; this is a pure-parser
+ *    layer with no time injection point in v0.1.x.
+ * 3. The mapping is consistent project-wide with `Track2.expiry` (#6).
+ *
+ * Cards expiring 2100+ silently mis-map to `20XX`. A future
+ * `EmvParserOptions(today: LocalDate)` parameter could enable the
+ * sliding window; that's tracked separately and out of scope for
+ * v0.1.x. The static mapping is pinned by a regression test.
  */
 internal fun extractExpiry(node: Tlv.Primitive): ExtractResult<YearMonth> {
     val bytes = node.copyValue()
