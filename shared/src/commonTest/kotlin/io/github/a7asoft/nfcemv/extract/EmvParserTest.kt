@@ -72,4 +72,76 @@ class EmvParserTest {
         val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(without57)))
         assertNull(ok.card.track2)
     }
+
+    @Test
+    fun `parse rejects empty input with EmptyInput`() {
+        val err = assertIs<EmvCardResult.Err>(EmvParser.parse(emptyList()))
+        assertEquals(EmvCardError.EmptyInput, err.error)
+    }
+
+    @Test
+    fun `parse surfaces TlvDecodeFailed on malformed TLV input`() {
+        val malformed = byteArrayOf(0x4F, 0xFF.toByte(), 0x00)
+        val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(malformed)))
+        val tlvErr = assertIs<EmvCardError.TlvDecodeFailed>(err.error)
+        assertNotNull(tlvErr.cause)
+    }
+
+    @Test
+    fun `parse surfaces MissingRequiredTag 4F when AID is absent`() {
+        val raw = byteArrayOf(
+            0x70, 0x10,
+            0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        )
+        val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(raw)))
+        assertEquals(EmvCardError.MissingRequiredTag(tagHex = "4F"), err.error)
+    }
+
+    @Test
+    fun `parse surfaces MissingRequiredTag 5A when PAN is absent`() {
+        val raw = byteArrayOf(
+            0x70, 0x0F,
+            0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+            0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        )
+        val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(raw)))
+        assertEquals(EmvCardError.MissingRequiredTag(tagHex = "5A"), err.error)
+    }
+
+    @Test
+    fun `parse surfaces MissingRequiredTag 5F24 when expiry is absent`() {
+        val raw = byteArrayOf(
+            0x70, 0x13,
+            0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+            0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        )
+        val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(raw)))
+        assertEquals(EmvCardError.MissingRequiredTag(tagHex = "5F24"), err.error)
+    }
+
+    @Test
+    fun `parse surfaces PanRejected when PAN fails Luhn`() {
+        val raw = byteArrayOf(
+            0x70, 0x19,
+            0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+            0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x12,
+            0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        )
+        val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(raw)))
+        val panErr = assertIs<EmvCardError.PanRejected>(err.error)
+        assertEquals(PanError.LuhnCheckFailed, panErr.cause)
+    }
+
+    @Test
+    fun `parse surfaces InvalidExpiryMonth when month is 13`() {
+        val raw = byteArrayOf(
+            0x70, 0x19,
+            0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+            0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0x5F, 0x24, 0x03, 0x28, 0x13, 0x31,
+        )
+        val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(raw)))
+        assertEquals(EmvCardError.InvalidExpiryMonth(month = 13), err.error)
+    }
 }
