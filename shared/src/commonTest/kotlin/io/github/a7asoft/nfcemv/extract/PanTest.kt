@@ -134,4 +134,42 @@ class PanTest {
             Pan("0004111111111111111"),
         )
     }
+
+    @Test
+    fun `IllegalArgumentException for Luhn failure does not embed the raw value`() {
+        val raw = "4111111111111112"
+        val ex = assertFailsWith<IllegalArgumentException> { Pan(raw) }
+        val msg = ex.message ?: ""
+        assertFalse(raw in msg, "raw embedded in $msg")
+        assertFalse(raw.take(6) in msg, "BIN embedded in $msg")
+        assertFalse(raw.takeLast(4) in msg, "last4 embedded in $msg")
+        assertEquals("PAN failed Luhn check", msg)
+    }
+
+    @Test
+    fun `IllegalArgumentException for length violation embeds only the length integer`() {
+        val raw = "4111"
+        val ex = assertFailsWith<IllegalArgumentException> { Pan(raw) }
+        val msg = ex.message ?: ""
+        assertFalse(raw in msg, "raw embedded in $msg")
+        assertEquals("PAN length must be 12 to 19 digits, was 4", msg)
+    }
+
+    @Test
+    fun `toString of a freshly constructed Pan never contains the hidden middle digits`() {
+        val zeroPans = (12..19).map { len -> Pan("0".repeat(len)) }
+        zeroPans.forEach { pan ->
+            val rendered = pan.toString()
+            val starCount = rendered.count { it == '*' }
+            assertEquals(pan.unmasked().length - 10, starCount)
+            assertEquals("000000", rendered.take(6))
+            assertEquals("0000", rendered.takeLast(4))
+        }
+    }
+
+    @Test
+    fun `toString format does not change between calls and is idempotent`() {
+        val pan = Pan("4111111111111111")
+        assertEquals(pan.toString(), pan.toString())
+    }
 }
