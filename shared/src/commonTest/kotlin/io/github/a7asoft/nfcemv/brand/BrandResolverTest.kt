@@ -97,4 +97,23 @@ class BrandResolverTest {
         val unknownAid = Aid.fromHex("A0000000FF1010")
         assertEquals(EmvBrand.UNKNOWN, BrandResolver.resolveBrand(aid = unknownAid, pan = null))
     }
+
+    @Test
+    fun `every non-UNKNOWN brand resolves correctly via at least one canonical AID fixture`() {
+        val anchors: List<Pair<String, EmvBrand>> = listOf(
+            "A0000000031010" to EmvBrand.VISA,
+            "A0000000041010" to EmvBrand.MASTERCARD,
+            "A0000000043060" to EmvBrand.MAESTRO,
+            "A000000025010402" to EmvBrand.AMERICAN_EXPRESS,
+            "A0000003241010" to EmvBrand.DISCOVER,
+            "A0000001523010" to EmvBrand.DINERS_CLUB,
+            "A0000000651010" to EmvBrand.JCB,
+            "A000000333010101" to EmvBrand.UNIONPAY,
+            "A0000002771010" to EmvBrand.INTERAC,
+        )
+        val mismatches = anchors.filter { (hex, expected) ->
+            BrandResolver.resolveBrand(aid = Aid.fromHex(hex), pan = null) != expected
+        }
+        assertEquals(emptyList(), mismatches, "anchor AIDs that misresolve")
+    }
 }
