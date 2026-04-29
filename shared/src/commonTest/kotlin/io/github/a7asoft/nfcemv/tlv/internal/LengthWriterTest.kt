@@ -3,6 +3,7 @@ package io.github.a7asoft.nfcemv.tlv.internal
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class LengthWriterTest {
 
@@ -140,21 +141,11 @@ class LengthWriterTest {
     @Test
     fun `writeLength rejects negative input`() {
         val dst = ByteArray(1)
-        try {
-            writeLength(-1, dst, 0)
-            error("expected IllegalArgumentException")
-        } catch (_: IllegalArgumentException) {
-            // expected
-        }
+        assertFailsWith<IllegalArgumentException> { writeLength(-1, dst, 0) }
     }
 
     @Test
     fun `lengthOctets rejects negative input`() {
-        try {
-            lengthOctets(-1)
-            error("expected IllegalArgumentException")
-        } catch (_: IllegalArgumentException) {
-            // expected
-        }
+        assertFailsWith<IllegalArgumentException> { lengthOctets(-1) }
     }
 }

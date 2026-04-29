@@ -30,14 +30,11 @@ internal fun writeLength(value: Int, dst: ByteArray, offset: Int): Int {
     }
     val octets = significantOctets(value)
     dst[offset] = (LONG_FORM_BASE or octets).toByte()
-    var shift = (octets - 1) * 8
-    var pos = offset + 1
-    repeat(octets) {
-        dst[pos] = ((value ushr shift) and 0xFF).toByte()
-        shift -= 8
-        pos++
+    for (i in 0 until octets) {
+        val shift = (octets - 1 - i) * 8
+        dst[offset + 1 + i] = ((value ushr shift) and 0xFF).toByte()
     }
-    return pos
+    return offset + 1 + octets
 }
 
 private fun significantOctets(value: Int): Int =
