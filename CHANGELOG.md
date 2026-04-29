@@ -50,6 +50,15 @@ All notable changes to this project will be documented here. The format follows 
 - `ServiceCode` is a `@JvmInline value class` validating exactly three ASCII digits; service codes are categorical metadata, not PCI data, so `toString` returns the raw form.
 - New dependency: `org.jetbrains.kotlinx:kotlinx-datetime` (commonMain).
 
+### Added — AID directory + brand resolution (#4)
+- New package `io.github.a7asoft.nfcemv.brand` with `Aid` value type, `EmvBrand` enum (10 variants — Visa, Mastercard, Maestro, American Express, Discover, Diners Club, JCB, UnionPay, Interac, Unknown), `AidDirectory` static lookup, internal `BinMatcher` sealed type (`Prefix` / `DigitRange`), internal `BIN_TABLE`, and the public `BrandResolver`.
+- `Aid.fromHex(...)` and `Aid.fromBytes(...)` factories validate length (5..16 bytes per ISO/IEC 7816-5) and hex content; case is normalised to uppercase. AIDs are public application metadata, not PCI data.
+- `AidDirectory` registers 23 EMVCo-published AIDs across 9 brands, paraphrased; no third-party listing copied verbatim. O(1) lookup via a precomputed `Map<Aid, EmvBrand>`.
+- `BinMatcher.Prefix(prefix)` matches by leading-digit prefix; `BinMatcher.DigitRange(length, lo, hi)` matches by numeric range over the leading `length` digits (covers Mastercard's 2221..2720 second series, Discover's 622126..622925, JCB's 3528..3589, Diners' 300..305, etc.).
+- `BIN_TABLE` is order-sensitive: more specific matchers come first so Discover's 622126..622925 sub-range resolves to Discover before UnionPay's broader `62` prefix would catch it.
+- `BrandResolver.resolveBrand(aid: Aid?, pan: Pan?): EmvBrand` is the public layered entry point: AID lookup first, then BIN fallback against the PAN's raw digits (via `Pan.unmasked()`), then `EmvBrand.UNKNOWN`.
+- Out of scope for this milestone: country-specific debit AIDs, BIN-database issuer-name resolution, kernel-scoped AID disambiguation, and exhaustive Maestro overlap coverage.
+
 ### Added — EMV tag dictionary (#3)
 - New package `io.github.a7asoft.nfcemv.emv` with `EmvTagFormat`, `EmvTagLength` (sealed `Fixed` / `Variable`), `TagSensitivity` (`PCI` / `PUBLIC`), `EmvTagInfo`, and the `EmvTags` lookup object.
 - 27 entries covering EMV Book 3 / Book 4 staples plus contactless-kernel additions: AID, App Label, Track 2, PAN, Cardholder Name, Expiration / Effective Date, Country / Currency / Language, PAN Sequence, AIP, DF Name, CDOL1 / CDOL2, AFL, Amount, IAD, Preferred Name, ARQC, CID, ATC, Unpredictable Number, Signed Dynamic, Track 2 (Mastercard), CTQ, FCI Issuer Discretionary Data.

@@ -11,8 +11,9 @@ Pure-Kotlin core for the nfc-emv-toolkit. Lives in `commonMain` and ships with n
 | `io.github.a7asoft.nfcemv.validation` | Luhn check (this milestone) |
 | `io.github.a7asoft.nfcemv.extract` | PAN, Track 2, ServiceCode (this milestone) |
 | `io.github.a7asoft.nfcemv.emv` | EMV tag dictionary (this milestone) |
+| `io.github.a7asoft.nfcemv.brand` | AID directory + BIN-fallback brand resolution (this milestone) |
 
-Future packages (later issues): `brand` (AID + BIN brand resolution), `extract` (PAN, Track2, expiry), `validation` (Luhn, format checks).
+Future packages (later issues): `extract` (PAN, Track2, expiry), `validation` (Luhn, format checks).
 
 ## BER-TLV decoder — quickstart
 
@@ -185,6 +186,30 @@ val info = EmvTags.lookup(Tag.fromHex("9F26"))
 `EmvTags.lookup` returns `null` for tags not in the dictionary. Use `EmvTags.all` to enumerate all 27 registered entries in source order. Sensitivity is a binary `PCI` / `PUBLIC` flag; `PCI` covers PAN, Track 2, cryptograms, signed dynamic data, IAD, and the cardholder-data trio (name, expiry, sequence number).
 
 Names and metadata are hand-curated from EMV Book 3 / Book 4 / contactless kernels C-2..C-7. Descriptions are paraphrased; no third-party listing has been copied verbatim.
+
+## Brand resolution
+
+Resolve a card brand from an AID, a PAN, or both:
+
+```kotlin
+import io.github.a7asoft.nfcemv.brand.Aid
+import io.github.a7asoft.nfcemv.brand.BrandResolver
+import io.github.a7asoft.nfcemv.brand.EmvBrand
+import io.github.a7asoft.nfcemv.extract.Pan
+
+val aid = Aid.fromHex("A0000000031010")          // from EMV tag 4F
+val pan = Pan.parseOrThrow("4111111111111111")    // from EMV tag 5A
+
+val brand: EmvBrand = BrandResolver.resolveBrand(aid = aid, pan = pan)
+// brand.displayName == "Visa"
+```
+
+Resolution layers:
+1. If `aid` is non-null and registered in `AidDirectory`, return that brand.
+2. Otherwise, if `pan` is non-null and one of the registered BIN matchers accepts its leading digits, return that brand.
+3. Otherwise, return `EmvBrand.UNKNOWN`.
+
+The AID directory ships 23 entries across 9 brands; the BIN table covers the same 9 plus broad UnionPay catch-all. Both are paraphrased from EMVCo and ISO/IEC 7816-5 sources.
 
 ## Tests
 
