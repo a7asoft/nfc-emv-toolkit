@@ -37,7 +37,7 @@ fun main() {
 fun printTree(tlv: Tlv, depth: Int = 0) {
     val indent = "  ".repeat(depth)
     when (tlv) {
-        is Tlv.Primitive   -> println("$indent${tlv.tag}: ${tlv.value.size} bytes")
+        is Tlv.Primitive   -> println("$indent${tlv.tag}: ${tlv.length} bytes")
         is Tlv.Constructed -> {
             println("$indent${tlv.tag}: (constructed, ${tlv.children.size} children)")
             tlv.children.forEach { printTree(it, depth + 1) }
@@ -45,6 +45,12 @@ fun printTree(tlv: Tlv, depth: Int = 0) {
     }
 }
 ```
+
+> **PCI safety:** never write `println(tlv.copyValue().toHexString())` or pass
+> `copyValue()` to a logger / persistence layer. Tags `5A` (PAN), `57` (Track 2),
+> and `9F26` (ARQC) carry sensitive bytes. The only safe sink is a typed
+> extractor (`Pan`, `Track2`, …) that masks on `toString`. The `tlv.length`
+> read above is structural and PCI-neutral.
 
 Output:
 

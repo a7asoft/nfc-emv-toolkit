@@ -9,7 +9,7 @@ import io.github.a7asoft.nfcemv.tlv.TlvParseException
 private const val TAG_NUMBER_MASK = 0x1F
 private const val MULTI_BYTE_ESCAPE = 0x1F
 private const val CONTINUATION_BIT = 0x80
-private const val NON_MINIMAL_FIRST_CONTINUATION = 0x80
+private const val SEVEN_BIT_MASK = 0x7F
 
 /**
  * Read a BER-TLV tag per ISO/IEC 8825-1 §8.1.2.
@@ -18,8 +18,9 @@ private const val NON_MINIMAL_FIRST_CONTINUATION = 0x80
  * "bits 5-1 = 0x1F escape" form with continuation bytes; bit 8 of each
  * continuation indicates whether another byte follows.
  *
- * Strict mode rejects a first continuation byte of `0x80`, which would
- * encode a leading zero in the 7-bit tag-number representation.
+ * Strict mode rejects a first continuation byte whose seven low bits are
+ * all zero (i.e. `0x00` or `0x80`). Per ISO/IEC 8825-1 §8.1.2.4.2(c), the
+ * first subsequent octet must encode a non-zero seven-bit tag-number segment.
  *
  * Note on EMV deviation: X.690 §8.1.2.4 specifies that tag numbers ≤ 30
  * MUST use the short form. EMV violates this by design (e.g. tag `9F02`
@@ -72,7 +73,7 @@ private fun readContinuation(reader: TlvReader, startOffset: Int): Byte {
 private fun validateLeadingZero(currentSize: Int, next: Byte, strictness: Strictness, startOffset: Int) {
     if (strictness !== Strictness.Strict) return
     if (currentSize != 1) return
-    if ((next.toInt() and 0xFF) == NON_MINIMAL_FIRST_CONTINUATION) {
+    if ((next.toInt() and SEVEN_BIT_MASK) == 0) {
         throw TlvParseException(TlvError.NonMinimalTagEncoding(startOffset))
     }
 }

@@ -138,6 +138,24 @@ class TagReaderTest {
     }
 
     @Test
+    fun `strict mode rejects first continuation 0x00`() {
+        // ISO/IEC 8825-1 §8.1.2.4.2(c): the first subsequent octet must encode a
+        // non-zero seven-bit tag-number segment. 0x00 has no continuation bit set
+        // AND zero seven-bit value — encodes "tag number 0" non-minimally
+        // (the short-form encoding for class private + tag 0 would suffice).
+        val r = TlvReader(byteArrayOf(0x9F.toByte(), 0x00))
+        val ex = assertFailsWith<TlvParseException> { readTag(r, strict) }
+        assertEquals(TlvError.NonMinimalTagEncoding(0), ex.error)
+    }
+
+    @Test
+    fun `lenient mode accepts first continuation 0x00`() {
+        val r = TlvReader(byteArrayOf(0x9F.toByte(), 0x00))
+        val tag = readTag(r, lenient)
+        assertEquals(2, tag.byteCount)
+    }
+
+    @Test
     fun `tag bytes 1F 1F decodes class universal`() {
         val r = TlvReader(byteArrayOf(0x1F, 0x1F))
         val tag = readTag(r, strict)

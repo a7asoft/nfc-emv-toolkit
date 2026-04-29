@@ -46,14 +46,14 @@ public object TlvDecoder {
 
     private fun decodeAll(input: ByteArray, options: TlvOptions): List<Tlv> {
         val ctx = ParseContext(reader = TlvReader(input), options = options, depth = 0)
-        val nodes = mutableListOf<Tlv>()
-        while (!ctx.reader.isEof) {
-            if (options.paddingPolicy === PaddingPolicy.Tolerated) {
-                skipZeroPaddingToEof(ctx.reader)
+        return buildList {
+            while (!ctx.reader.isEof) {
+                if (options.paddingPolicy === PaddingPolicy.Tolerated) {
+                    skipZeroPaddingToEof(ctx.reader)
+                }
+                if (ctx.reader.isEof) break
+                add(readNode(ctx))
             }
-            if (ctx.reader.isEof) break
-            nodes.add(readNode(ctx))
         }
-        return nodes
     }
 }

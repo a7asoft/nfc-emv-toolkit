@@ -41,8 +41,12 @@ class TlvDecoderFuzzTest {
         repeat(iterations) {
             val length = rng.nextInt(0, 257)
             val data = ByteArray(length).also { rng.nextBytes(it) }
-            // Either Ok or Err is acceptable; the contract is "no other exception escapes".
-            TlvDecoder.parse(data, options)
+            // Pin the invariant per iteration: every input MUST resolve to a
+            // typed parse result (Ok or Err). Asserting on the return value
+            // (not just relying on no-throw) catches a regression where a
+            // future code path returns null, hangs, or throws a non-typed
+            // exception that gets swallowed elsewhere.
+            assertIs<TlvParseResult>(TlvDecoder.parse(data, options))
         }
     }
 

@@ -2,6 +2,7 @@ package io.github.a7asoft.nfcemv.tlv
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 
@@ -71,17 +72,13 @@ class TlvDecoderPciSafetyTest {
     @Test
     fun `TlvParseException message on truncated PAN does not embed value bytes`() {
         val data = byteArrayOf(0x5A, 0x08, 0x41, 0x11)
-        try {
-            TlvDecoder.parseOrThrow(data)
-            error("Expected exception")
-        } catch (e: TlvParseException) {
-            val msg = e.message ?: ""
-            assertFalse("0x41" in msg)
-            assertFalse("0x11" in msg)
-            assertFalse("4111" in msg)
-            assertFalse("65, 17" in msg)
-            assertFalse("41 11" in msg)
-        }
+        val ex = assertFailsWith<TlvParseException> { TlvDecoder.parseOrThrow(data) }
+        val msg = ex.message ?: ""
+        assertFalse("0x41" in msg, "byte leaked: $msg")
+        assertFalse("0x11" in msg, "byte leaked: $msg")
+        assertFalse("4111" in msg, "concatenated bytes leaked: $msg")
+        assertFalse("65, 17" in msg, "decimal-form bytes leaked: $msg")
+        assertFalse("41 11" in msg, "space-separated hex leaked: $msg")
     }
 
     @Test

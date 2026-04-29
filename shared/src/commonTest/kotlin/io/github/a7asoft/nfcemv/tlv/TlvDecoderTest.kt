@@ -26,7 +26,7 @@ class TlvDecoderTest {
         assertEquals(1, ok.tlvs.size)
         val prim = assertIs<Tlv.Primitive>(ok.tlvs.single())
         assertEquals(Tag.fromHex("57"), prim.tag)
-        assertContentEquals(byteArrayOf(0x10, 0x20), prim.value)
+        assertContentEquals(byteArrayOf(0x10, 0x20), prim.copyValue())
     }
 
     @Test

@@ -38,25 +38,32 @@ private fun readPrimitive(reader: TlvReader, tag: Tag, length: Int): Tlv.Primiti
 private fun readConstructed(ctx: ParseContext, tag: Tag, length: Int): Tlv.Constructed {
     val bodyStart = ctx.reader.pos
     val end = bodyStart + length
-    val children = readChildren(ctx.deeper(), end)
-    detectChildrenMismatch(ctx.reader.pos, bodyStart, length)
+    val children = readChildren(ctx.deeper(), bodyStart, end, length)
     return Tlv.Constructed(tag, children)
 }
 
-private fun readChildren(ctx: ParseContext, end: Int): List<Tlv> {
-    val out = mutableListOf<Tlv>()
+private fun readChildren(ctx: ParseContext, bodyStart: Int, end: Int, declared: Int): List<Tlv> = buildList {
     while (ctx.reader.pos < end) {
         if (ctx.options.paddingPolicy === PaddingPolicy.Tolerated) {
             skipZeroPaddingUpTo(ctx.reader, end)
         }
         if (ctx.reader.pos >= end) break
-        out.add(readNode(ctx))
+        add(readNode(ctx))
+        rejectOverRead(ctx.reader.pos, bodyStart, end, declared)
     }
-    return out
 }
 
-private fun detectChildrenMismatch(currentPos: Int, bodyStart: Int, declared: Int) {
-    if (currentPos == bodyStart + declared) return
-    val consumed = currentPos - bodyStart
-    throw TlvParseException(TlvError.ChildrenLengthMismatch(declared, consumed, currentPos))
+// why: localizes "child crossed parent body boundary" to the parent's `end`
+// offset rather than letting the child's read continue into sibling/parent
+// bytes and surface as a misleading UnexpectedEof later.
+//
+// The dual error variant `ChildrenLengthMismatch(consumed < declared)` is
+// structurally unreachable through this loop (the `while` guard exits only
+// when `pos >= end`, and `pos > end` is rejected here), but is retained on
+// the sealed catalogue for explicit `when` exhaustiveness in callers.
+private fun rejectOverRead(currentPos: Int, bodyStart: Int, end: Int, declared: Int) {
+    if (currentPos <= end) return
+    throw TlvParseException(
+        TlvError.ChildrenLengthMismatch(declared, currentPos - bodyStart, end),
+    )
 }

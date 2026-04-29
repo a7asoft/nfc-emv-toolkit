@@ -22,10 +22,18 @@ public sealed interface TlvError {
     public data class IndefiniteLengthForbidden(override val offset: Int) : TlvError
 
     /**
-     * The length byte was reserved or unsupported (`0x85`–`0xFF`). EMV bounds
-     * length to four octets at most.
+     * The first length byte was reserved or unsupported (`0x85`–`0xFF`). EMV
+     * bounds long-form length to four octets at most. The reported [byte] is
+     * the offending first length octet.
      */
     public data class InvalidLengthOctet(val byte: Byte, override val offset: Int) : TlvError
+
+    /**
+     * A long-form length parsed structurally per ISO/IEC 8825-1 §8.1.3.5 but
+     * decoded to a value larger than the platform's bounded `Int` range. The
+     * declared payload size cannot be addressed by the decoder.
+     */
+    public data class LengthOverflow(val declared: Long, override val offset: Int) : TlvError
 
     /** A multi-byte tag was started but not terminated before EOF. */
     public data class IncompleteTag(override val offset: Int) : TlvError

@@ -35,7 +35,7 @@ private fun readLongForm(reader: TlvReader, octets: Int, startOffset: Int, optio
         throw TlvParseException(TlvError.NonMinimalLengthEncoding(startOffset))
     }
     if (value > Int.MAX_VALUE) {
-        throw invalidOctet((LONG_FORM_BASE or octets).toByte(), startOffset)
+        throw TlvParseException(TlvError.LengthOverflow(value, startOffset))
     }
     return value.toInt()
 }

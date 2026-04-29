@@ -18,7 +18,8 @@ internal fun skipZeroPaddingUpTo(reader: TlvReader, endExclusive: Int) {
  * Advance the reader past consecutive `0x00` bytes until end-of-input.
  *
  * Used at the top level to absorb trailing or interleaved padding when
- * [io.github.a7asoft.nfcemv.tlv.TlvOptions.tolerateZeroPadding] is enabled.
+ * [io.github.a7asoft.nfcemv.tlv.TlvOptions.paddingPolicy] is set to
+ * [io.github.a7asoft.nfcemv.tlv.PaddingPolicy.Tolerated].
  */
 internal fun skipZeroPaddingToEof(reader: TlvReader) {
     while (!reader.isEof && reader.peek() == PAD_BYTE) {

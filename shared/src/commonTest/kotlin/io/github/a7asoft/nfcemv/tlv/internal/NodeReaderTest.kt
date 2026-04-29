@@ -25,7 +25,7 @@ class NodeReaderTest {
         val tlv = readNode(ParseContext(r, opts, depth = 0))
         val prim = assertIs<Tlv.Primitive>(tlv)
         assertEquals(Tag.fromHex("57"), prim.tag)
-        assertContentEquals(byteArrayOf(0x10, 0x20), prim.value)
+        assertContentEquals(byteArrayOf(0x10, 0x20), prim.copyValue())
         assertTrue(r.isEof)
     }
 
@@ -35,7 +35,7 @@ class NodeReaderTest {
         val r = TlvReader(byteArrayOf(0x57, 0x00))
         val tlv = readNode(ParseContext(r, opts, depth = 0))
         val prim = assertIs<Tlv.Primitive>(tlv)
-        assertEquals(0, prim.value.size)
+        assertEquals(0, prim.length)
     }
 
     @Test
@@ -45,8 +45,8 @@ class NodeReaderTest {
         val r = TlvReader(data)
         val tlv = readNode(ParseContext(r, opts, depth = 0))
         val prim = assertIs<Tlv.Primitive>(tlv)
-        assertEquals(128, prim.value.size)
-        assertEquals(0x42.toByte(), prim.value[0])
+        assertEquals(128, prim.length)
+        assertEquals(0x42.toByte(), prim.copyValue()[0])
     }
 
     @Test
@@ -148,6 +148,18 @@ class NodeReaderTest {
         assertIs<TlvError.ChildrenLengthMismatch>(err)
         assertEquals(4, err.declared)
         assertTrue(err.consumed > 4)
+    }
+
+    @Test
+    fun `child crossing parent body end reports mismatch at parent end offset`() {
+        // 70 04 | 57 01 10 | 57 03 11 12 13   parent body = bytes [2..6),
+        // second child consumes through pos=10. Error MUST localize at the
+        // parent's end (offset 6), not at the over-read child's later position.
+        val r = TlvReader(byteArrayOf(0x70, 0x04, 0x57, 0x01, 0x10, 0x57, 0x03, 0x11, 0x12, 0x13))
+        val ex = assertFailsWith<TlvParseException> { readNode(ParseContext(r, opts, depth = 0)) }
+        val err = ex.error
+        assertIs<TlvError.ChildrenLengthMismatch>(err)
+        assertEquals(6, err.offset)
     }
 
     @Test

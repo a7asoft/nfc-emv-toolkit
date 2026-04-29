@@ -111,6 +111,18 @@ class LengthReaderTest {
     }
 
     @Test
+    fun `long form value above Int MAX_VALUE throws LengthOverflow not InvalidLengthOctet`() {
+        // 0x84 80 00 00 00 = 2147483648 (Int.MAX_VALUE + 1). Structurally valid
+        // long form, minimal 4-octet encoding; only the magnitude is the problem.
+        val r = TlvReader(byteArrayOf(0x84.toByte(), 0x80.toByte(), 0x00, 0x00, 0x00))
+        val ex = assertFailsWith<TlvParseException> { readLength(r, strict) }
+        val err = ex.error
+        assertIs<TlvError.LengthOverflow>(err)
+        assertEquals(0, err.offset)
+        assertEquals(0x80000000L, err.declared)
+    }
+
+    @Test
     fun `eof on empty input throws UnexpectedEof`() {
         val r = TlvReader(byteArrayOf())
         val ex = assertFailsWith<TlvParseException> { readLength(r, strict) }

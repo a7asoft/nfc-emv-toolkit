@@ -15,25 +15,40 @@ public sealed interface Tlv {
     /** The tag identifying this node. */
     public val tag: Tag
 
-    /** A primitive node holding raw value bytes. */
+    /**
+     * A primitive node holding raw value bytes.
+     *
+     * The constructor takes ownership of [value] via a defensive copy; the
+     * stored bytes are never exposed by reference. Callers obtain bytes
+     * through [copyValue], which returns a fresh copy each call so mutation
+     * cannot propagate into the node's identity (preserving [equals] and
+     * [hashCode] invariants).
+     *
+     * For PAN-bearing tags (`5A`, `57`, etc.) the only safe sink for the
+     * returned bytes is a typed extractor (e.g. `Pan`) that masks on
+     * `toString`. Never log, persist, or transmit `copyValue()` directly.
+     */
     public class Primitive(
         override val tag: Tag,
-        /**
-         * The decoded value. The `Tlv.Primitive` instance retains this
-         * reference; callers MUST treat the returned array as read-only.
-         * Mutating it would be observable on this node.
-         */
-        public val value: ByteArray,
+        value: ByteArray,
     ) : Tlv {
+        private val storedValue: ByteArray = value.copyOf()
+
+        /** Number of bytes in the value field. */
+        public val length: Int get() = storedValue.size
+
+        /** Returns a fresh defensive copy of the value bytes. */
+        public fun copyValue(): ByteArray = storedValue.copyOf()
+
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is Primitive) return false
-            return tag == other.tag && value.contentEquals(other.value)
+            return tag == other.tag && storedValue.contentEquals(other.storedValue)
         }
 
-        override fun hashCode(): Int = 31 * tag.hashCode() + value.contentHashCode()
+        override fun hashCode(): Int = 31 * tag.hashCode() + storedValue.contentHashCode()
 
-        override fun toString(): String = "Primitive(tag=$tag, length=${value.size})"
+        override fun toString(): String = "Primitive(tag=$tag, length=${storedValue.size})"
     }
 
     /** A constructed node holding child TLV nodes. */
