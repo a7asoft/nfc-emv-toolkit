@@ -97,6 +97,21 @@ class NodeWriterTest {
     }
 
     @Test
+    fun `rejects Primitive whose tag has the constructed bit set`() {
+        val node = Tlv.Primitive(Tag.fromHex("70"), byteArrayOf(0x10))
+        val dst = ByteArray(encodedSize(node))
+        assertFailsWith<IllegalArgumentException> { writeNode(node, dst, offset = 0, depth = 0) }
+    }
+
+    @Test
+    fun `rejects Constructed whose tag has the primitive bit set`() {
+        val leaf = Tlv.Primitive(Tag.fromHex("9F36"), ByteArray(0))
+        val node = Tlv.Constructed(Tag.fromHex("57"), listOf(leaf))
+        val dst = ByteArray(encodedSize(node))
+        assertFailsWith<IllegalArgumentException> { writeNode(node, dst, offset = 0, depth = 0) }
+    }
+
+    @Test
     fun `rejects trees deeper than MAX_DEPTH`() {
         // Build a chain of MAX_DEPTH + 2 constructed nodes wrapping a leaf so
         // the recursion definitely exceeds the bound on the way down. dst is
