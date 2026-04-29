@@ -43,4 +43,34 @@ class LuhnTest {
         assertFalse("4111 1111".isValidLuhn()) // non-breaking space
         assertFalse("4111　1111".isValidLuhn()) // ideographic space
     }
+
+    @Test
+    fun `Visa test PAN 4111111111111111 is valid`() {
+        assertTrue("4111111111111111".isValidLuhn())
+    }
+
+    @Test
+    fun `Mastercard test PAN 5555555555554444 is valid`() {
+        assertTrue("5555555555554444".isValidLuhn())
+    }
+
+    @Test
+    fun `Amex 15-digit test PAN 378282246310005 is valid`() {
+        assertTrue("378282246310005".isValidLuhn())
+    }
+
+    @Test
+    fun `Discover test PAN 6011111111111117 is valid`() {
+        assertTrue("6011111111111117".isValidLuhn())
+    }
+
+    @Test
+    fun `JCB test PAN 3530111333300000 is valid`() {
+        assertTrue("3530111333300000".isValidLuhn())
+    }
+
+    @Test
+    fun `Diners test PAN 30569309025904 is valid`() {
+        assertTrue("30569309025904".isValidLuhn())
+    }
 }
