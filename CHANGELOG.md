@@ -4,6 +4,13 @@ All notable changes to this project will be documented here. The format follows 
 
 ## [Unreleased]
 
+### Added — EmvCard model + EmvParser entry point (#8)
+- `EmvCard` data class composing every parser shipped so far: `pan: Pan`, `expiry: YearMonth` (kotlinx.datetime), `cardholderName: String?`, `brand: EmvBrand`, `applicationLabel: String?`, `track2: Track2?`, `aid: Aid`.
+- `EmvParser.parse(apduResponses: List<ByteArray>): EmvCardResult` (sealed `Ok` / `Err(EmvCardError)`) and `EmvParser.parseOrThrow` for the throw form. Mirrors `Pan.parse` / `parseOrThrow` and `Track2.parse` / `parseOrThrow`.
+- `EmvCardError` sealed catalogue: `EmptyInput`, `TlvDecodeFailed(cause: TlvError)`, `MissingRequiredTag(tagHex)`, `PanRejected(cause: PanError)`, `Track2Rejected(cause: Track2Error)`, `InvalidExpiryFormat(nibbleCount)`, `InvalidExpiryMonth(month)`, `InvalidAid(byteCount)`. Errors carry only structural metadata; raw bytes never appear.
+- Required tags (`4F`, `5A`, `5F24`) and optional tags (`5F20`, `50`, `57`) are extracted via per-format helpers in `extract/internal/`; PAN segment delegates to `Pan.parse`, Track 2 delegates to `Track2.parse`, brand resolution delegates to `BrandResolver.resolveBrand`. TLV decoding uses `Strictness.Lenient` so cards that emit non-minimal length encodings still parse.
+- `EmvCard.toString` overrides the data class default to mask sensitive fields: PAN through `Pan.toString`, Track 2 through `Track2.toString`, and cardholder name as a length-only placeholder (`<N chars>`). Direct `cardholderName` accessor still returns the raw String — caller MUST NOT log the EmvCard whole. A future `CardholderName` value-class wrapper is tracked separately.
+
 ### Added — BER-TLV decoder (#1)
 - `Tag` value class (`@JvmInline`) backed by a packed `Long`. Supports 1–4 byte tags per ISO/IEC 8825-1.
 - `TagClass` enum (universal / application / context-specific / private).
