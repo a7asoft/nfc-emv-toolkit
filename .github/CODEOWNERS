@@ -1,0 +1,15 @@
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-configuration/about-code-owners
+#
+# Last matching pattern wins. Keep the most specific paths at the bottom so
+# the explicit re-statements below cannot be silently overridden by a future
+# broader matcher inserted above them.
+
+# Global default — Adrian as sole maintainer.
+*                                                         @a7asoft
+
+# EMV / TLV / PCI-sensitive paths — explicit re-statement so future broader
+# matchers cannot bypass owner review on the security-critical surface.
+/shared/src/commonMain/kotlin/io/github/a7asoft/nfcemv/   @a7asoft
+/docs/threat-model.md                                     @a7asoft
+/CLAUDE.md                                                @a7asoft
+/.github/CODEOWNERS                                       @a7asoft

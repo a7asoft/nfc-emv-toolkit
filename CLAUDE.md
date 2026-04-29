@@ -174,6 +174,29 @@ Constants live in `companion object` only when truly invariant (e.g. EMV tag byt
 - Test names are sentences: `decode returns UnexpectedEof when length byte is missing`.
 - One assertion concept per test. Group with `kotest`'s `should` blocks if needed.
 
+### 6.1 Tests are the contract — do not weaken them to make code pass
+
+When a test fails, the default response is **fix the implementation**, not delete or relax the test.
+
+A failing test forces a deliberate decision:
+
+1. **Test is right, implementation is wrong** → fix the implementation. Most common case.
+2. **Test encodes the wrong contract** → the design itself was wrong; before changing the test:
+   - Document why the original contract is incorrect, with a citation (spec section, real-world counter-example, security rationale).
+   - Replace the test with a new one that explicitly captures the corrected contract — never just delete.
+   - Reflect the change in `CLAUDE.md` or the relevant doc if it's a project-wide rule.
+3. **Both could be right depending on configuration** → make the behavior configurable via `TlvOptions` (or equivalent), and write tests for **both** modes.
+
+Forbidden patterns:
+- Deleting a failing test without a replacement that captures the corrected behavior.
+- Adding `@Ignore` / `@Disabled` to dodge a failure.
+- Loosening an assertion (`assertEquals` → `assertTrue`) to swallow a real divergence.
+- Renaming a test to "skipped reason" and leaving it.
+
+If a deviation from a published spec is intentional (e.g., EMV deviating from X.690 short-form rule), the deviation MUST be:
+- Documented in the implementation's KDoc / DocC with a spec citation.
+- Captured by a positive test whose name and comment make the deviation explicit (e.g., `strict mode accepts EMV tag 9F02 even though tag number is below 31`).
+
 ---
 
 ## 7. Module boundaries
