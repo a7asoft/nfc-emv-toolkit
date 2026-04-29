@@ -71,4 +71,19 @@ class EmvCardTest {
         assertEquals(card.track2, track2)
         assertEquals(card.aid, aid)
     }
+
+    @Test
+    fun `toString delegates to Track2 toString when track2 is non-null`() {
+        val track2 = io.github.a7asoft.nfcemv.extract.Track2.parseOrThrow(byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+        ))
+        val card = sample(track2 = track2)
+        val rendered = card.toString()
+        // Track2.toString masks PAN and discretionary; pin that the
+        // EmvCard's toString includes the Track2 representation but no
+        // raw PAN.
+        kotlin.test.assertFalse("4111111111111111" in rendered)
+        kotlin.test.assertTrue("track2=Track2" in rendered)
+    }
 }

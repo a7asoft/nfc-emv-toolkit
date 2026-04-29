@@ -34,28 +34,59 @@ class EmvParserTest {
     )
 
     @Test
-    fun `parse extracts every required field from the canonical fixture`() {
+    fun `parse extracts the PAN from the canonical fixture`() {
         val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
-        val card = ok.card
-        assertEquals("4111111111111111", card.pan.unmasked())
-        assertEquals(YearMonth(2028, 12), card.expiry)
-        assertEquals(Aid.fromHex("A0000000031010"), card.aid)
-        assertEquals(EmvBrand.VISA, card.brand)
+        assertEquals("4111111111111111", ok.card.pan.unmasked())
     }
 
     @Test
-    fun `parse extracts cardholder name and application label`() {
+    fun `parse extracts the expiry from the canonical fixture`() {
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
+        assertEquals(YearMonth(2028, 12), ok.card.expiry)
+    }
+
+    @Test
+    fun `parse extracts the AID from the canonical fixture`() {
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
+        assertEquals(Aid.fromHex("A0000000031010"), ok.card.aid)
+    }
+
+    @Test
+    fun `parse resolves the brand to VISA from the canonical fixture`() {
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
+        assertEquals(EmvBrand.VISA, ok.card.brand)
+    }
+
+    @Test
+    fun `parse extracts the cardholder name from the canonical fixture`() {
         val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
         assertEquals("VISA TEST", ok.card.cardholderName)
+    }
+
+    @Test
+    fun `parse extracts the application label from the canonical fixture`() {
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
         assertEquals("VISA", ok.card.applicationLabel)
     }
 
     @Test
-    fun `parse extracts Track 2 when tag 57 is present`() {
+    fun `parse extracts the Track 2 PAN when tag 57 is present`() {
         val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
         val track2 = assertNotNull(ok.card.track2)
         assertEquals("4111111111111111", track2.pan.unmasked())
+    }
+
+    @Test
+    fun `parse extracts the Track 2 expiry when tag 57 is present`() {
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
+        val track2 = assertNotNull(ok.card.track2)
         assertEquals(YearMonth(2028, 12), track2.expiry)
+    }
+
+    @Test
+    fun `parse extracts the Track 2 service code when tag 57 is present`() {
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
+        val track2 = assertNotNull(ok.card.track2)
         assertEquals("201", track2.serviceCode.toString())
     }
 
@@ -80,11 +111,12 @@ class EmvParserTest {
     }
 
     @Test
-    fun `parse surfaces TlvDecodeFailed on malformed TLV input`() {
+    fun `parse surfaces TlvDecodeFailed with InvalidLengthOctet on a 0xFF length byte`() {
+        // 0xFF is reserved per ISO 8825-1 §8.1.3.5c.
         val malformed = byteArrayOf(0x4F, 0xFF.toByte(), 0x00)
         val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(malformed)))
         val tlvErr = assertIs<EmvCardError.TlvDecodeFailed>(err.error)
-        assertNotNull(tlvErr.cause)
+        assertIs<io.github.a7asoft.nfcemv.tlv.TlvError.InvalidLengthOctet>(tlvErr.cause)
     }
 
     @Test
