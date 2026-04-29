@@ -1,7 +1,9 @@
 package io.github.a7asoft.nfcemv.extract
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 
 class PanTest {
 
@@ -42,5 +44,37 @@ class PanTest {
     @Test
     fun `accepts a 15-digit Amex test PAN`() {
         Pan("378282246310005")
+    }
+
+    @Test
+    fun `toString masks 16-digit Visa PAN as 411111star6_1111`() {
+        assertEquals("411111******1111", Pan("4111111111111111").toString())
+    }
+
+    @Test
+    fun `toString masks 12-digit PAN as 6prefix_2stars_4suffix`() {
+        assertEquals("000000**0000", Pan("000000000000").toString())
+    }
+
+    @Test
+    fun `toString masks 13-digit legacy Visa PAN as 6prefix_3stars_4suffix`() {
+        assertEquals("422222***2222", Pan("4222222222222").toString())
+    }
+
+    @Test
+    fun `toString masks 15-digit Amex PAN as 6prefix_5stars_4suffix`() {
+        assertEquals("378282*****0005", Pan("378282246310005").toString())
+    }
+
+    @Test
+    fun `toString masks 19-digit PAN as 6prefix_9stars_4suffix`() {
+        assertEquals("000411*********1111", Pan("0004111111111111111").toString())
+    }
+
+    @Test
+    fun `toString never embeds the middle digits of a 16-digit PAN`() {
+        val pan = Pan("4111111111111111")
+        val rendered = pan.toString()
+        assertFalse("111111" in rendered.removePrefix("411111").removeSuffix("1111"))
     }
 }
