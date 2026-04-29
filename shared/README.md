@@ -9,6 +9,7 @@ Pure-Kotlin core for the nfc-emv-toolkit. Lives in `commonMain` and ships with n
 | `io.github.a7asoft.nfcemv.tlv` | BER-TLV decoder + encoder (this milestone) |
 | `io.github.a7asoft.nfcemv.tlv.internal` | Reader cursor, tag/length/node decoders, padding skipper. Internal — do not depend on these symbols. |
 | `io.github.a7asoft.nfcemv.validation` | Luhn check (this milestone) |
+| `io.github.a7asoft.nfcemv.extract` | PAN value class with PCI-safe `toString` (this milestone) |
 
 Future packages (later issues): `emv` (tag dictionary), `brand` (AID + BIN brand resolution), `extract` (PAN, Track2, expiry), `validation` (Luhn, format checks).
 
@@ -113,6 +114,21 @@ if ("4111111111111111".isValidLuhn()) {
     // proceed
 }
 ```
+
+## Extract
+
+`Pan` is a `@JvmInline value class` that wraps a primary account number and keeps raw digits off `toString()`, stack traces, and string interpolation.
+
+```kotlin
+import io.github.a7asoft.nfcemv.extract.Pan
+
+val pan = Pan("4111111111111111")
+println(pan)              // 411111******1111
+println("Card $pan ok")   // Card 411111******1111 ok
+val raw: String = pan.unmasked()  // explicit opt-in to the raw form
+```
+
+Construction validates length (12–19 digits) and Luhn (#7); failures throw `IllegalArgumentException` with messages that never embed the raw input.
 
 ## Tests
 
