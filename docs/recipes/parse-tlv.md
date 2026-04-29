@@ -111,3 +111,21 @@ val tlvs = TlvDecoder.parseOrThrow(data)
 - Interpreting EMV tags semantically (PAN, expiry, brand) — see future recipes once the `emv` and `extract` modules ship.
 - Building APDUs and chaining `61 xx` / `6C xx` responses — that's transport-layer concern.
 - Handling cards that return token PANs (`9F6B` Mastercard PayPass etc.) vs raw PANs (`5A`) — extraction module will handle that.
+
+## Re-emit a parsed tree
+
+If you need to forward the same TLV stream you decoded — for example, to a downstream service that expects raw EMV bytes — use `TlvEncoder`:
+
+```kotlin
+import io.github.a7asoft.nfcemv.tlv.*
+
+val parsed = TlvDecoder.parse(response)
+if (parsed is TlvParseResult.Ok) {
+    val reEmitted: ByteArray = TlvEncoder.encode(parsed.tlvs)
+    forwardToBackend(reEmitted)
+}
+```
+
+Output is always DER-canonical (minimal length, definite-only). If the original card response used non-minimal length octets (uncommon), the re-emitted bytes will be shorter but **semantically identical** — a second `TlvDecoder.parse` produces the same `Tlv` tree.
+
+> **PCI safety:** the encoder writes value bytes for sensitive tags (`5A`, `57`, `9F26`) into the output `ByteArray` as required to be useful — that is the encoder's job. The constraint is the same as for `Tlv.Primitive.copyValue()`: never log the result, never persist it, never send it anywhere except a typed extractor or a transport whose endpoint is itself PCI-scoped.
