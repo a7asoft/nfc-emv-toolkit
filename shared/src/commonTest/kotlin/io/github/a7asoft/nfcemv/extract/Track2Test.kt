@@ -219,13 +219,19 @@ class Track2Test {
     }
 
     @Test
-    fun `toString never embeds raw discretionary digits`() {
-        val track2 = Track2.parseOrThrow(visaFixture)
-        val rendered = track2.toString()
-        val tail = rendered.removePrefix(
-            "Track2(pan=411111******1111, expiry=2028-12, service=201, discretionary.size=",
+    fun `toString output never contains the discretionary digit sequence`() {
+        // The visaFixture's discretionary is "0000". The discretionary length
+        // (4) IS expected in the output, so we cannot simply test "0000 not in
+        // toString". Instead, build a fixture whose discretionary digits do NOT
+        // also appear as the integer length, and assert absence directly.
+        val raw = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01,
+            0x12, 0x34, 0x56, 0x7F.toByte(), // discretionary "1234567" + F-pad
         )
-        assertFalse("0000" in tail)
+        val track2 = Track2.parseOrThrow(raw)
+        val rendered = track2.toString()
+        assertFalse("1234567" in rendered)
     }
 
     @Test
