@@ -59,6 +59,56 @@ class Track2Test {
     }
 
     @Test
+    fun `parse rejects truncated expiry with ExpiryTooShort`() {
+        // 16d PAN + D + only 2 expiry nibbles + F pad → 20 nibbles, 10 bytes.
+        // Bytes: 41 11 11 11 11 11 11 11 D2 8F
+        val raw = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x8F.toByte(),
+        )
+        val err = assertIs<Track2Result.Err>(Track2.parse(raw))
+        val cause = assertIs<Track2Error.ExpiryTooShort>(err.error)
+        assertEquals(2, cause.nibblesAvailable)
+    }
+
+    @Test
+    fun `parse rejects expiry month 00 with InvalidExpiryMonth`() {
+        // PAN + D + 2800 + 201 + 0000 → 28 nibbles, 14 bytes.
+        val raw = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x80.toByte(), 0x02, 0x01, 0x00, 0x00,
+        )
+        val err = assertIs<Track2Result.Err>(Track2.parse(raw))
+        assertEquals(Track2Error.InvalidExpiryMonth(month = 0), err.error)
+    }
+
+    @Test
+    fun `parse rejects expiry month 13 with InvalidExpiryMonth`() {
+        // PAN + D + 2813 + 201 + 0000 → 28 nibbles, 14 bytes.
+        val raw = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x32, 0x01, 0x00, 0x00,
+        )
+        val err = assertIs<Track2Result.Err>(Track2.parse(raw))
+        assertEquals(Track2Error.InvalidExpiryMonth(month = 13), err.error)
+    }
+
+    @Test
+    fun `parse accepts every legal month from 01 to 12`() {
+        (1..12).forEach { month ->
+            val mmHigh = month / 10
+            val mmLow = month % 10
+            val raw = byteArrayOf(
+                0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+                0xD2.toByte(), (0x80 or mmHigh).toByte(),
+                ((mmLow shl 4) or 0x2).toByte(), 0x01, 0x00, 0x00,
+            )
+            val ok = assertIs<Track2Result.Ok>(Track2.parse(raw))
+            assertEquals(YearMonth(2028, month), ok.track2.expiry)
+        }
+    }
+
+    @Test
     fun `parse rejects too-short PAN with PanRejected wrapping LengthOutOfRange`() {
         // 11-digit PAN (11 nibbles) → less than Pan minimum 12.
         // 11 + 1(D) + 4(YYMM) + 3(SSS) = 19 nibbles → +F pad = 20 → 10 bytes.
