@@ -117,18 +117,32 @@ if ("4111111111111111".isValidLuhn()) {
 
 ## Extract
 
-`Pan` is a `@JvmInline value class` that wraps a primary account number and keeps raw digits off `toString()`, stack traces, and string interpolation.
+`Pan` is a `@JvmInline value class` that wraps a primary account number and keeps raw digits off `toString()`, stack traces, and string interpolation. Construction goes through a typed factory; the primary constructor is `internal`.
 
 ```kotlin
 import io.github.a7asoft.nfcemv.extract.Pan
+import io.github.a7asoft.nfcemv.extract.PanResult
 
-val pan = Pan("4111111111111111")
+// Result-driven control flow
+when (val result = Pan.parse(input)) {
+    is PanResult.Ok  -> use(result.pan)
+    is PanResult.Err -> reportRefusal(result.error)
+}
+
+// Or, throw-on-error
+val pan = Pan.parseOrThrow("4111111111111111")
 println(pan)              // 411111******1111
 println("Card $pan ok")   // Card 411111******1111 ok
 val raw: String = pan.unmasked()  // explicit opt-in to the raw form
 ```
 
-Construction validates length (12–19 digits) and Luhn (#7); failures throw `IllegalArgumentException` with messages that never embed the raw input.
+`Pan.parse` returns a sealed `PanResult` with a typed `PanError` reason:
+
+| Variant                  | When                                                              |
+|--------------------------|-------------------------------------------------------------------|
+| `LengthOutOfRange`       | Input is not 12 to 19 characters long                             |
+| `NonDigitCharacters`     | Input contains anything other than `'0'..'9'`                     |
+| `LuhnCheckFailed`        | Input is well-formed digits but fails the mod-10 check (#7)       |
 
 ## Tests
 
