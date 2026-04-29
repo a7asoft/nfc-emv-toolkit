@@ -205,6 +205,21 @@ class EmvFieldExtractorsTest {
     }
 
     @Test
+    fun `extractCardholderName decodes ISO-8859-1 high-byte characters correctly`() {
+        // "MÜLLER" in ISO-8859-1: M=0x4D, Ü=0xDC, L=0x4C, L=0x4C, E=0x45, R=0x52
+        val bytes = byteArrayOf(0x4D, 0xDC.toByte(), 0x4C, 0x4C, 0x45, 0x52)
+        val node = Tlv.Primitive(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F20"), bytes)
+        assertEquals("MÜLLER", extractCardholderName(node))
+    }
+
+    @Test
+    fun `extractCardholderName decodes 0xFF as the highest Latin-1 codepoint`() {
+        val bytes = byteArrayOf(0xFF.toByte())
+        val node = Tlv.Primitive(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F20"), bytes)
+        assertEquals("ÿ", extractCardholderName(node))
+    }
+
+    @Test
     fun `extractApplicationLabel returns the trimmed ASCII string`() {
         val node = Tlv.Primitive(
             io.github.a7asoft.nfcemv.tlv.Tag.fromHex("50"),

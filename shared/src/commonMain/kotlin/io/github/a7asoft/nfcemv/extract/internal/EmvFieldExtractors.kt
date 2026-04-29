@@ -86,7 +86,7 @@ internal fun extractExpiry(node: Tlv.Primitive): ExtractResult<YearMonth> {
 }
 
 /**
- * Decode tag `5F20` (Cardholder Name) — `AN` ASCII bytes,
+ * Decode tag `5F20` (Cardholder Name) — `AN` ISO-8859-1 bytes,
  * right-padded with `0x20`. Returns `null` when the value is empty
  * or contains only spaces.
  *
@@ -97,10 +97,10 @@ internal fun extractExpiry(node: Tlv.Primitive): ExtractResult<YearMonth> {
  * enforces this by emitting a length-only placeholder.
  */
 internal fun extractCardholderName(node: Tlv.Primitive): String? =
-    decodeTrimmedAscii(node.copyValue())
+    decodeTrimmedLatin1(node.copyValue())
 
 /**
- * Decode tag `50` (Application Label) — `AN` ASCII bytes,
+ * Decode tag `50` (Application Label) — `AN` ISO-8859-1 bytes,
  * right-padded with `0x20`. Returns `null` when the value is empty
  * or contains only spaces.
  *
@@ -108,11 +108,13 @@ internal fun extractCardholderName(node: Tlv.Primitive): String? =
  * log raw.
  */
 internal fun extractApplicationLabel(node: Tlv.Primitive): String? =
-    decodeTrimmedAscii(node.copyValue())
+    decodeTrimmedLatin1(node.copyValue())
 
-private fun decodeTrimmedAscii(bytes: ByteArray): String? {
+private fun decodeTrimmedLatin1(bytes: ByteArray): String? {
     if (bytes.isEmpty()) return null
-    val text = bytes.decodeToString().trimEnd(' ')
+    val text = buildString(bytes.size) {
+        for (b in bytes) append(Char(b.toInt() and 0xFF))
+    }.trimEnd(' ')
     return text.ifEmpty { null }
 }
 
