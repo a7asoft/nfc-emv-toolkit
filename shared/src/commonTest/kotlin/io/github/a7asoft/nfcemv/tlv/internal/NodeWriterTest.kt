@@ -99,12 +99,14 @@ class NodeWriterTest {
     @Test
     fun `rejects trees deeper than MAX_DEPTH`() {
         // Build a chain of MAX_DEPTH + 2 constructed nodes wrapping a leaf so
-        // the recursion definitely exceeds the bound on the way down.
+        // the recursion definitely exceeds the bound on the way down. dst is
+        // sized generously rather than via encodedSize, since encodedSize also
+        // enforces MAX_DEPTH and would mask the writeNode-side guard under test.
         var node: Tlv = Tlv.Primitive(Tag.fromHex("57"), ByteArray(0))
         repeat(MAX_DEPTH + 2) {
             node = Tlv.Constructed(Tag.fromHex("70"), listOf(node))
         }
-        val dst = ByteArray(encodedSize(node))
+        val dst = ByteArray(4 * (MAX_DEPTH + 4))
         assertFailsWith<IllegalStateException> {
             writeNode(node, dst, offset = 0, depth = 0)
         }

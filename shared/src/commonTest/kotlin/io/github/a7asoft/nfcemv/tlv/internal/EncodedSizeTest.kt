@@ -4,6 +4,7 @@ import io.github.a7asoft.nfcemv.tlv.Tag
 import io.github.a7asoft.nfcemv.tlv.Tlv
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class EncodedSizeTest {
 
@@ -63,5 +64,14 @@ class EncodedSizeTest {
         // outer tag 70 (1) + length 0x82 0x01 0x90 (3) + 400 = 404
         val outer = Tlv.Constructed(Tag.fromHex("70"), children)
         assertEquals(404, encodedSize(outer))
+    }
+
+    @Test
+    fun `encodedSize rejects trees deeper than MAX_DEPTH with IllegalStateException`() {
+        var node: Tlv = Tlv.Primitive(Tag.fromHex("57"), ByteArray(0))
+        repeat(MAX_DEPTH + 2) {
+            node = Tlv.Constructed(Tag.fromHex("70"), listOf(node))
+        }
+        assertFailsWith<IllegalStateException> { encodedSize(node) }
     }
 }

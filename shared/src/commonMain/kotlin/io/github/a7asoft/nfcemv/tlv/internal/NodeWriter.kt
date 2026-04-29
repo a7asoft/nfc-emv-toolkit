@@ -2,9 +2,6 @@ package io.github.a7asoft.nfcemv.tlv.internal
 
 import io.github.a7asoft.nfcemv.tlv.Tlv
 
-/** Hard cap on encoder recursion depth; mirrors the decoder's default bound. */
-internal const val MAX_DEPTH = 64
-
 /**
  * Write [node] into [dst] starting at [offset] in DER-canonical BER-TLV form.
  * Returns the offset just past the last byte written.
