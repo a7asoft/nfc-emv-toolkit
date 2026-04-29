@@ -278,6 +278,71 @@ class EmvParserTest {
         assertEquals("MÜLLER", ok.card.cardholderName)
     }
 
+    @Test
+    fun `parse surfaces InvalidAid when the 4F entry has too few bytes`() {
+        // 4F entry with 4-byte value (below the 5-byte AID minimum).
+        // 5A and 5F24 present and valid.
+        // 4F entry: 4F 04 A0 00 00 00 = 6 bytes
+        // Inner: 6 + 10 + 6 = 22 bytes. Outer 70 16.
+        val raw = byteArrayOf(
+            0x70, 0x16,
+            0x4F, 0x04, 0xA0.toByte(), 0x00, 0x00, 0x00,
+            0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        )
+        val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(raw)))
+        assertEquals(EmvCardError.InvalidAid(byteCount = 4), err.error)
+    }
+
+    @Test
+    fun `parse surfaces Track2Rejected when tag 57 is present but malformed`() {
+        // Tag 57 with no D separator — Track2.parse rejects with
+        // MissingSeparator, surfaces as EmvCardError.Track2Rejected.
+        // 57 entry: 57 08 41 11 11 11 11 11 11 11 = 10 bytes (no D in PAN).
+        // Inner: 9 + 10 + 6 + 10 = 35 bytes. Outer 70 23.
+        val raw = byteArrayOf(
+            0x70, 0x23,
+            0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+            0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+            0x57, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        )
+        val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(raw)))
+        val t2err = assertIs<EmvCardError.Track2Rejected>(err.error)
+        assertEquals(io.github.a7asoft.nfcemv.extract.Track2Error.MissingSeparator, t2err.cause)
+    }
+
+    @Test
+    fun `parse surfaces InvalidExpiryFormat when 5F24 is 2 bytes`() {
+        // 5F24 entry: 5F 24 02 28 12 = 5 bytes (2-byte value, expected 3).
+        // Inner: 9 + 10 + 5 = 24 bytes. Outer 70 18.
+        val raw = byteArrayOf(
+            0x70, 0x18,
+            0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+            0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0x5F, 0x24, 0x02, 0x28, 0x12,
+        )
+        val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(raw)))
+        assertEquals(EmvCardError.InvalidExpiryFormat(nibbleCount = 4), err.error)
+    }
+
+    @Test
+    fun `parse surfaces MalformedPanNibble when 5A contains a non-digit nibble`() {
+        // 5A entry with 0xA at nibble position 3 (second byte's high
+        // nibble). Mirror the unit-level test from Task 2.
+        // 5A entry: 5A 08 41 1A 11 11 11 11 11 11 = 10 bytes.
+        // Inner: 9 + 10 + 6 = 25 bytes. Outer 70 19.
+        val raw = byteArrayOf(
+            0x70, 0x19,
+            0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+            0x5A, 0x08, 0x41, 0x1A, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        )
+        val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(raw)))
+        val malformed = assertIs<EmvCardError.MalformedPanNibble>(err.error)
+        assertEquals(3, malformed.offset)
+    }
+
     private companion object {
         const val FUZZ_SEED: Long = 0x454D5643L // "EMVC"
         const val FUZZ_ITERATIONS: Int = 1_000
