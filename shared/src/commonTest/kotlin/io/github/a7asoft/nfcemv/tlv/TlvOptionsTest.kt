@@ -12,7 +12,6 @@ class TlvOptionsTest {
         val opts = TlvOptions()
         assertTrue(opts.strict)
         assertTrue(opts.tolerateZeroPadding)
-        assertTrue(opts.rejectTrailingBytes)
         assertEquals(4, opts.maxTagBytes)
         assertEquals(16, opts.maxDepth)
     }

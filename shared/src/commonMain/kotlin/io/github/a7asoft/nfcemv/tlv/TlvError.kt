@@ -59,12 +59,4 @@ public sealed interface TlvError {
 
     /** Constructed nesting exceeded [TlvOptions.maxDepth]. */
     public data class MaxDepthExceeded(override val offset: Int, val limit: Int) : TlvError
-
-    /**
-     * The input contained bytes after the last complete TLV.
-     *
-     * Common cause: caller forgot to strip the SW1 SW2 status word from an
-     * APDU response before passing the data to the decoder.
-     */
-    public data class TrailingBytes(override val offset: Int, val remaining: Int) : TlvError
 }

@@ -16,16 +16,18 @@ package io.github.a7asoft.nfcemv.tlv
  *   arbitrary length; EMV uses at most 2. Bounded to prevent decoder DoS.
  * @property maxDepth Hard cap on constructed-tag nesting. Bounded to prevent
  *   stack-overflow attacks via crafted input.
- * @property rejectTrailingBytes When true, fail if input contains bytes after
- *   the last decoded TLV. The most common cause is a caller forgetting to strip
- *   the SW1 SW2 status word from an APDU response — strict default surfaces this.
+ *
+ * Note: an earlier draft included a `rejectTrailingBytes` option intended to
+ * catch callers that forgot to strip an APDU response's SW1 SW2 status word.
+ * It was removed because, at the BER-TLV layer, `90 00` decodes as a valid
+ * primitive (`tag=0x90, value=[]`), not as trailing bytes. SW1 SW2 detection
+ * belongs to the transport / APDU layer, not the TLV decoder.
  */
 public data class TlvOptions(
     val strict: Boolean = true,
     val tolerateZeroPadding: Boolean = true,
     val maxTagBytes: Int = 4,
     val maxDepth: Int = 16,
-    val rejectTrailingBytes: Boolean = true,
 ) {
     init {
         require(maxTagBytes in 1..4) { "maxTagBytes out of range: $maxTagBytes" }
