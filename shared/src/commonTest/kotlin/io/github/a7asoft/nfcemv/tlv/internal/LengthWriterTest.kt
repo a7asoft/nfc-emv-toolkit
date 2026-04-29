@@ -123,4 +123,38 @@ class LengthWriterTest {
     fun `lengthOctets is 5 for length Int MAX_VALUE`() {
         assertEquals(5, lengthOctets(Int.MAX_VALUE))
     }
+
+    @Test
+    fun `writeLength writes at the requested offset and leaves earlier bytes untouched`() {
+        val dst = ByteArray(5)
+        dst[0] = 0xAA.toByte()
+        dst[1] = 0xBB.toByte()
+        val end = writeLength(0x100, dst, offset = 2)
+        assertEquals(5, end)
+        assertContentEquals(
+            byteArrayOf(0xAA.toByte(), 0xBB.toByte(), 0x82.toByte(), 0x01, 0x00),
+            dst,
+        )
+    }
+
+    @Test
+    fun `writeLength rejects negative input`() {
+        val dst = ByteArray(1)
+        try {
+            writeLength(-1, dst, 0)
+            error("expected IllegalArgumentException")
+        } catch (_: IllegalArgumentException) {
+            // expected
+        }
+    }
+
+    @Test
+    fun `lengthOctets rejects negative input`() {
+        try {
+            lengthOctets(-1)
+            error("expected IllegalArgumentException")
+        } catch (_: IllegalArgumentException) {
+            // expected
+        }
+    }
 }
