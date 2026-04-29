@@ -57,4 +57,30 @@ class LengthWriterTest {
     fun `lengthOctets is 2 for length 0xFF`() {
         assertEquals(2, lengthOctets(0xFF))
     }
+
+    @Test
+    fun `writeLength encodes 0x100 as 0x82 0x01 0x00`() {
+        val dst = ByteArray(3)
+        val end = writeLength(0x100, dst, 0)
+        assertEquals(3, end)
+        assertContentEquals(byteArrayOf(0x82.toByte(), 0x01, 0x00), dst)
+    }
+
+    @Test
+    fun `writeLength encodes 0xFFFF as 0x82 0xFF 0xFF`() {
+        val dst = ByteArray(3)
+        val end = writeLength(0xFFFF, dst, 0)
+        assertEquals(3, end)
+        assertContentEquals(byteArrayOf(0x82.toByte(), 0xFF.toByte(), 0xFF.toByte()), dst)
+    }
+
+    @Test
+    fun `lengthOctets is 3 for length 0x100`() {
+        assertEquals(3, lengthOctets(0x100))
+    }
+
+    @Test
+    fun `lengthOctets is 3 for length 0xFFFF`() {
+        assertEquals(3, lengthOctets(0xFFFF))
+    }
 }
