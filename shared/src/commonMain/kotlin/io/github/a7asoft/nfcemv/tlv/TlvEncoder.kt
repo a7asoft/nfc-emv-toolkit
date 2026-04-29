@@ -13,9 +13,14 @@ import io.github.a7asoft.nfcemv.tlv.internal.writeNode
  * and `BF0C` round-trip byte-for-byte at the tag level.
  *
  * The encoder uses two passes over a pre-allocated [ByteArray]: first to
- * compute the total size, second to fill the buffer. No intermediate
- * growth, no temporary copies of value bytes beyond the one defensive copy
- * the [Tlv.Primitive] contract already requires.
+ * compute the total size, second to fill the buffer. The second pass
+ * re-derives constructed-node lengths on the fly (the first pass's running
+ * subtotals are not memoized), so the work is roughly `O(n + n_constructed
+ * × children-per-constructed)` rather than strictly linear; for the
+ * EMV-shaped trees this library targets, both terms are small. Value bytes
+ * are written into [dst] in a single defensive copy via the `internal`
+ * [Tlv.Primitive] writer — no temporary value-bytes buffers exist anywhere
+ * in the encoder path.
  *
  * Defense in depth: a hardcoded `MAX_DEPTH = 64` guard mirrors the upper
  * bound of `TlvOptions.maxDepth`, protecting against caller-constructed

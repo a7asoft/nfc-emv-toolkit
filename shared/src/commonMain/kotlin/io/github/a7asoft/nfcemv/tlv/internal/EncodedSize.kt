@@ -20,11 +20,16 @@ private fun encodedSizeAt(node: Tlv, depth: Int): Int {
     }
 }
 
-private fun sizePrimitive(node: Tlv.Primitive): Int =
-    node.tag.byteCount + lengthOctets(node.length) + node.length
+private fun sizePrimitive(node: Tlv.Primitive): Int {
+    val size = node.tag.byteCount + lengthOctets(node.length) + node.length
+    require(size >= 0) { "Primitive encoded size overflows Int" }
+    return size
+}
 
 private fun sizeConstructed(node: Tlv.Constructed, depth: Int): Int {
     val childrenSize = node.children.sumOf { encodedSizeAt(it, depth + 1) }
     require(childrenSize >= 0) { "Constructed children size overflows Int" }
-    return node.tag.byteCount + lengthOctets(childrenSize) + childrenSize
+    val total = node.tag.byteCount + lengthOctets(childrenSize) + childrenSize
+    require(total >= 0) { "Constructed encoded size overflows Int" }
+    return total
 }
