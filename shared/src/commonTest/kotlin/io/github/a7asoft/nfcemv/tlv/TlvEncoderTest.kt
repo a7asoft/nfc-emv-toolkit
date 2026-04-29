@@ -87,4 +87,13 @@ class TlvEncoderTest {
         val node = Tlv.Primitive(Tag.fromHex("57"), byteArrayOf(0x10, 0x20))
         assertContentEquals(TlvEncoder.encode(node), TlvEncoder.encode(listOf(node)))
     }
+
+    @Test
+    fun `encode list overload rejects depth-exhausted trees with IllegalStateException`() {
+        var node: Tlv = Tlv.Primitive(Tag.fromHex("57"), ByteArray(0))
+        repeat(70) {
+            node = Tlv.Constructed(Tag.fromHex("70"), listOf(node))
+        }
+        assertFailsWith<IllegalStateException> { TlvEncoder.encode(listOf(node)) }
+    }
 }
