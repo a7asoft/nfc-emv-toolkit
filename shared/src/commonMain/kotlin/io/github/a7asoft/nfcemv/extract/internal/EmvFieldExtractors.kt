@@ -5,6 +5,7 @@ import io.github.a7asoft.nfcemv.extract.EmvCardError
 import io.github.a7asoft.nfcemv.extract.Pan
 import io.github.a7asoft.nfcemv.extract.PanResult
 import io.github.a7asoft.nfcemv.tlv.Tlv
+import kotlinx.datetime.YearMonth
 
 /**
  * Result envelope for per-field extractors. Mirrors the toolkit's other
@@ -53,6 +54,32 @@ internal fun extractPan(node: Tlv.Primitive): ExtractResult<Pan> {
 private const val MIN_AID_BYTES: Int = 5
 private const val MAX_AID_BYTES: Int = 16
 private const val PAD_NIBBLE: Int = 0xF
+private const val EXPIRY_NIBBLE_COUNT: Int = 6
+private const val CENTURY_OFFSET: Int = 2000
+private const val MIN_MONTH: Int = 1
+private const val MAX_MONTH: Int = 12
+
+/**
+ * Decode tag `5F24` (Application Expiration Date) — `YYMMDD` BCD.
+ *
+ * Returns a [YearMonth] taking only the `YYMM` portion; the day field
+ * is read but discarded (per the issue spec, `EmvCard.expiry` is a
+ * month, not a date). Two-digit `YY` is mapped to 21st century
+ * (`YY ⇒ 20YY`), matching the `Track2` convention from #6.
+ */
+internal fun extractExpiry(node: Tlv.Primitive): ExtractResult<YearMonth> {
+    val bytes = node.copyValue()
+    val nibbleCount = bytes.nibbleCount()
+    if (nibbleCount != EXPIRY_NIBBLE_COUNT) {
+        return ExtractResult.Err(EmvCardError.InvalidExpiryFormat(nibbleCount = nibbleCount))
+    }
+    val yy = bytes.nibbleAt(0) * 10 + bytes.nibbleAt(1)
+    val mm = bytes.nibbleAt(2) * 10 + bytes.nibbleAt(3)
+    if (mm !in MIN_MONTH..MAX_MONTH) {
+        return ExtractResult.Err(EmvCardError.InvalidExpiryMonth(month = mm))
+    }
+    return ExtractResult.Ok(YearMonth(CENTURY_OFFSET + yy, mm))
+}
 
 private fun unpackPanDigits(bytes: ByteArray): String {
     val totalNibbles = bytes.nibbleCount()

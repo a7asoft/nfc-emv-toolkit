@@ -92,4 +92,61 @@ class EmvFieldExtractorsTest {
         val panErr = assertIs<EmvCardError.PanRejected>(err.error)
         assertEquals(PanError.NonDigitCharacters, panErr.cause)
     }
+
+    // ---- Expiry ----
+
+    @Test
+    fun `extractExpiry returns YearMonth 2028-12 for 281231`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F24"),
+            byteArrayOf(0x28, 0x12, 0x31),
+        )
+        val result = extractExpiry(node)
+        val ok = assertIs<ExtractResult.Ok<kotlinx.datetime.YearMonth>>(result)
+        assertEquals(kotlinx.datetime.YearMonth(2028, 12), ok.value)
+    }
+
+    @Test
+    fun `extractExpiry surfaces InvalidExpiryFormat for a 2-byte value`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F24"),
+            byteArrayOf(0x28, 0x12),
+        )
+        val result = extractExpiry(node)
+        val err = assertIs<ExtractResult.Err>(result)
+        assertEquals(EmvCardError.InvalidExpiryFormat(nibbleCount = 4), err.error)
+    }
+
+    @Test
+    fun `extractExpiry surfaces InvalidExpiryFormat for a 4-byte value`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F24"),
+            byteArrayOf(0x28, 0x12, 0x31, 0x00),
+        )
+        val result = extractExpiry(node)
+        val err = assertIs<ExtractResult.Err>(result)
+        assertEquals(EmvCardError.InvalidExpiryFormat(nibbleCount = 8), err.error)
+    }
+
+    @Test
+    fun `extractExpiry surfaces InvalidExpiryMonth for month 00`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F24"),
+            byteArrayOf(0x28, 0x00, 0x31),
+        )
+        val result = extractExpiry(node)
+        val err = assertIs<ExtractResult.Err>(result)
+        assertEquals(EmvCardError.InvalidExpiryMonth(month = 0), err.error)
+    }
+
+    @Test
+    fun `extractExpiry surfaces InvalidExpiryMonth for month 13`() {
+        val node = Tlv.Primitive(
+            io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F24"),
+            byteArrayOf(0x28, 0x13, 0x31),
+        )
+        val result = extractExpiry(node)
+        val err = assertIs<ExtractResult.Err>(result)
+        assertEquals(EmvCardError.InvalidExpiryMonth(month = 13), err.error)
+    }
 }
