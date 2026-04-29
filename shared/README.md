@@ -9,6 +9,7 @@ Pure-Kotlin core for the nfc-emv-toolkit. Lives in `commonMain` and ships with n
 | `io.github.a7asoft.nfcemv.tlv` | BER-TLV decoder + encoder (this milestone) |
 | `io.github.a7asoft.nfcemv.tlv.internal` | Reader cursor, tag/length/node decoders, padding skipper. Internal — do not depend on these symbols. |
 | `io.github.a7asoft.nfcemv.validation` | Luhn check (this milestone) |
+| `io.github.a7asoft.nfcemv.extract` | PAN value class with PCI-safe `toString` (this milestone) |
 
 Future packages (later issues): `emv` (tag dictionary), `brand` (AID + BIN brand resolution), `extract` (PAN, Track2, expiry), `validation` (Luhn, format checks).
 
@@ -113,6 +114,35 @@ if ("4111111111111111".isValidLuhn()) {
     // proceed
 }
 ```
+
+## Extract
+
+`Pan` is a `@JvmInline value class` that wraps a primary account number and keeps raw digits off `toString()`, stack traces, and string interpolation. Construction goes through a typed factory; the primary constructor is `internal`.
+
+```kotlin
+import io.github.a7asoft.nfcemv.extract.Pan
+import io.github.a7asoft.nfcemv.extract.PanResult
+
+// Result-driven control flow
+when (val result = Pan.parse(input)) {
+    is PanResult.Ok  -> use(result.pan)
+    is PanResult.Err -> reportRefusal(result.error)
+}
+
+// Or, throw-on-error
+val pan = Pan.parseOrThrow("4111111111111111")
+println(pan)              // 411111******1111
+println("Card $pan ok")   // Card 411111******1111 ok
+val raw: String = pan.unmasked()  // explicit opt-in to the raw form
+```
+
+`Pan.parse` returns a sealed `PanResult` with a typed `PanError` reason:
+
+| Variant                  | When                                                              |
+|--------------------------|-------------------------------------------------------------------|
+| `LengthOutOfRange`       | Input is not 12 to 19 characters long                             |
+| `NonDigitCharacters`     | Input contains anything other than `'0'..'9'`                     |
+| `LuhnCheckFailed`        | Input is well-formed digits but fails the mod-10 check (#7)       |
 
 ## Tests
 
