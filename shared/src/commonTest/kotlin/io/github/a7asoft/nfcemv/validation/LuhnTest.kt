@@ -91,4 +91,38 @@ class LuhnTest {
         // most but not 09↔90 / 22↔55 / 33↔66 / 44↔77 — see KDoc).
         assertFalse("5555555555545444".isValidLuhn())
     }
+
+    @Test
+    fun `8-digit minimum PAN length validates`() {
+        assertTrue("00000000".isValidLuhn())
+    }
+
+    @Test
+    fun `13-digit legacy Visa PAN validates`() {
+        assertTrue("4222222222222".isValidLuhn())
+    }
+
+    @Test
+    fun `19-digit max-length PAN validates`() {
+        // Leading zeros do not affect Luhn (per ISO/IEC 7812-1 Annex B); use
+        // a 16-digit Visa test PAN with three leading zeros to reach 19.
+        assertTrue("0004111111111111111".isValidLuhn())
+    }
+
+    @Test
+    fun `leading zeros do not affect validity`() {
+        assertTrue("4111111111111111".isValidLuhn())
+        assertTrue("04111111111111111".isValidLuhn())
+        assertTrue("00004111111111111111".isValidLuhn())
+        assertFalse("4111111111111112".isValidLuhn())
+        assertFalse("00004111111111111112".isValidLuhn())
+    }
+
+    @Test
+    fun `all-zero strings of arbitrary length validate`() {
+        assertTrue("0".isValidLuhn())
+        assertTrue("00".isValidLuhn())
+        assertTrue("000".isValidLuhn())
+        assertTrue("0000000000000000".isValidLuhn())
+    }
 }
