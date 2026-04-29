@@ -103,13 +103,37 @@ class TagReaderTest {
         assertEquals(3, tag.byteCount)
     }
 
+    /**
+     * Regression: X.690 §8.1.2.4 mandates short-form for tag numbers ≤ 30, but
+     * EMVCo allocates real-world tags like 9F02 (Amount, Authorised Numeric)
+     * and BF0C (FCI Issuer Discretionary Data) in long-form even though their
+     * decoded tag numbers are 2 and 12 respectively.
+     *
+     * Strict mode in this library follows EMV practice: it does NOT enforce
+     * the X.690 short-form-mandatory rule. If you expect this to fail, you
+     * are reading the wrong spec.
+     */
     @Test
-    fun `strict mode accepts EMV style 9F02 with low tag number in long form`() {
-        // X.690 minimality says number 2 should use short form; EMV deviates.
-        // Decoder follows EMV practice and accepts it.
+    fun `strict mode accepts EMV tag 9F02 even though tag number is below 31`() {
         val r = TlvReader(byteArrayOf(0x9F.toByte(), 0x02))
         val tag = readTag(r, strict)
         assertEquals(Tag.fromHex("9F02"), tag)
+    }
+
+    @Test
+    fun `strict mode accepts EMV tag BF0C with tag number 12 in long form`() {
+        val r = TlvReader(byteArrayOf(0xBF.toByte(), 0x0C))
+        val tag = readTag(r, strict)
+        assertEquals(Tag.fromHex("BF0C"), tag)
+    }
+
+    @Test
+    fun `strict mode still rejects leading zero in first continuation`() {
+        // Even with the EMV deviation above, the X.690 §8.1.2.4 leading-zero rule
+        // (first continuation byte != 0x80) IS enforced.
+        val r = TlvReader(byteArrayOf(0x9F.toByte(), 0x80.toByte(), 0x02))
+        val ex = assertFailsWith<TlvParseException> { readTag(r, strict) }
+        assertEquals(TlvError.NonMinimalTagEncoding(0), ex.error)
     }
 
     @Test
