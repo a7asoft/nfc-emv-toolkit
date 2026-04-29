@@ -223,6 +223,61 @@ class EmvParserTest {
         kotlin.test.assertTrue(errCount > 0, "expected some rejections, got 0")
     }
 
+    @Test
+    fun `parse handles a List of multiple APDU response ByteArrays`() {
+        // Split the canonical fixture into TWO ByteArrays: one carrying
+        // the 4F + 5A + 5F24 + 5F20 + 50 wrapper, the other carrying the
+        // 57 Track 2 entry. Both must merge into a single EmvCard.
+        //
+        // First template inner: 4F (9) + 5A (10) + 5F24 (6) +
+        //   5F20 (12: 2-byte tag + 1 length + 9 value) + 50 (6) = 43 bytes.
+        //   Outer: 70 2B.
+        // Second template (16 bytes inner): 57 (16). Outer: 70 10.
+        val first = byteArrayOf(
+            0x70, 0x2B,
+            0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+            0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+            0x5F, 0x20, 0x09, 0x56, 0x49, 0x53, 0x41, 0x20, 0x54, 0x45, 0x53, 0x54,
+            0x50, 0x04, 0x56, 0x49, 0x53, 0x41,
+        )
+        val second = byteArrayOf(
+            0x70, 0x10,
+            0x57, 0x0E,
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+        )
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(first, second)))
+        val card = ok.card
+        assertEquals("4111111111111111", card.pan.unmasked())
+        assertEquals(YearMonth(2028, 12), card.expiry)
+        assertEquals("VISA TEST", card.cardholderName)
+        assertEquals("VISA", card.applicationLabel)
+        assertNotNull(card.track2)
+    }
+
+    @Test
+    fun `parse decodes a Latin-1 cardholder name across high bytes`() {
+        // Replace the canonical fixture's 5F20 entry with "MÜLLER" (Latin-1)
+        // M=0x4D, Ü=0xDC, L=0x4C, L=0x4C, E=0x45, R=0x52.
+        // 5F 20 06 4D DC 4C 4C 45 52 — 9 bytes total
+        // Outer template inner = 4F (9) + 5A (10) + 5F24 (6) + 5F20 (9) +
+        //   50 (6) + 57 (16) = 56 bytes. Outer 70 38.
+        val raw = byteArrayOf(
+            0x70, 0x38,
+            0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+            0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+            0x5F, 0x20, 0x06, 0x4D, 0xDC.toByte(), 0x4C, 0x4C, 0x45, 0x52,
+            0x50, 0x04, 0x56, 0x49, 0x53, 0x41,
+            0x57, 0x0E,
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+        )
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(raw)))
+        assertEquals("MÜLLER", ok.card.cardholderName)
+    }
+
     private companion object {
         const val FUZZ_SEED: Long = 0x454D5643L // "EMVC"
         const val FUZZ_ITERATIONS: Int = 1_000
