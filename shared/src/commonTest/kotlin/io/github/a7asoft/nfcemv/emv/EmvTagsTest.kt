@@ -75,4 +75,69 @@ class EmvTagsTest {
         assertEquals(EmvTagLength.Fixed(8), info.length)
         assertEquals(TagSensitivity.PCI, info.sensitivity)
     }
+
+    @Test
+    fun `dictionary contains exactly 27 entries`() {
+        assertEquals(27, EmvTags.all.size)
+    }
+
+    @Test
+    fun `dictionary has no duplicate tag entries`() {
+        val tags = EmvTags.all.map { it.tag }
+        assertEquals(tags.size, tags.toSet().size)
+    }
+
+    @Test
+    fun `every entry's name is non-blank`() {
+        EmvTags.all.forEach { entry ->
+            kotlin.test.assertTrue(entry.name.isNotBlank(), "blank name for tag ${entry.tag}")
+        }
+    }
+
+    @Test
+    fun `lookup resolves every registered entry by its tag`() {
+        EmvTags.all.forEach { entry ->
+            assertEquals(entry, EmvTags.lookup(entry.tag), "lookup mismatch for tag ${entry.tag}")
+        }
+    }
+
+    @Test
+    fun `lookup returns null for several unregistered tags`() {
+        listOf("99", "FF", "9F99", "BFAA").forEach { hex ->
+            kotlin.test.assertNull(
+                EmvTags.lookup(io.github.a7asoft.nfcemv.tlv.Tag.fromHex(hex)),
+                "expected null for unregistered tag $hex",
+            )
+        }
+    }
+
+    @Test
+    fun `tag 5A is the PAN with CN format and PCI sensitivity`() {
+        val pan = EmvTags.lookup(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5A"))!!
+        assertEquals(EmvTagFormat.CN, pan.format)
+        assertEquals(EmvTagLength.Variable(10), pan.length)
+        assertEquals(TagSensitivity.PCI, pan.sensitivity)
+    }
+
+    @Test
+    fun `tag 4F is the AID with B format and PUBLIC sensitivity`() {
+        val aid = EmvTags.lookup(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("4F"))!!
+        assertEquals(EmvTagFormat.B, aid.format)
+        assertEquals(EmvTagLength.Variable(16), aid.length)
+        assertEquals(TagSensitivity.PUBLIC, aid.sensitivity)
+    }
+
+    @Test
+    fun `tag 9F02 amount has N format and 6-byte fixed length`() {
+        val amount = EmvTags.lookup(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("9F02"))!!
+        assertEquals(EmvTagFormat.N, amount.format)
+        assertEquals(EmvTagLength.Fixed(6), amount.length)
+        assertEquals(TagSensitivity.PUBLIC, amount.sensitivity)
+    }
+
+    @Test
+    fun `tag 50 application label has AN format`() {
+        val label = EmvTags.lookup(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("50"))!!
+        assertEquals(EmvTagFormat.AN, label.format)
+    }
 }
