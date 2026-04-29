@@ -73,4 +73,22 @@ class LuhnTest {
     fun `Diners test PAN 30569309025904 is valid`() {
         assertTrue("30569309025904".isValidLuhn())
     }
+
+    @Test
+    fun `Visa test PAN with corrupted check digit is invalid`() {
+        assertFalse("4111111111111112".isValidLuhn())
+    }
+
+    @Test
+    fun `Visa test PAN with one mid-string digit changed is invalid`() {
+        assertFalse("4111111111121111".isValidLuhn())
+    }
+
+    @Test
+    fun `Mastercard test PAN with adjacent transposition is invalid`() {
+        // 5555555555554444 (valid) → 5555555555545444 (swap indices 11 and 12)
+        // Confirms adjacent-digit transposition is detected (Luhn catches
+        // most but not 09↔90 / 22↔55 / 33↔66 / 44↔77 — see KDoc).
+        assertFalse("5555555555545444".isValidLuhn())
+    }
 }
