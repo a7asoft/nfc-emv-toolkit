@@ -21,4 +21,26 @@ class LuhnTest {
         assertFalse("1".isValidLuhn())
         assertFalse("9".isValidLuhn())
     }
+
+    @Test
+    fun `whitespace inside string is rejected`() {
+        assertFalse("4111 1111 1111 1111".isValidLuhn())
+        assertFalse(" 4111111111111111".isValidLuhn())
+        assertFalse("4111111111111111 ".isValidLuhn())
+    }
+
+    @Test
+    fun `letters anywhere in string are rejected`() {
+        assertFalse("a".isValidLuhn())
+        assertFalse("411a111111111111".isValidLuhn())
+        assertFalse("4111111111111111a".isValidLuhn())
+        assertFalse("a4111111111111111".isValidLuhn())
+    }
+
+    @Test
+    fun `punctuation and unicode are rejected`() {
+        assertFalse("4111-1111-1111-1111".isValidLuhn())
+        assertFalse("4111 1111".isValidLuhn()) // non-breaking space
+        assertFalse("4111　1111".isValidLuhn()) // ideographic space
+    }
 }
