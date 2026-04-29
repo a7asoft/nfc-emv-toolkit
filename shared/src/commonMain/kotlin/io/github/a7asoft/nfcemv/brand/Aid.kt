@@ -1,0 +1,82 @@
+package io.github.a7asoft.nfcemv.brand
+
+/**
+ * An ISO/IEC 7816-5 Application Identifier (AID) — a Registered
+ * Application Provider Identifier (5-byte RID, ANSI-managed) followed by
+ * an optional Proprietary Application Identifier Extension (PIX, 0..11
+ * bytes). Total length 5..16 bytes per the spec.
+ *
+ * AIDs are public application metadata, NOT PCI data. `toString` returns
+ * the raw uppercase hex form. Construction goes through [Aid.fromHex] or
+ * [Aid.fromBytes] — both validate length and content; the primary
+ * constructor is `internal` so callers always go through a typed factory.
+ *
+ * Equality is content-based on the normalised uppercase hex string. Two
+ * AIDs constructed from the same bytes (regardless of input case) are
+ * equal and share a hash code.
+ */
+public class Aid internal constructor(private val raw: String) {
+
+    /** Number of bytes (1 byte per 2 hex chars). */
+    public val byteCount: Int get() = raw.length / 2
+
+    /** The 5-byte RID portion, in uppercase hex (10 chars). */
+    public val rid: String get() = raw.substring(0, RID_HEX_LENGTH)
+
+    /** The PIX portion (after the RID), in uppercase hex. May be empty. */
+    public val pix: String get() = raw.substring(RID_HEX_LENGTH)
+
+    override fun toString(): String = raw
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Aid) return false
+        return raw == other.raw
+    }
+
+    override fun hashCode(): Int = raw.hashCode()
+
+    public companion object {
+        private const val MIN_BYTES: Int = 5
+        private const val MAX_BYTES: Int = 16
+        private const val RID_HEX_LENGTH: Int = MIN_BYTES * 2
+
+        /**
+         * Construct an [Aid] from a hex string. Case is normalised to
+         * uppercase. Throws [IllegalArgumentException] on empty input,
+         * odd length, length outside `5..16` bytes, or non-hex characters.
+         */
+        public fun fromHex(hex: String): Aid {
+            require(hex.isNotEmpty()) { "AID hex must not be empty" }
+            require(hex.length % 2 == 0) { "AID hex length must be even, was ${hex.length}" }
+            val bytes = hex.length / 2
+            require(bytes in MIN_BYTES..MAX_BYTES) {
+                "AID byte length must be $MIN_BYTES..$MAX_BYTES, was $bytes"
+            }
+            val upper = hex.uppercase()
+            require(upper.all { it in '0'..'9' || it in 'A'..'F' }) {
+                "AID hex must contain only [0-9A-F]"
+            }
+            return Aid(upper)
+        }
+
+        /**
+         * Construct an [Aid] from a byte array. Length must be `5..16`.
+         */
+        public fun fromBytes(bytes: ByteArray): Aid {
+            require(bytes.size in MIN_BYTES..MAX_BYTES) {
+                "AID byte length must be $MIN_BYTES..$MAX_BYTES, was ${bytes.size}"
+            }
+            val hex = buildString(bytes.size * 2) {
+                for (b in bytes) {
+                    val v = b.toInt() and 0xFF
+                    append(HEX_CHARS[v ushr 4])
+                    append(HEX_CHARS[v and 0xF])
+                }
+            }
+            return Aid(hex)
+        }
+
+        private const val HEX_CHARS: String = "0123456789ABCDEF"
+    }
+}
