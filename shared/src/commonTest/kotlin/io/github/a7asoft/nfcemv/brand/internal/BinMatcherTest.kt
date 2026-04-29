@@ -8,8 +8,12 @@ import kotlin.test.assertTrue
 class BinMatcherTest {
 
     @Test
-    fun `Prefix matches a PAN whose digits start with the prefix`() {
+    fun `Prefix matches a PAN whose digits start with a 1 digit prefix`() {
         assertTrue(BinMatcher.Prefix("4").matches("4111111111111111"))
+    }
+
+    @Test
+    fun `Prefix matches a PAN whose digits start with a 2 digit prefix`() {
         assertTrue(BinMatcher.Prefix("51").matches("5105105105105100"))
     }
 
@@ -34,17 +38,32 @@ class BinMatcherTest {
     }
 
     @Test
-    fun `DigitRange matches when the leading digits fall inside the range`() {
+    fun `DigitRange matches at the lower boundary value`() {
         val mc2Series = BinMatcher.DigitRange(length = 4, lo = 2221, hi = 2720)
         assertTrue(mc2Series.matches("2221111111111111"))
-        assertTrue(mc2Series.matches("2500000000000000"))
+    }
+
+    @Test
+    fun `DigitRange matches at the upper boundary value`() {
+        val mc2Series = BinMatcher.DigitRange(length = 4, lo = 2221, hi = 2720)
         assertTrue(mc2Series.matches("2720999999999999"))
     }
 
     @Test
-    fun `DigitRange does not match outside the range`() {
+    fun `DigitRange matches an interior value`() {
+        val mc2Series = BinMatcher.DigitRange(length = 4, lo = 2221, hi = 2720)
+        assertTrue(mc2Series.matches("2500000000000000"))
+    }
+
+    @Test
+    fun `DigitRange does not match below the lower boundary`() {
         val mc2Series = BinMatcher.DigitRange(length = 4, lo = 2221, hi = 2720)
         assertFalse(mc2Series.matches("2220111111111111"))
+    }
+
+    @Test
+    fun `DigitRange does not match above the upper boundary`() {
+        val mc2Series = BinMatcher.DigitRange(length = 4, lo = 2221, hi = 2720)
         assertFalse(mc2Series.matches("2721000000000000"))
     }
 
@@ -55,12 +74,32 @@ class BinMatcherTest {
     }
 
     @Test
-    fun `DigitRange handles 6-digit Discover sub-range`() {
+    fun `DigitRange Discover sub range matches at the lower boundary 622126`() {
         val discover = BinMatcher.DigitRange(length = 6, lo = 622126, hi = 622925)
         assertTrue(discover.matches("6221260000000000"))
+    }
+
+    @Test
+    fun `DigitRange Discover sub range matches an interior value 622500`() {
+        val discover = BinMatcher.DigitRange(length = 6, lo = 622126, hi = 622925)
         assertTrue(discover.matches("6225000000000000"))
+    }
+
+    @Test
+    fun `DigitRange Discover sub range matches at the upper boundary 622925`() {
+        val discover = BinMatcher.DigitRange(length = 6, lo = 622126, hi = 622925)
         assertTrue(discover.matches("6229250000000000"))
+    }
+
+    @Test
+    fun `DigitRange Discover sub range does not match 622125`() {
+        val discover = BinMatcher.DigitRange(length = 6, lo = 622126, hi = 622925)
         assertFalse(discover.matches("6221250000000000"))
+    }
+
+    @Test
+    fun `DigitRange Discover sub range does not match 622926`() {
+        val discover = BinMatcher.DigitRange(length = 6, lo = 622126, hi = 622925)
         assertFalse(discover.matches("6229260000000000"))
     }
 
