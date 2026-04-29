@@ -191,7 +191,8 @@ nfc-emv-toolkit/
 
 ## Features (v0.1.0 milestone)
 
-- [ ] BER-TLV parser (encode + decode)
+- [x] BER-TLV decoder ([details](./shared/README.md))
+- [ ] BER-TLV encoder
 - [ ] EMV tag dictionary (Book 3 + contactless kernels)
 - [ ] AID directory (Visa, MC, Amex, JCB, Discover, UnionPay, more)
 - [ ] Card brand detection (AID + BIN range)
