@@ -39,6 +39,10 @@ internal val BIN_TABLE: List<Pair<BinMatcher, EmvBrand>> = listOf(
     BinMatcher.Prefix("56") to EmvBrand.MAESTRO,
     BinMatcher.Prefix("57") to EmvBrand.MAESTRO,
     BinMatcher.Prefix("58") to EmvBrand.MAESTRO,
+    BinMatcher.Prefix("6759") to EmvBrand.MAESTRO,
+    BinMatcher.Prefix("6761") to EmvBrand.MAESTRO,
+    BinMatcher.Prefix("6762") to EmvBrand.MAESTRO,
+    BinMatcher.Prefix("6763") to EmvBrand.MAESTRO,
     // Visa
     BinMatcher.Prefix("4") to EmvBrand.VISA,
     // UnionPay (catch-all after Discover sub-ranges)
