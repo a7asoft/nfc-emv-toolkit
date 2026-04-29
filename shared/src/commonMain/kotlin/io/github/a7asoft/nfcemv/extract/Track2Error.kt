@@ -39,11 +39,9 @@ public sealed interface Track2Error {
 
     /**
      * An `F` (`0x0F`) padding nibble appeared somewhere other than as the
-     * single trailing nibble of the input.
-     *
-     * Reserved for future stricter F-pad detection; the current parser
-     * surfaces non-trailing F as [MalformedBcdNibble] because `readDigits`
-     * treats any non-`0..9` nibble uniformly.
+     * single trailing nibble of the input. The offset of the offending F
+     * is implied by the parser's input-validation pass (always reported
+     * inside the input range, never past the effective end).
      */
     public data object MalformedFPadding : Track2Error
 }
