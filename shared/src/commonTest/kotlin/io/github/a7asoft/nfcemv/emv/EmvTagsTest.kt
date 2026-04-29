@@ -36,4 +36,28 @@ class EmvTagsTest {
         kotlin.test.assertFailsWith<IllegalArgumentException> { EmvTagLength.Variable(0) }
         kotlin.test.assertFailsWith<IllegalArgumentException> { EmvTagLength.Variable(-5) }
     }
+
+    @Test
+    fun `TagSensitivity has exactly two values`() {
+        assertEquals(
+            setOf(TagSensitivity.PCI, TagSensitivity.PUBLIC),
+            TagSensitivity.entries.toSet(),
+        )
+    }
+
+    @Test
+    fun `EmvTagInfo carries every field exposed by the spec`() {
+        val info = EmvTagInfo(
+            tag = io.github.a7asoft.nfcemv.tlv.Tag.fromHex("9F26"),
+            name = "Application Cryptogram",
+            format = EmvTagFormat.B,
+            length = EmvTagLength.Fixed(8),
+            sensitivity = TagSensitivity.PCI,
+        )
+        assertEquals("9F26", info.tag.toString())
+        assertEquals("Application Cryptogram", info.name)
+        assertEquals(EmvTagFormat.B, info.format)
+        assertEquals(EmvTagLength.Fixed(8), info.length)
+        assertEquals(TagSensitivity.PCI, info.sensitivity)
+    }
 }
