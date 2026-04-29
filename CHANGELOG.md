@@ -26,6 +26,11 @@ All notable changes to this project will be documented here. The format follows 
 - An earlier draft included a `rejectTrailingBytes` option intended to catch APDU responses passed in with SW1 SW2 still attached. Removed because at the BER-TLV layer `90 00` decodes as a valid empty primitive, not as trailing bytes — SW detection belongs to the transport layer.
 - Wizard-generated scaffold (`Greeting.kt`, `Platform.kt`, `SharedCommonTest.example`) cleaned up.
 
+### Added — Luhn validation (#7)
+- `String.isValidLuhn()` extension in `commonMain` package `io.github.a7asoft.nfcemv.validation` per ISO/IEC 7812-1 Annex B.
+- Predicate semantics: empty input, non-digit characters, embedded whitespace, and any non-`'0'..'9'` codepoint all return `false`. Length-agnostic (PAN length bounds belong to `Pan` per #5).
+- Property-tested against a textbook reference implementation across 1,000 random digit strings.
+
 ### Added — engineering setup
 - `CLAUDE.md` engineering rules (architecture, SOLID, code style, testing discipline §6.1).
 - `.claude/agents/` project-scoped reviewers: `emv-nfc-expert`, `pci-security-reviewer`.
