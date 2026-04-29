@@ -7,13 +7,24 @@ import kotlin.jvm.JvmInline
  * A primary account number (PAN) wrapped to keep raw digits off
  * `toString()`, stack traces, and string interpolation.
  *
- * Construction throws [IllegalArgumentException] when [raw]:
- * - is not 12 to 19 ASCII digits in length, or
- * - fails the Luhn / mod-10 check per ISO/IEC 7812-1 Annex B.
+ * Construction goes through one of the typed factory functions on the
+ * companion:
  *
- * Length range covers the modern ISO/IEC 7812-1 PAN range that masks
- * cleanly under the 6-prefix + last-4 PCI DSS Req 3.4 rule (12d Maestro
- * minimum through 19d ISO max).
+ * - [Pan.parse] returns a sealed [PanResult] carrying either the validated
+ *   [Pan] or a typed [PanError]. Mirrors `TlvDecoder.parse`.
+ * - [Pan.parseOrThrow] throws [IllegalArgumentException] on the first
+ *   detected violation. Mirrors `TlvDecoder.parseOrThrow`.
+ *
+ * Both validate (in this order):
+ * 1. Length is `12..19` (modern ISO/IEC 7812-1 PAN range that masks
+ *    cleanly under PCI DSS Req 3.4 first-6 + last-4 rule).
+ * 2. Every codepoint is in `'0'..'9'` (no whitespace, letters, Arabic-Indic
+ *    digits, fullwidth digits, or any other non-ASCII-digit codepoint).
+ * 3. Luhn / mod-10 check per ISO/IEC 7812-1 Annex B (#7).
+ *
+ * The primary constructor is `internal` and exists only so the factory
+ * functions and same-module tests can construct validated instances.
+ * External consumers of the library cannot bypass the typed factories.
  *
  * [toString] returns the PCI-DSS-compliant masked form: first 6 (BIN) +
  * `*` for the middle digits + last 4. The raw value is NEVER embedded in
@@ -31,12 +42,13 @@ import kotlin.jvm.JvmInline
  * value is not exposed by the comparison itself.
  */
 @JvmInline
-public value class Pan(private val raw: String) {
+public value class Pan internal constructor(private val raw: String) {
 
     init {
         require(raw.length in MIN_LENGTH..MAX_LENGTH) {
             "PAN length must be $MIN_LENGTH to $MAX_LENGTH digits, was ${raw.length}"
         }
+        require(raw.all { it in '0'..'9' }) { "PAN must be ASCII digits only" }
         require(raw.isValidLuhn()) { "PAN failed Luhn check" }
     }
 
@@ -44,8 +56,10 @@ public value class Pan(private val raw: String) {
      * Returns the underlying digit string. PCI-scoped: the caller is
      * responsible for not logging, persisting, or transmitting this value.
      *
-     * A future logging hook (per #v0.4.0 `Logger`) will instrument this
-     * accessor to emit a warning when called from production code.
+     * This member alone cannot be intercepted at runtime in a value class.
+     * A future `Logger`-aware extractor wrapper (per #v0.4.0) may emit a
+     * warning when this is reached, but the wrapping happens at the
+     * extractor surface, not on this method itself.
      */
     public fun unmasked(): String = raw
 
@@ -55,10 +69,39 @@ public value class Pan(private val raw: String) {
             raw.takeLast(VISIBLE_SUFFIX)
 
     public companion object {
-        internal const val MIN_LENGTH: Int = 12
-        internal const val MAX_LENGTH: Int = 19
+        private const val MIN_LENGTH: Int = 12
+        private const val MAX_LENGTH: Int = 19
         private const val VISIBLE_PREFIX: Int = 6
         private const val VISIBLE_SUFFIX: Int = 4
         private const val MASK_RESERVED: Int = VISIBLE_PREFIX + VISIBLE_SUFFIX
+
+        /**
+         * Parse [raw] into a [Pan], returning a typed [PanResult].
+         *
+         * Mirrors `TlvDecoder.parse` for callers who prefer sealed
+         * result-driven control flow over try / catch.
+         */
+        public fun parse(raw: String): PanResult {
+            if (raw.length !in MIN_LENGTH..MAX_LENGTH) {
+                return PanResult.Err(PanError.LengthOutOfRange(raw.length))
+            }
+            if (raw.any { it !in '0'..'9' }) {
+                return PanResult.Err(PanError.NonDigitCharacters)
+            }
+            if (!raw.isValidLuhn()) {
+                return PanResult.Err(PanError.LuhnCheckFailed)
+            }
+            return PanResult.Ok(Pan(raw))
+        }
+
+        /**
+         * Parse [raw] into a [Pan], or throw [IllegalArgumentException] on
+         * the first detected violation.
+         *
+         * Mirrors `TlvDecoder.parseOrThrow`. The exception message is
+         * static text plus the failing length integer (when applicable);
+         * raw digits are never embedded.
+         */
+        public fun parseOrThrow(raw: String): Pan = Pan(raw)
     }
 }
