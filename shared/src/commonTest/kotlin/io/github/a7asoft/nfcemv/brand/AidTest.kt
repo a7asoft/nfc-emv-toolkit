@@ -105,4 +105,41 @@ class AidTest {
             Aid.fromHex("a0000000031010").hashCode(),
         )
     }
+
+    @Test
+    fun `fromHex toString round-trips uppercase hex across 5 to 16 byte lengths`() {
+        val fixtures = listOf(
+            "A000000003",
+            "A0000000031010",
+            "A000000025010402",
+            "A000000333010101",
+            "A00000003200000000000000",
+            "A0000000030000000000000000000000",
+        )
+        val mismatches = fixtures.filter { hex ->
+            Aid.fromHex(hex).toString() != hex
+        }
+        assertEquals(emptyList(), mismatches, "round-trip failed for the listed AIDs")
+    }
+
+    @Test
+    fun `fromHex normalises lowercase round-trips to uppercase`() {
+        val mismatches = listOf("a0000000031010", "a000000025010402", "a000000333010101").filter { hex ->
+            Aid.fromHex(hex).toString() != hex.uppercase()
+        }
+        assertEquals(emptyList(), mismatches, "lowercase round-trip failed for the listed AIDs")
+    }
+
+    @Test
+    fun `fromBytes toString fromHex round-trip preserves the canonical hex form`() {
+        val bytes = byteArrayOf(0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10)
+        val fromBytes = Aid.fromBytes(bytes)
+        val fromHex = Aid.fromHex(fromBytes.toString())
+        assertEquals(fromBytes, fromHex)
+    }
+
+    @Test
+    fun `fromBytes rejects an array of length 4 just below the minimum`() {
+        assertFailsWith<IllegalArgumentException> { Aid.fromBytes(ByteArray(4)) }
+    }
 }
