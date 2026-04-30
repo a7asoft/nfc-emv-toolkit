@@ -60,6 +60,7 @@ style:
       - '**/shared/**/commonMain/**'
       - '**/shared/**/androidMain/**'
       - '**/shared/**/iosMain/**'
+      - '**/android/reader/src/main/**'
     methods:
       - reason: 'Use the Logger interface (CLAUDE.md §5.9). println leaks PCI data.'
         value: 'kotlin.io.println'
