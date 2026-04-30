@@ -4,6 +4,19 @@ All notable changes to this project will be documented here. The format follows 
 
 ## [Unreleased]
 
+### Added — PDOL-aware GPO + EmvParser AID injection (#57)
+- Reader now reads tag `9F38` from the SELECT AID FCI response, parses the DOL format, builds a structurally-valid PDOL response from terminal defaults (TTQ, country, currency, date, type, UN), wraps in `83 [Lc] [response]`, and sends it as the GPO command body. Cards return records instead of `6A 80` / `69 85`.
+- New 2-arg overload `EmvParser.parse(aid: Aid, records: List<ByteArray>)` (and the matching `parseOrThrow`). Real cards put `4F` (AID) in PPSE / SELECT AID FCI but NOT in READ RECORD records — the reader passes the PPSE-extracted AID directly. Existing 1-arg `parse(records)` keeps its behavior for v0.1.x synthetic fixtures.
+- New `:shared:commonMain` public types: `Pdol` + `PdolEntry` + `PdolError` + `PdolResult`, `SelectAidFci` + `SelectAidFciError` + `SelectAidFciResult`, `TerminalConfig` (with `Companion.default()`), `PdolResponseBuilder`. All follow the established `parse` / `parseOrThrow` mirror pattern.
+- `EmvTags` dictionary extended with `9F38`, `9F66`, `9F1A`, `95`, `9A`, `9C`, `9F33`, `9F35`, `9F40`, `9F09` entries.
+- `:android:reader` new public API: `ContactlessReader.read(config: TerminalConfig)` overload (the no-arg `read()` delegates to `read(TerminalConfig.default())`). New `internal ApduCommands.gpoCommand(pdolResponse)` builder. Two new `ReaderError` variants: `SelectAidFciRejected(cause)` and `PdolRejected(cause)`.
+- `ios/Sources/EmvReader` mirrors the Android refactor: parallel Swift `TerminalConfig` struct with `static let default`, new `Mapping` bridges (`parsePdol`, `parseSelectAidFci`, `buildPdolResponse`, `parseEmvCard(aid:records:)`), refactored `EmvReader.read(config:)` overload, two new `ReaderError` cases (`selectAidFciRejected`, `pdolRejected`).
+- `composeApp` `ErrorPanel` updated with friendly messages for the two new variants.
+- TTQ default `36 00 80 00` per javaemvreader / nfc-frog reference implementations. Country / currency US/USD per ISO 3166-1 / 4217 numeric `0840`. Amounts zero (read-only flow does not commit a transaction). Transaction date and unpredictable number computed at READ time so a long-lived `TerminalConfig` does not ship stale values.
+- ABI gate regenerated for the additive surface (4 new public types + 1 new `EmvParser.parse` overload + tag dict additions). Determinism verified.
+- Test coverage delta: `:shared:allTests` +49 (PdolTest, SelectAidFciTest, TerminalConfigTest, PdolResponseBuilderTest, EmvTagsTest, plus 5 new EmvParserTest cases). `:android:reader:check` +6 (PDOL-flow Visa, AID-injection records-without-4F, SelectAidFci/PDOL rejection, custom TTQ override, Mastercard back-compat). `EmvReaderTests` +5 (Swift mirror).
+- Module boundaries preserved per CLAUDE.md §7: only `NFCISO7816TagTransport.swift` imports CoreNFC; new bridges live in `Mapping.swift`. Out-of-scope per CLAUDE.md §1: ARQC, DDA/CDA, online auth, GENERATE AC, kernel certification.
+
 ### Added — iOS contactless reader (#50)
 - New `ios/Sources/EmvReader` Swift Package providing `EmvReader().read() -> AsyncStream<ReaderState>`. Wraps CoreNFC's `NFCTagReaderSession` + `NFCISO7816Tag` and orchestrates the full EMV contactless read flow per Book 1 §11–12: PPSE → SELECT AID → GPO → READ RECORD → `EmvParser.parse`. Mirrors the v0.2.0 Android reader (#48), but as Swift-idiomatic enums.
 - `ReaderState` and `ReaderError` defined as parallel Swift enums (decision: NOT promoted to `commonMain`). Manual mapping at the Kotlin/Swift boundary lives in a single `Mapping.swift`. Kept `commonMain` platform-neutral and gives iOS consumers idiomatic `switch` exhaustiveness on Swift-native types.

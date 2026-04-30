@@ -45,13 +45,22 @@ public object EmvTags {
         EmvTagInfo(Tag.fromHex("8C"),   "CDOL1 (Card Risk Management DOL 1)",          EmvTagFormat.B,  EmvTagLength.Variable(252), TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("8D"),   "CDOL2 (Card Risk Management DOL 2)",          EmvTagFormat.B,  EmvTagLength.Variable(252), TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("94"),   "Application File Locator (AFL)",              EmvTagFormat.B,  EmvTagLength.Variable(252), TagSensitivity.PUBLIC),
+        EmvTagInfo(Tag.fromHex("95"),   "Terminal Verification Results (TVR)",         EmvTagFormat.B,  EmvTagLength.Fixed(5),      TagSensitivity.PUBLIC),
+        EmvTagInfo(Tag.fromHex("9A"),   "Transaction Date (YYMMDD)",                   EmvTagFormat.N,  EmvTagLength.Fixed(3),      TagSensitivity.PUBLIC),
+        EmvTagInfo(Tag.fromHex("9C"),   "Transaction Type",                            EmvTagFormat.N,  EmvTagLength.Fixed(1),      TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("9F02"), "Amount, Authorised (Numeric)",                EmvTagFormat.N,  EmvTagLength.Fixed(6),      TagSensitivity.PUBLIC),
+        EmvTagInfo(Tag.fromHex("9F09"), "Application Version Number (Terminal)",       EmvTagFormat.B,  EmvTagLength.Fixed(2),      TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("9F10"), "Issuer Application Data (IAD)",               EmvTagFormat.B,  EmvTagLength.Variable(32),  TagSensitivity.PCI),
         EmvTagInfo(Tag.fromHex("9F12"), "Application Preferred Name",                  EmvTagFormat.AN, EmvTagLength.Variable(16),  TagSensitivity.PUBLIC),
+        EmvTagInfo(Tag.fromHex("9F1A"), "Terminal Country Code (ISO 3166-1 numeric)",  EmvTagFormat.N,  EmvTagLength.Fixed(2),      TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("9F26"), "Application Cryptogram",                      EmvTagFormat.B,  EmvTagLength.Fixed(8),      TagSensitivity.PCI),
         EmvTagInfo(Tag.fromHex("9F27"), "Cryptogram Information Data (CID)",           EmvTagFormat.B,  EmvTagLength.Fixed(1),      TagSensitivity.PUBLIC),
+        EmvTagInfo(Tag.fromHex("9F33"), "Terminal Capabilities",                       EmvTagFormat.B,  EmvTagLength.Fixed(3),      TagSensitivity.PUBLIC),
+        EmvTagInfo(Tag.fromHex("9F35"), "Terminal Type",                               EmvTagFormat.N,  EmvTagLength.Fixed(1),      TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("9F36"), "Application Transaction Counter (ATC)",       EmvTagFormat.B,  EmvTagLength.Fixed(2),      TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("9F37"), "Unpredictable Number",                        EmvTagFormat.B,  EmvTagLength.Fixed(4),      TagSensitivity.PUBLIC),
+        EmvTagInfo(Tag.fromHex("9F38"), "Processing Options Data Object List (PDOL)",  EmvTagFormat.B,  EmvTagLength.Variable(252), TagSensitivity.PUBLIC),
+        EmvTagInfo(Tag.fromHex("9F40"), "Additional Terminal Capabilities",            EmvTagFormat.B,  EmvTagLength.Fixed(5),      TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("9F4B"), "Signed Dynamic Application Data",             EmvTagFormat.B,  EmvTagLength.Variable(248), TagSensitivity.PCI),
         // why: tag 9F6B is multiplexed across kernels — Mastercard C-2 uses it
         // as Track 2 Data (PCI), Visa C-3 uses it as Card CVM Limit (PUBLIC,
@@ -60,6 +69,7 @@ public object EmvTags {
         // overlay is tracked as out-of-scope. Callers decoding under C-3 MUST
         // NOT rely on this entry.
         EmvTagInfo(Tag.fromHex("9F6B"), "Track 2 Data (Mastercard kernel C-2)",        EmvTagFormat.B,  EmvTagLength.Variable(19),  TagSensitivity.PCI),
+        EmvTagInfo(Tag.fromHex("9F66"), "Terminal Transaction Qualifiers (TTQ)",       EmvTagFormat.B,  EmvTagLength.Fixed(4),      TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("9F6C"), "Card Transaction Qualifiers (CTQ)",           EmvTagFormat.B,  EmvTagLength.Fixed(2),      TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("BF0C"), "FCI Issuer Discretionary Data",               EmvTagFormat.B,  EmvTagLength.Variable(222), TagSensitivity.PUBLIC),
     )

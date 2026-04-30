@@ -2,6 +2,7 @@ package io.github.a7asoft.nfcemv.reader
 
 import io.github.a7asoft.nfcemv.brand.Aid
 import io.github.a7asoft.nfcemv.extract.EmvCardError
+import io.github.a7asoft.nfcemv.extract.TerminalConfig
 import io.github.a7asoft.nfcemv.reader.internal.ApduCommands
 import io.github.a7asoft.nfcemv.reader.internal.FakeApduTransport
 import io.github.a7asoft.nfcemv.reader.internal.Transcripts
@@ -210,6 +211,98 @@ class ContactlessReaderTest {
         val states = ContactlessReader(transport).read().toList()
         val selecting = states.filterIsInstance<ReaderState.SelectingAid>().single()
         assertEquals(Aid.fromHex("A0000000041010"), selecting.aid)
+        assertIs<ReaderState.Done>(states.last())
+    }
+
+    @Test
+    fun `read parses PDOL from Visa FCI and sends correct GPO command body`() = runTest {
+        val transport = FakeApduTransport(
+            listOf(
+                ApduCommands.PPSE_SELECT to Transcripts.VISA_PPSE_RESPONSE,
+                selectVisaPrefix() to Transcripts.VISA_SELECT_FCI_WITH_PDOL_RESPONSE,
+                Transcripts.VISA_GPO_COMMAND_PDOL to Transcripts.VISA_GPO_RESPONSE,
+                readRecord1Sfi1Prefix() to Transcripts.VISA_RECORD_1_RESPONSE,
+            ),
+        )
+        val states = ContactlessReader(transport).read().toList()
+        assertIs<ReaderState.Done>(states.last())
+    }
+
+    @Test
+    fun `read uses injected AID and parses Visa records that lack 4F`() = runTest {
+        val transport = FakeApduTransport(
+            listOf(
+                ApduCommands.PPSE_SELECT to Transcripts.VISA_PPSE_RESPONSE,
+                selectVisaPrefix() to Transcripts.VISA_SELECT_FCI_RESPONSE,
+                ApduCommands.GPO_DEFAULT to Transcripts.VISA_GPO_RESPONSE,
+                readRecord1Sfi1Prefix() to Transcripts.VISA_RECORD_WITHOUT_4F_RESPONSE,
+            ),
+        )
+        val states = ContactlessReader(transport).read().toList()
+        val done = assertIs<ReaderState.Done>(states.last())
+        assertEquals(Aid.fromHex("A0000000031010"), done.card.aid)
+        assertEquals("4111111111111111", done.card.pan.unmasked())
+    }
+
+    @Test
+    fun `read emits SelectAidFciRejected on a malformed FCI body`() = runTest {
+        val transport = FakeApduTransport(
+            listOf(
+                ApduCommands.PPSE_SELECT to Transcripts.VISA_PPSE_RESPONSE,
+                selectVisaPrefix() to Transcripts.SELECT_FCI_MALFORMED_RESPONSE,
+            ),
+        )
+        val states = ContactlessReader(transport).read().toList()
+        val failed = assertIs<ReaderState.Failed>(states.last())
+        assertIs<ReaderError.SelectAidFciRejected>(failed.error)
+    }
+
+    @Test
+    fun `read emits PdolRejected when PDOL bytes are structurally invalid`() = runTest {
+        val transport = FakeApduTransport(
+            listOf(
+                ApduCommands.PPSE_SELECT to Transcripts.VISA_PPSE_RESPONSE,
+                selectVisaPrefix() to Transcripts.SELECT_FCI_TRUNCATED_PDOL_RESPONSE,
+            ),
+        )
+        val states = ContactlessReader(transport).read().toList()
+        val failed = assertIs<ReaderState.Failed>(states.last())
+        assertIs<ReaderError.PdolRejected>(failed.error)
+    }
+
+    @Test
+    fun `read with custom TerminalConfig overrides the default TTQ in the GPO body`() = runTest {
+        val customTtq = byteArrayOf(0x26, 0x00, 0x00, 0x00)
+        val expectedGpo = byteArrayOf(
+            0x80.toByte(), 0xA8.toByte(), 0x00, 0x00, 0x06,
+            0x83.toByte(), 0x04, 0x26, 0x00, 0x00, 0x00,
+            0x00,
+        )
+        val transport = FakeApduTransport(
+            listOf(
+                ApduCommands.PPSE_SELECT to Transcripts.VISA_PPSE_RESPONSE,
+                selectVisaPrefix() to Transcripts.VISA_SELECT_FCI_WITH_PDOL_RESPONSE,
+                expectedGpo to Transcripts.VISA_GPO_RESPONSE,
+                readRecord1Sfi1Prefix() to Transcripts.VISA_RECORD_1_RESPONSE,
+            ),
+        )
+        val custom = TerminalConfig.default().copy(terminalTransactionQualifiers = customTtq)
+        val states = ContactlessReader(transport).read(custom).toList()
+        assertIs<ReaderState.Done>(states.last())
+    }
+
+    @Test
+    fun `read with default Mastercard FCI sends empty PDOL GPO body for back compat`() = runTest {
+        // why: Mastercard FCI omits 9F38 → reader sends GPO_DEFAULT-equivalent body.
+        val transport = FakeApduTransport(
+            listOf(
+                ApduCommands.PPSE_SELECT to Transcripts.MASTERCARD_PPSE_RESPONSE,
+                selectMastercardPrefix() to Transcripts.MASTERCARD_SELECT_FCI_RESPONSE,
+                ApduCommands.GPO_DEFAULT to Transcripts.MASTERCARD_GPO_RESPONSE,
+                readRecord1Sfi1Prefix() to Transcripts.MASTERCARD_RECORD_1_RESPONSE,
+            ),
+        )
+        val states = ContactlessReader(transport).read().toList()
         assertIs<ReaderState.Done>(states.last())
     }
 

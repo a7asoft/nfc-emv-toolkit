@@ -79,14 +79,60 @@ public object EmvParser {
     /**
      * Parse [apduResponses] (each ByteArray = one APDU response data
      * field with SW1 SW2 already stripped) into an [EmvCardResult].
+     *
+     * Uses the `4F` (AID) tag found inside the records. Real EMV cards
+     * generally do NOT include `4F` in READ RECORD records — `4F` lives
+     * in the PPSE / SELECT AID FCI responses. Callers reading from a
+     * physical card should use the [parse] overload that accepts an
+     * [Aid] explicitly. This 1-arg overload remains for callers feeding
+     * synthetic fixtures (or older transcripts) where `4F` is inline.
      */
-    public fun parse(apduResponses: List<ByteArray>): EmvCardResult {
+    public fun parse(apduResponses: List<ByteArray>): EmvCardResult =
+        parseInternal(injectedAid = null, apduResponses = apduResponses)
+
+    /**
+     * Parse [apduResponses] using [aid] as the application identifier.
+     *
+     * The injected [aid] takes precedence over any `4F` tag found in
+     * the records. This overload matches the real-card flow: the
+     * reader extracts the AID from the PPSE / SELECT AID FCI response
+     * and passes it here directly.
+     */
+    public fun parse(aid: Aid, apduResponses: List<ByteArray>): EmvCardResult =
+        parseInternal(injectedAid = aid, apduResponses = apduResponses)
+
+    /**
+     * Parse [apduResponses] into an [EmvCard], or throw
+     * [IllegalArgumentException] on the first detected violation.
+     */
+    public fun parseOrThrow(apduResponses: List<ByteArray>): EmvCard =
+        when (val result = parse(apduResponses)) {
+            is EmvCardResult.Ok -> result.card
+            is EmvCardResult.Err -> throw IllegalArgumentException(messageFor(result.error))
+        }
+
+    /**
+     * Parse [apduResponses] using [aid] as the application identifier,
+     * or throw [IllegalArgumentException]. Mirrors [parseOrThrow] for
+     * the AID-injection overload.
+     */
+    public fun parseOrThrow(aid: Aid, apduResponses: List<ByteArray>): EmvCard =
+        when (val result = parse(aid, apduResponses)) {
+            is EmvCardResult.Ok -> result.card
+            is EmvCardResult.Err -> throw IllegalArgumentException(messageFor(result.error))
+        }
+
+    @Suppress("ReturnCount", "CyclomaticComplexMethod")
+    // why: each return is a distinct EMV parse step (decode / required /
+    // optional / brand). Splitting forces ferrying nodes through more
+    // signatures without reducing real complexity.
+    private fun parseInternal(injectedAid: Aid?, apduResponses: List<ByteArray>): EmvCardResult {
         if (apduResponses.isEmpty()) return EmvCardResult.Err(EmvCardError.EmptyInput)
         val nodes = when (val outcome = decodeAll(apduResponses)) {
             is DecodeOutcome.Ok -> outcome.nodes
             is DecodeOutcome.Err -> return EmvCardResult.Err(outcome.error)
         }
-        val required = when (val r = extractRequiredFields(nodes)) {
+        val required = when (val r = extractRequiredFields(injectedAid, nodes)) {
             is RequiredOutcome.Ok -> r.fields
             is RequiredOutcome.Err -> return EmvCardResult.Err(r.error)
         }
@@ -104,16 +150,6 @@ public object EmvParser {
             ),
         )
     }
-
-    /**
-     * Parse [apduResponses] into an [EmvCard], or throw
-     * [IllegalArgumentException] on the first detected violation.
-     */
-    public fun parseOrThrow(apduResponses: List<ByteArray>): EmvCard =
-        when (val result = parse(apduResponses)) {
-            is EmvCardResult.Ok -> result.card
-            is EmvCardResult.Err -> throw IllegalArgumentException(messageFor(result.error))
-        }
 
     // ----- private orchestrators -----
 
@@ -140,6 +176,23 @@ public object EmvParser {
         data class Err(val error: EmvCardError) : OptionalOutcome
     }
 
+    private sealed interface AidOutcome {
+        data class Ok(val aid: Aid) : AidOutcome
+        data class Err(val error: EmvCardError) : AidOutcome
+    }
+
+    @Suppress("CyclomaticComplexMethod")
+    // why: 4-branch sealed dispatch (find / null / Ok / Err). Splitting moves
+    // the AID node lookup through more signatures without reducing complexity.
+    private fun resolveAid(nodes: List<Tlv>): AidOutcome {
+        val aidNode = findFirst(nodes, TAG_AID) as? Tlv.Primitive
+            ?: return AidOutcome.Err(EmvCardError.MissingRequiredTag("4F"))
+        return when (val r = extractAid(aidNode)) {
+            is ExtractResult.Ok -> AidOutcome.Ok(r.value)
+            is ExtractResult.Err -> AidOutcome.Err(r.error)
+        }
+    }
+
     private fun decodeAll(apduResponses: List<ByteArray>): DecodeOutcome {
         val collected = mutableListOf<Tlv>()
         for (response in apduResponses) {
@@ -151,12 +204,15 @@ public object EmvParser {
         return DecodeOutcome.Ok(collected)
     }
 
-    private fun extractRequiredFields(nodes: List<Tlv>): RequiredOutcome {
-        val aidNode = findFirst(nodes, TAG_AID) as? Tlv.Primitive
-            ?: return RequiredOutcome.Err(EmvCardError.MissingRequiredTag("4F"))
-        val aid = when (val r = extractAid(aidNode)) {
-            is ExtractResult.Ok -> r.value
-            is ExtractResult.Err -> return RequiredOutcome.Err(r.error)
+    @Suppress("ReturnCount", "CyclomaticComplexMethod")
+    // why: each return surfaces a distinct typed required-field rejection
+    // (missing AID / PAN / expiry, plus their per-extractor errors). Splitting
+    // moves the continuation through more signatures without reducing
+    // real complexity.
+    private fun extractRequiredFields(injectedAid: Aid?, nodes: List<Tlv>): RequiredOutcome {
+        val aid = injectedAid ?: when (val r = resolveAid(nodes)) {
+            is AidOutcome.Ok -> r.aid
+            is AidOutcome.Err -> return RequiredOutcome.Err(r.error)
         }
         val panNode = findFirst(nodes, TAG_PAN) as? Tlv.Primitive
             ?: return RequiredOutcome.Err(EmvCardError.MissingRequiredTag("5A"))
