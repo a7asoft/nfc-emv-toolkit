@@ -3,7 +3,6 @@ package io.github.a7asoft.nfcemv.reader
 import android.nfc.Tag
 import android.nfc.TagLostException
 import android.nfc.tech.IsoDep
-import android.util.Log
 import io.github.a7asoft.nfcemv.brand.Aid
 import io.github.a7asoft.nfcemv.extract.Afl
 import io.github.a7asoft.nfcemv.extract.EmvCardResult
@@ -172,33 +171,19 @@ public class ContactlessReader internal constructor(
         val fci = when (val parsed = SelectAidFci.parse(fciBody)) {
             is SelectAidFciResult.Ok -> parsed.fci
             is SelectAidFciResult.Err -> {
-                Log.d(DIAG_TAG, "SELECT-AID FCI parse FAILED: ${parsed.error}")
                 emit(ReaderState.Failed(ReaderError.SelectAidFciRejected(parsed.error)))
                 return null
             }
         }
-        Log.d(DIAG_TAG, "FCI parsed OK: pdolBytes=${fci.pdolBytes?.size ?: 0} inlineTlv.size=${fci.inlineTlv.size}")
-        for ((i, t) in fci.inlineTlv.withIndex()) {
-            Log.d(DIAG_TAG, "  FCI inline[$i] tag=${t.tag}")
-        }
-        val pdolBytes = fci.pdolBytes ?: run {
-            Log.d(DIAG_TAG, "PDOL absent in FCI; sending empty GPO body (83 00).")
-            return ApduCommands.gpoCommand(EMPTY_BYTES) to fci
-        }
-        Log.d(DIAG_TAG, "PDOL bytes from FCI (${pdolBytes.size}): ${pdolBytes.toHexLog()}")
+        val pdolBytes = fci.pdolBytes ?: return ApduCommands.gpoCommand(EMPTY_BYTES) to fci
         val pdol = when (val parsed = Pdol.parse(pdolBytes)) {
             is PdolResult.Ok -> parsed.pdol
             is PdolResult.Err -> {
-                Log.d(DIAG_TAG, "PDOL parse FAILED: ${parsed.error}")
                 emit(ReaderState.Failed(ReaderError.PdolRejected(parsed.error)))
                 return null
             }
         }
-        for ((i, e) in pdol.entries.withIndex()) {
-            Log.d(DIAG_TAG, "  PDOL[$i] tag=${e.tag} length=${e.length}")
-        }
         val response = PdolResponseBuilder.build(pdol, config, transactionDate(), unpredictableNumber())
-        Log.d(DIAG_TAG, "PDOL response built (${response.size} bytes): ${response.toHexLog()}")
         return ApduCommands.gpoCommand(response) to fci
     }
 
@@ -214,18 +199,8 @@ public class ContactlessReader internal constructor(
             return null
         }
         return when (val parsed = Gpo.parse(ApduCommands.dataField(response))) {
-            is GpoResult.Ok -> {
-                Log.d(DIAG_TAG, "GPO parsed OK: aip=${parsed.gpo.applicationInterchangeProfile.toHexLog()} afl.entries=${parsed.gpo.afl.entries.size} inlineTlv.size=${parsed.gpo.inlineTlv.size}")
-                for ((i, e) in parsed.gpo.afl.entries.withIndex()) {
-                    Log.d(DIAG_TAG, "  AFL[$i] sfi=${e.sfi} records=${e.firstRecord}..${e.lastRecord} oda=${e.odaCount}")
-                }
-                for ((i, t) in parsed.gpo.inlineTlv.withIndex()) {
-                    Log.d(DIAG_TAG, "  GPO inline[$i] tag=${t.tag}")
-                }
-                parsed.gpo
-            }
+            is GpoResult.Ok -> parsed.gpo
             is GpoResult.Err -> {
-                Log.d(DIAG_TAG, "GPO parse FAILED: ${parsed.error}")
                 emit(ReaderState.Failed(ReaderError.GpoRejected(parsed.error)))
                 null
             }
@@ -261,20 +236,9 @@ public class ContactlessReader internal constructor(
         chosenAid: Aid,
         nodes: List<Tlv>,
     ) {
-        // DIAGNOSTIC ONLY — issue #59. PCI-UNSAFE.
-        Log.d(DIAG_TAG, "EmvParser inputs: aid=$chosenAid nodes.size=${nodes.size}")
-        for ((i, t) in nodes.withIndex()) {
-            Log.d(DIAG_TAG, "  node[$i] tag=${t.tag}")
-        }
         when (val parsed = EmvParser.parse(chosenAid, nodes)) {
-            is EmvCardResult.Ok -> {
-                Log.d(DIAG_TAG, "EmvParser OK: brand=${parsed.card.brand} pan(masked)=${parsed.card.pan} cardholder=${parsed.card.cardholderName} label=${parsed.card.applicationLabel} track2.present=${parsed.card.track2 != null}")
-                emit(ReaderState.Done(parsed.card))
-            }
-            is EmvCardResult.Err -> {
-                Log.d(DIAG_TAG, "EmvParser FAILED: ${parsed.error}")
-                emit(ReaderState.Failed(ReaderError.ParseFailed(parsed.error)))
-            }
+            is EmvCardResult.Ok -> emit(ReaderState.Done(parsed.card))
+            is EmvCardResult.Err -> emit(ReaderState.Failed(ReaderError.ParseFailed(parsed.error)))
         }
     }
 
@@ -301,18 +265,6 @@ public class ContactlessReader internal constructor(
             val isoDep = IsoDep.get(tag)
                 ?: throw IllegalArgumentException("Tag does not support IsoDep")
             return ContactlessReader(IsoDepTransport(isoDep))
-        }
-
-        // DIAGNOSTIC ONLY — issue #59. DO NOT MERGE.
-        private const val DIAG_TAG = "EmvDiag"
-        private val DIAG_HEX = "0123456789ABCDEF".toCharArray()
-        internal fun ByteArray.toHexLog(): String {
-            val sb = StringBuilder(size * 3)
-            for (b in this) {
-                val v = b.toInt() and 0xFF
-                sb.append(DIAG_HEX[v ushr 4]).append(DIAG_HEX[v and 0x0F]).append(' ')
-            }
-            return sb.toString().trimEnd()
         }
 
         private const val SW_FILE_NOT_FOUND_HI: Byte = 0x6A.toByte()
