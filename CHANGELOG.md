@@ -4,6 +4,13 @@ All notable changes to this project will be documented here. The format follows 
 
 ## [Unreleased]
 
+### Added — APDU replay fixtures (#9)
+- `extract/fixtures/Fixtures.kt` (test-only): three sanitized synthetic APDU `READ RECORD` response fixtures — `VISA_CLASSIC`, `MASTERCARD_PAYPASS`, `AMEX_EXPRESSPAY`. Each carries the six contactless tags (`4F`, `5A`, `5F24`, `5F20`, `50`, `57`) wrapped in a `70` template per EMV Book 3 §10.5.4. Test PANs from public test ranges (Stripe / Adyen / industry-standard) — Luhn-valid but not real accounts. ARQC, IAD, and other cryptographic fields are absent.
+- `extract/fixtures/FixtureExpectation.kt`: `data class` capturing expected per-fixture parse outcome (PAN, brand, AID, expiry, cardholder, label, Track 2 components).
+- `extract/fixtures/EmvParserFixturesTest.kt`: 3 integration-pin tests, one per brand, each driving the fixture through `EmvParser.parse` and asserting every field of the resulting `EmvCard` (PAN, expiry, cardholder, brand, application label, AID + Track 2 PAN/expiry/service code) in a single integration pin. Mirrors the pre-existing per-fixture integration pattern in `EmvParserTest`.
+- Implementation note: chose constants-in-source over `.apdu` text files (the issue's literal request) to avoid KMP `commonTest` resource-loading friction (no new dep, single source of truth, matches existing project test pattern). Rich KDoc on each constant carries the human-legible content an `.apdu` file would have provided.
+- Amex AID note: the fixture targets `A000000025010701` (Amex ExpressPay, the registered EMVCo contactless application — 8 bytes), not the 6-byte `A00000002501` stub originally listed in the plan. The 6-byte stub was explicitly dropped from `AidDirectory` in PR #28; ExpressPay is the contactless EMVCo-registered AID and the right brand-detection path for this corpus.
+
 ### Added — Security disclosure path + Dependabot (#36)
 - `SECURITY.md` at repo root documents the responsible-disclosure path: GitHub Private Vulnerability Reporting primary, `a7asoft@gmail.com` fallback. Supported versions table covers the latest minor on `main`. SLO: first-touch in 5 business days, triage in 10, fix-and-advisory within 90 days.
 - `.github/dependabot.yml` configures weekly version updates on `gradle` (root, picks up `libs.versions.toml`, `shared`, and `composeApp`) and `github-actions` ecosystems. Minor + patch grouped per ecosystem; majors open as individual PRs. Security updates grouped separately. Maintainer auto-assigned per CODEOWNERS.
