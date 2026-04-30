@@ -2,17 +2,34 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: ktlint + detekt
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Run ktlint
+        run: ./gradlew ktlintCheck --stacktrace
+      - name: Run detekt
+        run: ./gradlew detekt --stacktrace
+
   kmp:
     name: KMP build & test
+    needs: lint
     runs-on: macos-14
     timeout-minutes: 25
     steps:
@@ -31,6 +48,7 @@ jobs:
 
   ios:
     name: iOS build
+    needs: lint
     runs-on: macos-14
     timeout-minutes: 25
     steps:

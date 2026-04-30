@@ -1,0 +1,60 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+
+complexity:
+  active: true
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 10
+  LongMethod:
+    active: true
+    threshold: 25
+  LongParameterList:
+    active: true
+    functionThreshold: 4
+    constructorThreshold: 7
+  TooManyFunctions:
+    active: false
+
+style:
+  active: true
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+  MagicNumber:
+    active: true
+    excludes: ['**/test/**', '**/*Test.kt']
+    ignoreNumbers: ['-1', '0', '1', '2', '8', '16', '255']
+  WildcardImport:
+    active: true
+  ReturnCount:
+    active: true
+    max: 3
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    functionPattern: '[a-z][a-zA-Z0-9]*'
+    excludes: ['**/test/**', '**/*Test.kt']
+
+empty-blocks:
+  active: true
+
+exceptions:
+  active: true
+  TooGenericExceptionCaught:
+    active: true
+  SwallowedException:
+    active: true
+  ThrowingExceptionsWithoutMessageOrCause:
+    active: true
+
+potential-bugs:
+  active: true
+  UnreachableCode:
+    active: true

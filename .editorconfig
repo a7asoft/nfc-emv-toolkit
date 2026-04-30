@@ -1,0 +1,57 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+
+[*.{kt,kts}]
+indent_size = 4
+max_line_length = 140
+
+# ktlint rule overrides — see https://pinterest.github.io/ktlint/latest/rules/standard/
+# These rules would force large mechanical reformats of existing EMV code in
+# ways that hurt readability (test fixtures with hex byte literals, single-arg
+# Compose function names, etc.). Issue #10 disables them at the editorconfig
+# level so the lint baseline stays focused on real defects, not stylistic churn.
+
+# Compose @Composable functions are PascalCase by convention.
+ktlint_standard_function-naming = disabled
+
+# `import androidx.compose.runtime.*` is the canonical Compose import shape.
+ktlint_standard_no-wildcard-imports = disabled
+
+# Test fixtures (byteArrayOf(...) hex tables) are far more readable on one line
+# than expanded one-arg-per-line.
+ktlint_standard_argument-list-wrapping = disabled
+ktlint_standard_parameter-list-wrapping = disabled
+ktlint_standard_chain-method-continuation = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_function-expression-body = disabled
+
+# Trailing commas: keep optional rather than enforced; existing code is mixed.
+ktlint_standard_trailing-comma-on-call-site = disabled
+ktlint_standard_trailing-comma-on-declaration-site = disabled
+
+# Class body blank-line rule occasionally fires on intentional spacing in
+# `object` declarations with KDoc-heavy member lists.
+ktlint_standard_no-empty-first-line-in-class-body = disabled
+
+# `object` / value-class single-line declarations sometimes use `=` with no body.
+ktlint_standard_multiline-expression-wrapping = disabled
+
+# Class signature wrapping fires on multi-property data classes. The existing
+# layout (single line) is preferred where it fits.
+ktlint_standard_class-signature = disabled
+
+# EMV AID directory tables use aligned columns for human readability.
+ktlint_standard_no-multi-spaces = disabled
+
+# Other reformat rules surfacing volume churn on the existing TLV / EMV tree:
+ktlint_standard_wrapping = disabled
+ktlint_standard_blank-line-before-declaration = disabled
+
+# `max_line_length = 140` is set above; disable the ktlint enforcement that
+# trips on long EMV hex literals where breaking would harm readability.
+ktlint_standard_max-line-length = disabled
