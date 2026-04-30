@@ -14,7 +14,7 @@ detekt = "1.23.8"
 junit = "4.13.2"
 kotlin = "2.3.21"
 kotlinx-datetime = "0.7.1"
-ktlint-plugin = "12.1.2"
+ktlint-plugin = "14.2.0"
 material3 = "1.11.0-alpha07"
 
 [libraries]
