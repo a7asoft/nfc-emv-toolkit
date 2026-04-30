@@ -21,6 +21,7 @@ import io.github.a7asoft.nfcemv.tlv.TlvParseResult
 public class Gpo internal constructor(
     aip: ByteArray,
     public val afl: Afl,
+    public val inlineTlv: List<Tlv>,
 ) {
     private val storedAip: ByteArray = aip.copyOf()
 
@@ -35,24 +36,26 @@ public class Gpo internal constructor(
 
     // why: hand-rolled `equals` mirrors the `Tlv.Primitive` pattern from
     // PR #1 — each early-return is a structural invariant check
-    // (identity / type / AIP content / AFL).
+    // (identity / type / AIP content / AFL / inline TLV).
     @Suppress("CyclomaticComplexMethod")
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Gpo) return false
         if (!storedAip.contentEquals(other.storedAip)) return false
         if (afl != other.afl) return false
+        if (inlineTlv != other.inlineTlv) return false
         return true
     }
 
     override fun hashCode(): Int {
         var result = storedAip.contentHashCode()
         result = 31 * result + afl.hashCode()
+        result = 31 * result + inlineTlv.hashCode()
         return result
     }
 
     override fun toString(): String =
-        "Gpo(aip=${storedAip.size} bytes, afl=$afl)"
+        "Gpo(aip=${storedAip.size} bytes, afl=$afl, inlineTlv.size=${inlineTlv.size})"
 
     public companion object
 }
@@ -124,7 +127,7 @@ private fun parseFormat1(node: Tlv.Primitive): GpoResult {
     if (payload.size < AIP_BYTES) return GpoResult.Err(GpoError.InvalidAipLength(payload.size))
     val aip = payload.copyOfRange(0, AIP_BYTES)
     val aflBytes = payload.copyOfRange(AIP_BYTES, payload.size)
-    return composeGpo(aip, aflBytes)
+    return composeGpo(aip, aflBytes, inlineTlv = emptyList())
 }
 
 @Suppress("ReturnCount", "CyclomaticComplexMethod")
@@ -133,12 +136,13 @@ private fun parseFormat2(node: Tlv.Constructed): GpoResult {
     val aflNode = findChild(node, TAG_AFL) ?: return GpoResult.Err(GpoError.MissingAfl)
     val aip = aipNode.copyValue()
     if (aip.size != AIP_BYTES) return GpoResult.Err(GpoError.InvalidAipLength(aip.size))
-    return composeGpo(aip, aflNode.copyValue())
+    val inline = node.children.filter { it.tag != TAG_AIP && it.tag != TAG_AFL }
+    return composeGpo(aip, aflNode.copyValue(), inline)
 }
 
-private fun composeGpo(aip: ByteArray, aflBytes: ByteArray): GpoResult =
+private fun composeGpo(aip: ByteArray, aflBytes: ByteArray, inlineTlv: List<Tlv>): GpoResult =
     when (val parsed = Afl.parse(aflBytes)) {
-        is AflResult.Ok -> GpoResult.Ok(Gpo(aip, parsed.afl))
+        is AflResult.Ok -> GpoResult.Ok(Gpo(aip, parsed.afl, inlineTlv))
         is AflResult.Err -> GpoResult.Err(GpoError.AflRejected(parsed.error))
     }
 

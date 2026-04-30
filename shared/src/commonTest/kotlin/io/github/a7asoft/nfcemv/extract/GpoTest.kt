@@ -174,6 +174,38 @@ class GpoTest {
         }
     }
 
+    @Test
+    fun `parse format-2 populates inlineTlv with non-AIP non-AFL children`() {
+        // why: real-card observation (#59) shows format-2 GPO bodies often
+        // carry application data (5F20 cardholder, 57 Track 2, 5F34 PAN
+        // sequence, 9F26 cryptogram, ...) inline alongside AIP/AFL.
+        // 77 0F 82 02 00 80 94 04 08 01 01 00 5F 20 02 41 42
+        val ok = assertIs<GpoResult.Ok>(
+            Gpo.parse(
+                byteArrayOf(
+                    0x77, 0x0F,
+                    0x82.toByte(), 0x02, 0x00, 0x80.toByte(),
+                    0x94.toByte(), 0x04, 0x08, 0x01, 0x01, 0x00,
+                    0x5F, 0x20, 0x02, 0x41, 0x42,
+                ),
+            ),
+        )
+        assertEquals(1, ok.gpo.inlineTlv.size)
+        val first = assertIs<io.github.a7asoft.nfcemv.tlv.Tlv.Primitive>(ok.gpo.inlineTlv[0])
+        assertEquals(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F20"), first.tag)
+    }
+
+    @Test
+    fun `parse format-1 returns inlineTlv as empty list`() {
+        // why: format-1 (tag 80) is a fixed-layout payload with no
+        // embedded TLV — only AIP + AFL bytes packed in sequence.
+        // 80 06 00 80 08 01 01 00
+        val ok = assertIs<GpoResult.Ok>(
+            Gpo.parse(byteArrayOf(0x80.toByte(), 0x06, 0x00, 0x80.toByte(), 0x08, 0x01, 0x01, 0x00)),
+        )
+        assertEquals(emptyList(), ok.gpo.inlineTlv)
+    }
+
     private companion object {
         const val GPO_FUZZ_SEED: Int = 0x6_F0
         const val FUZZ_ITERATIONS: Int = 1_000
