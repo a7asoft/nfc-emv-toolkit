@@ -46,6 +46,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build shared (all targets)
         run: ./gradlew :shared:build --stacktrace
+      - name: Check public API compatibility
+        run: ./gradlew :shared:checkKotlinAbi --stacktrace
       - name: Run common tests
         run: ./gradlew :shared:allTests --stacktrace
       - name: Build Android sample

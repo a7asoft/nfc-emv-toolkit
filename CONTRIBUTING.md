@@ -52,6 +52,23 @@ docs(readme): clarify iOS entitlement steps
 - Every public API ships with at least one happy-path and one error-path test.
 - PCI-safety: any new field carrying PAN/track2/ARQC must include a test that proves `toString()` does not expose it.
 
+## Public API discipline
+
+The `:shared` module's public API is gated by Kotlin's built-in ABI validation. Reference dumps live under `shared/api/`:
+
+- `shared/api/android/shared.api` — captures `commonMain + androidMain` (JVM/Android signatures, ProGuard format)
+- `shared/api/shared.klib.api` — captures `commonMain + iosMain` (KLIB ABI, unified across iOS targets while their ABIs match; per-target files appear under `shared/api/klib/<target>/` only when targets diverge)
+
+If your change adds, removes, renames, or alters a public symbol on `commonMain`, `androidMain`, or `iosMain`, run:
+
+```bash
+./gradlew :shared:updateKotlinAbi
+```
+
+then commit the regenerated `shared/api/` files in the same PR. CI runs `:shared:checkKotlinAbi` and fails if the committed dump diverges from the actual public surface.
+
+Implementation-only changes (private helpers, internal utilities, refactors that don't move public boundaries) require no dump update.
+
 ## Security-sensitive PRs
 
 If your change touches PAN handling, logging, or anything in `docs/threat-model.md`, flag it in the PR description and request a security-focused review.
