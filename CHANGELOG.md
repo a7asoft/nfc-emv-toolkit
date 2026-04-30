@@ -4,6 +4,12 @@ All notable changes to this project will be documented here. The format follows 
 
 ## [Unreleased]
 
+### Changed — TTQ default + PAN-from-Track2 fallback (#59)
+- `TerminalConfig.default()` TTQ default lowered from `36 00 80 00` to `36 00 00 00`. The "Online cryptogram required" bit (byte 2, `0x80`) is now cleared so issuer kernels (Visa kernel-3 in particular) emit the AFL in the GPO response. A read-only reader has no issuer host and SHOULD never have signaled online-only intent. Override via `TerminalConfig.default().copy(terminalTransactionQualifiers = ...)` if a specific issuer kernel needs the legacy bit set. iOS `TerminalConfig.default` mirrors the new value (CLAUDE.md §8 cross-platform parity).
+
+### Fixed — PAN extraction falls back to Track 2 (#59)
+- `EmvParser.parse(...)` now falls back to the PAN embedded in tag `57` (Track 2) when standalone tag `5A` is absent. Previously rejected with `MissingRequiredTag(5A)`; per the EMV Book 3 record layout and the IDTECH knowledge base ("Why aren't tags 57 and 5A returned with my EMV transaction?"), `5A` is OPTIONAL when `57` is present — the embedded PAN is the canonical source. Affects real-card support for issuers that omit `5A` in READ RECORD responses (observed: Chase Visa Debit). Track 2 is now pre-parsed once per call so the required-field PAN fallback and the optional-field exposure see byte-identical data. New private sealed types `PanOutcome` / `Track2Outcome` keep the dispatch flag-free per CLAUDE.md §3.2; `:shared:checkKotlinAbi` zero diff.
+
 ### Added — PDOL-aware GPO + EmvParser AID injection (#57)
 - Reader now reads tag `9F38` from the SELECT AID FCI response, parses the DOL format, builds a structurally-valid PDOL response from terminal defaults (TTQ, country, currency, date, type, UN), wraps in `83 [Lc] [response]`, and sends it as the GPO command body. Cards return records instead of `6A 80` / `69 85`.
 - New 2-arg overload `EmvParser.parse(aid: Aid, records: List<ByteArray>)` (and the matching `parseOrThrow`). Real cards put `4F` (AID) in PPSE / SELECT AID FCI but NOT in READ RECORD records — the reader passes the PPSE-extracted AID directly. Existing 1-arg `parse(records)` keeps its behavior for v0.1.x synthetic fixtures.
