@@ -21,6 +21,11 @@ import io.github.a7asoft.nfcemv.extract.parse
 import io.github.a7asoft.nfcemv.reader.internal.ApduCommands
 import io.github.a7asoft.nfcemv.reader.internal.ApduTransport
 import io.github.a7asoft.nfcemv.reader.internal.IsoDepTransport
+import io.github.a7asoft.nfcemv.tlv.Strictness
+import io.github.a7asoft.nfcemv.tlv.Tlv
+import io.github.a7asoft.nfcemv.tlv.TlvDecoder
+import io.github.a7asoft.nfcemv.tlv.TlvOptions
+import io.github.a7asoft.nfcemv.tlv.TlvParseResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -100,7 +105,8 @@ public class ContactlessReader internal constructor(
             val gpoBody = buildGpoBody(fciBody, config) ?: return
             emit(ReaderState.ReadingRecords)
             val gpo = readGpo(gpoBody) ?: return
-            emitParseOutcome(chosen.aid, readAllRecords(gpo.afl))
+            val recordTlv = readAllRecordsAsTlv(gpo.afl)
+            emitParseOutcome(chosen.aid, gpo.inlineTlv + recordTlv)
         } catch (e: IOException) {
             emit(ReaderState.Failed(translateIo(e)))
         }
@@ -200,24 +206,25 @@ public class ContactlessReader internal constructor(
         }
     }
 
-    // why: nested for-loops walk the AFL's (entry × record) cross-product
-    // per EMV Book 3 §10.2. The inner branch silently drops non-9000
-    // responses (see comment below). Lifting the inner loop into a helper
-    // moves complexity rather than reducing it.
+    // why: walk AFL × records, transceive each, decode the success bodies
+    // into TLV nodes once. Non-9000 responses silently skipped (same
+    // policy as pre-#59). Returns the flat TLV node list, ready to union
+    // with the GPO body's inline TLV before EmvParser.parse.
     @Suppress("CyclomaticComplexMethod")
-    private fun readAllRecords(afl: Afl): List<ByteArray> {
-        val collected = ArrayList<ByteArray>()
+    private fun readAllRecordsAsTlv(afl: Afl): List<Tlv> {
+        val collected = ArrayList<Tlv>()
         for (entry in afl.entries) {
             for (record in entry.firstRecord..entry.lastRecord) {
                 val response = transport.transceive(ApduCommands.readRecord(record, entry.sfi))
-                // why: a non-9000 READ RECORD is silently skipped rather than aborting
-                // the whole flow. Real cards sometimes advertise records in their AFL
-                // that aren't readable (file-not-activated, end-of-file). EmvParser
-                // surfaces MissingRequiredTag downstream if essential data was in a
-                // skipped record. Trade-off accepted for v0.2.0; see docs/threat-model
-                // and follow-up issue if this turns out to mask real bugs.
-                if (ApduCommands.isSuccess(response)) {
-                    collected += ApduCommands.dataField(response)
+                if (!ApduCommands.isSuccess(response)) continue
+                val body = ApduCommands.dataField(response)
+                when (val parsed = TlvDecoder.parse(body, LENIENT_TLV)) {
+                    is TlvParseResult.Ok -> collected += parsed.tlvs
+                    // why: a record that fails to decode is silently
+                    // dropped — same risk-balance as the pre-#59 non-9000
+                    // skip. EmvParser surfaces MissingRequiredTag if a
+                    // dropped record carried essential data.
+                    is TlvParseResult.Err -> Unit
                 }
             }
         }
@@ -226,9 +233,9 @@ public class ContactlessReader internal constructor(
 
     private suspend fun FlowCollector<ReaderState>.emitParseOutcome(
         chosenAid: Aid,
-        records: List<ByteArray>,
+        nodes: List<Tlv>,
     ) {
-        when (val parsed = EmvParser.parse(chosenAid, records)) {
+        when (val parsed = EmvParser.parse(chosenAid, nodes)) {
             is EmvCardResult.Ok -> emit(ReaderState.Done(parsed.card))
             is EmvCardResult.Err -> emit(ReaderState.Failed(ReaderError.ParseFailed(parsed.error)))
         }
@@ -262,6 +269,7 @@ public class ContactlessReader internal constructor(
         private const val SW_FILE_NOT_FOUND_HI: Byte = 0x6A.toByte()
         private const val SW_FILE_NOT_FOUND_LO: Byte = 0x82.toByte()
         private val EMPTY_BYTES: ByteArray = ByteArray(0)
+        private val LENIENT_TLV: TlvOptions = TlvOptions(strictness = Strictness.Lenient)
 
         // why: BCD-encoded YYMMDD from the current wall clock — UTC for
         // deterministic behavior across devices. Tag 9A is informational
