@@ -9,6 +9,7 @@ public final class io/github/a7asoft/nfcemv/brand/Aid {
 	public static final fun getRid-impl (Ljava/lang/String;)Ljava/lang/String;
 	public fun hashCode ()I
 	public static fun hashCode-impl (Ljava/lang/String;)I
+	public static final fun toBytes-impl (Ljava/lang/String;)[B
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
@@ -126,6 +127,116 @@ public final class io/github/a7asoft/nfcemv/emv/TagSensitivity : java/lang/Enum 
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lio/github/a7asoft/nfcemv/emv/TagSensitivity;
 	public static fun values ()[Lio/github/a7asoft/nfcemv/emv/TagSensitivity;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/Afl {
+	public static final field Companion Lio/github/a7asoft/nfcemv/extract/Afl$Companion;
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lio/github/a7asoft/nfcemv/extract/Afl;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/Afl;Ljava/util/List;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/Afl;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEntries ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/Afl$Companion {
+}
+
+public final class io/github/a7asoft/nfcemv/extract/AflEntry {
+	public fun <init> (IIII)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun copy (IIII)Lio/github/a7asoft/nfcemv/extract/AflEntry;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/AflEntry;IIIIILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/AflEntry;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFirstRecord ()I
+	public final fun getLastRecord ()I
+	public final fun getOdaCount ()I
+	public final fun getSfi ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class io/github/a7asoft/nfcemv/extract/AflError {
+}
+
+public final class io/github/a7asoft/nfcemv/extract/AflError$EmptyInput : io/github/a7asoft/nfcemv/extract/AflError {
+	public static final field INSTANCE Lio/github/a7asoft/nfcemv/extract/AflError$EmptyInput;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/AflError$InvalidLength : io/github/a7asoft/nfcemv/extract/AflError {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Lio/github/a7asoft/nfcemv/extract/AflError$InvalidLength;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/AflError$InvalidLength;IILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/AflError$InvalidLength;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getByteCount ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/AflError$InvalidRecordRange : io/github/a7asoft/nfcemv/extract/AflError {
+	public fun <init> (III)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (III)Lio/github/a7asoft/nfcemv/extract/AflError$InvalidRecordRange;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/AflError$InvalidRecordRange;IIIILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/AflError$InvalidRecordRange;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFirst ()I
+	public final fun getLast ()I
+	public final fun getOffset ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/AflError$InvalidSfi : io/github/a7asoft/nfcemv/extract/AflError {
+	public fun <init> (II)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun copy (II)Lio/github/a7asoft/nfcemv/extract/AflError$InvalidSfi;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/AflError$InvalidSfi;IIILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/AflError$InvalidSfi;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOffset ()I
+	public final fun getSfi ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/AflKt {
+	public static final fun parse (Lio/github/a7asoft/nfcemv/extract/Afl$Companion;[B)Lio/github/a7asoft/nfcemv/extract/AflResult;
+	public static final fun parseOrThrow (Lio/github/a7asoft/nfcemv/extract/Afl$Companion;[B)Lio/github/a7asoft/nfcemv/extract/Afl;
+}
+
+public abstract interface class io/github/a7asoft/nfcemv/extract/AflResult {
+}
+
+public final class io/github/a7asoft/nfcemv/extract/AflResult$Err : io/github/a7asoft/nfcemv/extract/AflResult {
+	public fun <init> (Lio/github/a7asoft/nfcemv/extract/AflError;)V
+	public final fun component1 ()Lio/github/a7asoft/nfcemv/extract/AflError;
+	public final fun copy (Lio/github/a7asoft/nfcemv/extract/AflError;)Lio/github/a7asoft/nfcemv/extract/AflResult$Err;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/AflResult$Err;Lio/github/a7asoft/nfcemv/extract/AflError;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/AflResult$Err;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Lio/github/a7asoft/nfcemv/extract/AflError;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/AflResult$Ok : io/github/a7asoft/nfcemv/extract/AflResult {
+	public fun <init> (Lio/github/a7asoft/nfcemv/extract/Afl;)V
+	public final fun component1 ()Lio/github/a7asoft/nfcemv/extract/Afl;
+	public final fun copy (Lio/github/a7asoft/nfcemv/extract/Afl;)Lio/github/a7asoft/nfcemv/extract/AflResult$Ok;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/AflResult$Ok;Lio/github/a7asoft/nfcemv/extract/Afl;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/AflResult$Ok;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAfl ()Lio/github/a7asoft/nfcemv/extract/Afl;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/github/a7asoft/nfcemv/extract/EmvCard {
@@ -279,6 +390,116 @@ public final class io/github/a7asoft/nfcemv/extract/EmvParser {
 	public final fun parseOrThrow (Ljava/util/List;)Lio/github/a7asoft/nfcemv/extract/EmvCard;
 }
 
+public final class io/github/a7asoft/nfcemv/extract/Gpo {
+	public static final field Companion Lio/github/a7asoft/nfcemv/extract/Gpo$Companion;
+	public final fun component1 ()[B
+	public final fun component2 ()Lio/github/a7asoft/nfcemv/extract/Afl;
+	public final fun copy ([BLio/github/a7asoft/nfcemv/extract/Afl;)Lio/github/a7asoft/nfcemv/extract/Gpo;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/Gpo;[BLio/github/a7asoft/nfcemv/extract/Afl;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/Gpo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAfl ()Lio/github/a7asoft/nfcemv/extract/Afl;
+	public final fun getApplicationInterchangeProfile ()[B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/Gpo$Companion {
+}
+
+public abstract interface class io/github/a7asoft/nfcemv/extract/GpoError {
+}
+
+public final class io/github/a7asoft/nfcemv/extract/GpoError$AflRejected : io/github/a7asoft/nfcemv/extract/GpoError {
+	public fun <init> (Lio/github/a7asoft/nfcemv/extract/AflError;)V
+	public final fun component1 ()Lio/github/a7asoft/nfcemv/extract/AflError;
+	public final fun copy (Lio/github/a7asoft/nfcemv/extract/AflError;)Lio/github/a7asoft/nfcemv/extract/GpoError$AflRejected;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/GpoError$AflRejected;Lio/github/a7asoft/nfcemv/extract/AflError;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/GpoError$AflRejected;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCause ()Lio/github/a7asoft/nfcemv/extract/AflError;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/GpoError$EmptyInput : io/github/a7asoft/nfcemv/extract/GpoError {
+	public static final field INSTANCE Lio/github/a7asoft/nfcemv/extract/GpoError$EmptyInput;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/GpoError$InvalidAipLength : io/github/a7asoft/nfcemv/extract/GpoError {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Lio/github/a7asoft/nfcemv/extract/GpoError$InvalidAipLength;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/GpoError$InvalidAipLength;IILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/GpoError$InvalidAipLength;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getByteCount ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/GpoError$MissingAfl : io/github/a7asoft/nfcemv/extract/GpoError {
+	public static final field INSTANCE Lio/github/a7asoft/nfcemv/extract/GpoError$MissingAfl;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/GpoError$MissingAip : io/github/a7asoft/nfcemv/extract/GpoError {
+	public static final field INSTANCE Lio/github/a7asoft/nfcemv/extract/GpoError$MissingAip;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/GpoError$TlvDecodeFailed : io/github/a7asoft/nfcemv/extract/GpoError {
+	public fun <init> (Lio/github/a7asoft/nfcemv/tlv/TlvError;)V
+	public final fun component1 ()Lio/github/a7asoft/nfcemv/tlv/TlvError;
+	public final fun copy (Lio/github/a7asoft/nfcemv/tlv/TlvError;)Lio/github/a7asoft/nfcemv/extract/GpoError$TlvDecodeFailed;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/GpoError$TlvDecodeFailed;Lio/github/a7asoft/nfcemv/tlv/TlvError;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/GpoError$TlvDecodeFailed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCause ()Lio/github/a7asoft/nfcemv/tlv/TlvError;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/GpoError$UnknownTemplate : io/github/a7asoft/nfcemv/extract/GpoError {
+	public static final field INSTANCE Lio/github/a7asoft/nfcemv/extract/GpoError$UnknownTemplate;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/GpoKt {
+	public static final fun parse (Lio/github/a7asoft/nfcemv/extract/Gpo$Companion;[B)Lio/github/a7asoft/nfcemv/extract/GpoResult;
+	public static final fun parseOrThrow (Lio/github/a7asoft/nfcemv/extract/Gpo$Companion;[B)Lio/github/a7asoft/nfcemv/extract/Gpo;
+}
+
+public abstract interface class io/github/a7asoft/nfcemv/extract/GpoResult {
+}
+
+public final class io/github/a7asoft/nfcemv/extract/GpoResult$Err : io/github/a7asoft/nfcemv/extract/GpoResult {
+	public fun <init> (Lio/github/a7asoft/nfcemv/extract/GpoError;)V
+	public final fun component1 ()Lio/github/a7asoft/nfcemv/extract/GpoError;
+	public final fun copy (Lio/github/a7asoft/nfcemv/extract/GpoError;)Lio/github/a7asoft/nfcemv/extract/GpoResult$Err;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/GpoResult$Err;Lio/github/a7asoft/nfcemv/extract/GpoError;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/GpoResult$Err;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Lio/github/a7asoft/nfcemv/extract/GpoError;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/GpoResult$Ok : io/github/a7asoft/nfcemv/extract/GpoResult {
+	public fun <init> (Lio/github/a7asoft/nfcemv/extract/Gpo;)V
+	public final fun component1 ()Lio/github/a7asoft/nfcemv/extract/Gpo;
+	public final fun copy (Lio/github/a7asoft/nfcemv/extract/Gpo;)Lio/github/a7asoft/nfcemv/extract/GpoResult$Ok;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/GpoResult$Ok;Lio/github/a7asoft/nfcemv/extract/Gpo;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/GpoResult$Ok;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getGpo ()Lio/github/a7asoft/nfcemv/extract/Gpo;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/github/a7asoft/nfcemv/extract/Pan {
 	public static final field Companion Lio/github/a7asoft/nfcemv/extract/Pan$Companion;
 	public static final synthetic fun box-impl (Ljava/lang/String;)Lio/github/a7asoft/nfcemv/extract/Pan;
@@ -347,6 +568,109 @@ public final class io/github/a7asoft/nfcemv/extract/PanResult$Ok : io/github/a7a
 	public static synthetic fun copy-olEcj7s$default (Lio/github/a7asoft/nfcemv/extract/PanResult$Ok;Ljava/lang/String;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/PanResult$Ok;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getPan-o5U9eh4 ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/Ppse {
+	public static final field Companion Lio/github/a7asoft/nfcemv/extract/Ppse$Companion;
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lio/github/a7asoft/nfcemv/extract/Ppse;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/Ppse;Ljava/util/List;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/Ppse;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getApplications ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/Ppse$Companion {
+}
+
+public final class io/github/a7asoft/nfcemv/extract/PpseEntry {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Integer;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-7RB5c18 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/Integer;
+	public final fun copy-Pux_Fmc (Ljava/lang/String;Ljava/lang/Integer;)Lio/github/a7asoft/nfcemv/extract/PpseEntry;
+	public static synthetic fun copy-Pux_Fmc$default (Lio/github/a7asoft/nfcemv/extract/PpseEntry;Ljava/lang/String;Ljava/lang/Integer;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/PpseEntry;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAid-7RB5c18 ()Ljava/lang/String;
+	public final fun getPriority ()Ljava/lang/Integer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class io/github/a7asoft/nfcemv/extract/PpseError {
+}
+
+public final class io/github/a7asoft/nfcemv/extract/PpseError$EmptyInput : io/github/a7asoft/nfcemv/extract/PpseError {
+	public static final field INSTANCE Lio/github/a7asoft/nfcemv/extract/PpseError$EmptyInput;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/PpseError$InvalidAid : io/github/a7asoft/nfcemv/extract/PpseError {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Lio/github/a7asoft/nfcemv/extract/PpseError$InvalidAid;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/PpseError$InvalidAid;IILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/PpseError$InvalidAid;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getByteCount ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/PpseError$NoApplicationsFound : io/github/a7asoft/nfcemv/extract/PpseError {
+	public static final field INSTANCE Lio/github/a7asoft/nfcemv/extract/PpseError$NoApplicationsFound;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/PpseError$TlvDecodeFailed : io/github/a7asoft/nfcemv/extract/PpseError {
+	public fun <init> (Lio/github/a7asoft/nfcemv/tlv/TlvError;)V
+	public final fun component1 ()Lio/github/a7asoft/nfcemv/tlv/TlvError;
+	public final fun copy (Lio/github/a7asoft/nfcemv/tlv/TlvError;)Lio/github/a7asoft/nfcemv/extract/PpseError$TlvDecodeFailed;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/PpseError$TlvDecodeFailed;Lio/github/a7asoft/nfcemv/tlv/TlvError;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/PpseError$TlvDecodeFailed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCause ()Lio/github/a7asoft/nfcemv/tlv/TlvError;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/PpseError$UnknownTemplate : io/github/a7asoft/nfcemv/extract/PpseError {
+	public static final field INSTANCE Lio/github/a7asoft/nfcemv/extract/PpseError$UnknownTemplate;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/PpseKt {
+	public static final fun parse (Lio/github/a7asoft/nfcemv/extract/Ppse$Companion;[B)Lio/github/a7asoft/nfcemv/extract/PpseResult;
+	public static final fun parseOrThrow (Lio/github/a7asoft/nfcemv/extract/Ppse$Companion;[B)Lio/github/a7asoft/nfcemv/extract/Ppse;
+}
+
+public abstract interface class io/github/a7asoft/nfcemv/extract/PpseResult {
+}
+
+public final class io/github/a7asoft/nfcemv/extract/PpseResult$Err : io/github/a7asoft/nfcemv/extract/PpseResult {
+	public fun <init> (Lio/github/a7asoft/nfcemv/extract/PpseError;)V
+	public final fun component1 ()Lio/github/a7asoft/nfcemv/extract/PpseError;
+	public final fun copy (Lio/github/a7asoft/nfcemv/extract/PpseError;)Lio/github/a7asoft/nfcemv/extract/PpseResult$Err;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/PpseResult$Err;Lio/github/a7asoft/nfcemv/extract/PpseError;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/PpseResult$Err;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Lio/github/a7asoft/nfcemv/extract/PpseError;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/PpseResult$Ok : io/github/a7asoft/nfcemv/extract/PpseResult {
+	public fun <init> (Lio/github/a7asoft/nfcemv/extract/Ppse;)V
+	public final fun component1 ()Lio/github/a7asoft/nfcemv/extract/Ppse;
+	public final fun copy (Lio/github/a7asoft/nfcemv/extract/Ppse;)Lio/github/a7asoft/nfcemv/extract/PpseResult$Ok;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/PpseResult$Ok;Lio/github/a7asoft/nfcemv/extract/Ppse;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/PpseResult$Ok;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPpse ()Lio/github/a7asoft/nfcemv/extract/Ppse;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
