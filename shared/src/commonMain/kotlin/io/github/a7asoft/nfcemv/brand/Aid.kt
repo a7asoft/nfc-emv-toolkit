@@ -29,6 +29,23 @@ public value class Aid internal constructor(private val raw: String) {
     /** The PIX portion (after the RID), in uppercase hex. May be empty. */
     public val pix: String get() = raw.substring(RID_HEX_LENGTH)
 
+    /**
+     * Returns a fresh defensive byte-array copy of this AID. Length equals
+     * [byteCount]. Used by readers when building a `SELECT` APDU.
+     */
+    @Suppress("MagicNumber") // why: bit-level hex unpack; 4 = nibble, 2 = chars per byte.
+    public fun toBytes(): ByteArray {
+        val out = ByteArray(raw.length / 2)
+        var i = 0
+        while (i < raw.length) {
+            val hi = hexNibble(raw[i])
+            val lo = hexNibble(raw[i + 1])
+            out[i / 2] = ((hi shl 4) or lo).toByte()
+            i += 2
+        }
+        return out
+    }
+
     override fun toString(): String = raw
 
     public companion object {
@@ -71,5 +88,15 @@ public value class Aid internal constructor(private val raw: String) {
         }
 
         private const val HEX_CHARS: String = "0123456789ABCDEF"
+
+        // why: exhaustive `when` over the four hex character ranges.
+        // Each branch is a single mapping, not arm of real complexity.
+        @Suppress("CyclomaticComplexMethod", "MagicNumber")
+        private fun hexNibble(c: Char): Int = when (c) {
+            in '0'..'9' -> c - '0'
+            in 'A'..'F' -> 10 + (c - 'A')
+            in 'a'..'f' -> 10 + (c - 'a')
+            else -> error("non-hex character in normalised AID: $c")
+        }
     }
 }
