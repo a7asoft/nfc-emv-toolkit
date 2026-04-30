@@ -1,47 +1,31 @@
 package io.github.a7asoft
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import nfc_emv_toolkit.composeapp.generated.resources.Res
-import nfc_emv_toolkit.composeapp.generated.resources.compose_multiplatform
-import org.jetbrains.compose.resources.painterResource
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.a7asoft.ui.ReaderScreen
+import io.github.a7asoft.ui.ReaderViewModel
 
+/**
+ * Top-level composable that wires [ReaderViewModel.state] into
+ * [ReaderScreen]. Hoisted callbacks (`onTryAgain`, `onOpenNfcSettings`)
+ * keep the screen pure-presentation and unit-testable in isolation.
+ */
 @Composable
-@Preview
-fun App() {
+public fun App(viewModel: ReaderViewModel) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
-            }
-            AnimatedVisibility(showContent) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("nfc-emv-toolkit sample")
-                }
-            }
-        }
+        ReaderScreen(
+            state = state,
+            onTryAgain = viewModel::reset,
+            onOpenNfcSettings = {
+                context.startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
+            },
+        )
     }
 }
