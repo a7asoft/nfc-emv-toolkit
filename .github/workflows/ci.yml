@@ -56,10 +56,10 @@ jobs:
         run: ./gradlew :composeApp:assembleDebug --stacktrace
 
   ios:
-    name: iOS build
+    name: iOS build & test
     needs: lint
     runs-on: macos-14
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: maxim-lobanov/setup-xcode@v1
@@ -70,8 +70,16 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
-      - name: Build iOS framework
-        run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
+      - name: Build Shared XCFramework
+        run: ./gradlew :shared:assembleSharedReleaseXCFramework --stacktrace
+      - name: Test EmvReader Swift package
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -scheme EmvReader \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -derivedDataPath .build-ios \
+            test 2>&1 | xcpretty || exit ${PIPESTATUS[0]}
       - name: Build iOS sample app
         run: |
           xcodebuild -project iosApp/iosApp.xcodeproj \

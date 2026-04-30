@@ -4,6 +4,18 @@ All notable changes to this project will be documented here. The format follows 
 
 ## [Unreleased]
 
+### Added — iOS contactless reader (#50)
+- New `ios/Sources/EmvReader` Swift Package providing `EmvReader().read() -> AsyncStream<ReaderState>`. Wraps CoreNFC's `NFCTagReaderSession` + `NFCISO7816Tag` and orchestrates the full EMV contactless read flow per Book 1 §11–12: PPSE → SELECT AID → GPO → READ RECORD → `EmvParser.parse`. Mirrors the v0.2.0 Android reader (#48), but as Swift-idiomatic enums.
+- `ReaderState` and `ReaderError` defined as parallel Swift enums (decision: NOT promoted to `commonMain`). Manual mapping at the Kotlin/Swift boundary lives in a single `Mapping.swift`. Kept `commonMain` platform-neutral and gives iOS consumers idiomatic `switch` exhaustiveness on Swift-native types.
+- `IoReason` enum mirrors the Android reader's: `tagLost` / `timeout` / `generic`. CoreNFC's `NFCReaderError` codes are mapped to these categories so consumers don't depend on CoreNFC error semantics.
+- New `XCFramework("Shared")` Gradle wiring in `shared/build.gradle.kts` produces `Shared.xcframework` for the Swift package's `binaryTarget` to consume. New tasks: `assembleSharedReleaseXCFramework`, `assembleSharedDebugXCFramework`, `assembleSharedXCFramework`.
+- CI: `ios` job now builds the XCFramework and runs `xcodebuild test` for the EmvReader Swift package on the iPhone simulator before the sample-app xcodebuild.
+- Module boundary verified per CLAUDE.md §7: `EmvReader` depends only on `Shared` (XCFramework) and `CoreNFC`. The ONLY file importing `CoreNFC` is `NFCISO7816TagTransport.swift` (mirrors `:android:reader`'s "only `IsoDepTransport.kt` imports `android.nfc.*`" rule). Does NOT depend on UIKit, SwiftUI, or `iosApp/`.
+- Sample-app integration is out of scope for this PR — `iosApp/` is untouched. Sample integration tracked as a separate scope per CLAUDE.md §2 architecture (`ios/Sources/EmvToolkitUI`).
+- Test coverage: 14 integration tests in `EmvReaderTests` (Visa / Mastercard / Amex happy paths plus every `ReaderError` variant including `ioFailure(.generic)`, multi-AID lowest-priority selection, silent-skip on non-9000 READ RECORD, and real `Task` cancellation). Tests run against a `FakeIso7816Transport` test double; iOS Simulator does NOT support CoreNFC, so the production `NFCISO7816TagTransport` is exercised only on real-device manual QA.
+- Public ABI surface change: `:shared:checkKotlinAbi` UNCHANGED — this PR consumes `:shared`'s public surface, does not modify it.
+- Bridge note: Kotlin `@JvmInline value class` types (`Aid`, `Pan`) cannot expose methods through the ObjC interop bridge — they appear as boxed `Any` to Swift. Their `description` (Kotlin `toString()`) is the only accessible method. Swift consumers obtain the AID hex form via `String(describing: card.aid)`; raw bytes are reconstructed by hex-decoding the description in `Mapping.aidBytes(_:)`. Documented in CONTRIBUTING.md.
+
 ### Added — Android contactless reader (#48)
 - New `:android:reader` Gradle module providing `ContactlessReader.fromTag(tag).read()` returning a `Flow<ReaderState>`. Wraps `android.nfc.tech.IsoDep` and orchestrates the full EMV contactless read flow (PPSE → SELECT AID → GPO → READ RECORD → `EmvParser.parse`) per EMV Book 1 §11–12.
 - `ReaderState` sealed catalogue: `TagDetected`, `SelectingPpse`, `SelectingAid(aid)`, `ReadingRecords`, `Done(card)`, `Failed(error)`.
