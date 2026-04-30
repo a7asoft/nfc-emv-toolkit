@@ -19,8 +19,13 @@ PRs that expand scope into payment-terminal territory will be closed.
 2. Branch from `main`: `feat/<short-name>`, `fix/<short-name>`, `docs/<short-name>`.
 3. Run formatters + tests locally before pushing:
    ```bash
-   ./gradlew ktlintFormat detekt :shared:allTests
+   ./gradlew ktlintFormat ktlintCheck detekt :shared:allTests
    ```
+   CI runs `ktlintCheck` and `detekt` on every PR (the `lint` job gates `kmp` and `ios`).
+
+   If you hit a detekt finding you believe is wrong, do **not** add it to
+   `detekt-baseline.xml` — open a PR adjusting `detekt.yml` instead, with a
+   justification. The baseline is for legacy debt only.
 4. Open a PR. CI must pass.
 
 ## Commit format
@@ -46,6 +51,23 @@ docs(readme): clarify iOS entitlement steps
 - Every parser change ships with a fixture in `fixtures/` (sanitized hex APDU trace).
 - Every public API ships with at least one happy-path and one error-path test.
 - PCI-safety: any new field carrying PAN/track2/ARQC must include a test that proves `toString()` does not expose it.
+
+## Public API discipline
+
+The `:shared` module's public API is gated by Kotlin's built-in ABI validation. Reference dumps live under `shared/api/`:
+
+- `shared/api/android/shared.api` — captures `commonMain + androidMain` (JVM/Android signatures, ProGuard format)
+- `shared/api/shared.klib.api` — captures `commonMain + iosMain` (KLIB ABI, unified across iOS targets while their ABIs match; per-target files appear under `shared/api/klib/<target>/` only when targets diverge)
+
+If your change adds, removes, renames, or alters a public symbol on `commonMain`, `androidMain`, or `iosMain`, run:
+
+```bash
+./gradlew :shared:updateKotlinAbi
+```
+
+then commit the regenerated `shared/api/` files in the same PR. CI runs `:shared:checkKotlinAbi` and fails if the committed dump diverges from the actual public surface.
+
+Implementation-only changes (private helpers, internal utilities, refactors that don't move public boundaries) require no dump update.
 
 ## Security-sensitive PRs
 
