@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.dokka)
 }
 
 kotlin {
@@ -47,5 +48,12 @@ android {
     }
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
+    }
+}
+
+dokka {
+    moduleName.set("nfc-emv-toolkit")
+    dokkaPublications.html {
+        outputDirectory.set(rootProject.layout.projectDirectory.dir("docs/api/kotlin"))
     }
 }

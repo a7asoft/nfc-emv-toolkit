@@ -69,6 +69,23 @@ If you need any of the above, talk to a payment processor, not a GitHub library.
 
 ---
 
+## API Docs
+
+Generated from the latest released tag via [Dokka 2](https://kotlinlang.org/docs/dokka-introduction.html):
+
+**[https://a7asoft.github.io/nfc-emv-toolkit/](https://a7asoft.github.io/nfc-emv-toolkit/)**
+
+For unreleased `develop` snapshots, run locally:
+
+```bash
+./gradlew :shared:dokkaGenerate
+open docs/api/kotlin/index.html
+```
+
+The published site is regenerated automatically by GitHub Actions on every `v*` tag.
+
+---
+
 ## Security
 
 This library handles PCI-class data (PAN, Track 2, ARQC). Defaults are conservative — see [`docs/threat-model.md`](docs/threat-model.md) for what we do and do not protect against.
