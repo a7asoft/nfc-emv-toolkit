@@ -3,8 +3,8 @@ import Foundation
 /// Terminal-side data the reader supplies in the GPO PDOL response.
 ///
 /// Mirrors the Kotlin `io.github.a7asoft.nfcemv.extract.TerminalConfig`
-/// data class. Defaults match "standard payment terminal" — TTQ
-/// `36 00 80 00`, US country / USD currency, zero amounts. Override
+/// data class. Defaults match "read-only contactless terminal" — TTQ
+/// `36 00 00 00`, US country / USD currency, zero amounts. Override
 /// individual fields to validate against cards that reject the
 /// conservative defaults.
 ///
