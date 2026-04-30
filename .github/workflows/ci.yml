@@ -26,7 +26,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Run ktlint
         run: ./gradlew ktlintCheck --stacktrace
       - name: Run detekt
@@ -43,7 +43,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Build shared (all targets)
         run: ./gradlew :shared:build --stacktrace
       - name: Check public API compatibility
@@ -67,7 +67,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Build iOS framework
         run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
       - name: Build iOS sample app
