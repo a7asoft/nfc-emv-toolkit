@@ -532,6 +532,70 @@ class EmvParserTest {
         assertEquals(EmvCardError.EmptyInput, err.error)
     }
 
+    @Test
+    fun `parse falls back to Track2 expiry when tag 5F24 is absent and tag 57 is present`() {
+        // why: real-card observation (#59) — Visa Chase cards omit
+        // standalone tag 5F24 and carry expiry only in Track 2 (positions
+        // YYMM after the D separator). ISO 7813 + EMV Book 3 treat the
+        // Track 2 expiry as canonical when 5F24 is absent.
+        // Track2: PAN 4111111111111111, separator D, expiry 3005 (May 2030),
+        // service 220, discretionary 1000.
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD3.toByte(), 0x00, 0x52, 0x20, 0x10, 0x00,
+        )
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        assertEquals(kotlinx.datetime.YearMonth(2030, 5), ok.card.expiry)
+    }
+
+    @Test
+    fun `parse uses tag 5F24 directly when both 5F24 and 57 are present`() {
+        // why: pin 5F24 precedence over Track2 expiry — they CAN diverge
+        // (parser does not cross-validate per EmvParser KDoc).
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD3.toByte(), 0x00, 0x52, 0x20, 0x10, 0x00,
+        )
+        val expiryBytes = byteArrayOf(0x28, 0x12, 0x31)  // YYMMDD 28-12-31 → Dec 2028
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F24"), expiryBytes,
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        // 5F24 wins (Dec 2028), not Track2 expiry (May 2030).
+        assertEquals(kotlinx.datetime.YearMonth(2028, 12), ok.card.expiry)
+    }
+
+    @Test
+    fun `parse fails MissingRequiredTag 5F24 when both 5F24 and 57 are absent`() {
+        // why: when neither source provides expiry, fail with the
+        // canonical missing-tag error. Mirrors the PAN three-cell matrix.
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5A"),
+                byteArrayOf(0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11),
+            ),
+        )
+        val err = assertIs<EmvCardResult.Err>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        val cause = assertIs<EmvCardError.MissingRequiredTag>(err.error)
+        assertEquals("5F24", cause.tagHex)
+    }
+
     private companion object {
         const val FUZZ_SEED: Long = 0x454D5643L // "EMVC"
         const val FUZZ_ITERATIONS: Int = 1_000

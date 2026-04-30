@@ -234,6 +234,11 @@ public object EmvParser {
         data class Err(val error: EmvCardError) : PanOutcome
     }
 
+    private sealed interface ExpiryOutcome {
+        data class Ok(val expiry: YearMonth) : ExpiryOutcome
+        data class Err(val error: EmvCardError) : ExpiryOutcome
+    }
+
     private sealed interface Track2Outcome {
         data object Absent : Track2Outcome
         data class Present(val track2: Track2) : Track2Outcome
@@ -266,8 +271,8 @@ public object EmvParser {
     @Suppress("ReturnCount", "CyclomaticComplexMethod")
     // why: each return surfaces a distinct typed required-field rejection
     // (missing AID / PAN / expiry, plus their per-extractor errors). PAN
-    // resolution now also accepts Track 2's embedded PAN as a fallback
-    // (see resolvePan and issue #59).
+    // and expiry both accept Track 2 fallbacks (see resolvePan, resolveExpiry,
+    // and issue #59).
     private fun extractRequiredFields(
         injectedAid: Aid?,
         nodes: List<Tlv>,
@@ -281,11 +286,9 @@ public object EmvParser {
             is PanOutcome.Ok -> r.pan
             is PanOutcome.Err -> return RequiredOutcome.Err(r.error)
         }
-        val expiryNode = findFirst(nodes, TAG_EXPIRY) as? Tlv.Primitive
-            ?: return RequiredOutcome.Err(EmvCardError.MissingRequiredTag("5F24"))
-        val expiry = when (val r = extractExpiry(expiryNode)) {
-            is ExtractResult.Ok -> r.value
-            is ExtractResult.Err -> return RequiredOutcome.Err(r.error)
+        val expiry = when (val r = resolveExpiry(nodes, track2)) {
+            is ExpiryOutcome.Ok -> r.expiry
+            is ExpiryOutcome.Err -> return RequiredOutcome.Err(r.error)
         }
         return RequiredOutcome.Ok(RequiredFields(aid, pan, expiry))
     }
@@ -316,6 +319,33 @@ public object EmvParser {
         }
         if (track2 != null) return PanOutcome.Ok(track2.pan)
         return PanOutcome.Err(EmvCardError.MissingRequiredTag("5A"))
+    }
+
+    /**
+     * Resolve expiry with the EMV-canonical fallback chain:
+     *
+     * 1. If standalone tag `5F 24` is present, decode it via [extractExpiry].
+     * 2. Else if [track2] was successfully parsed from tag `57`, use
+     *    its [Track2.expiry]. Per ISO 7813 + EMV Book 3, the expiry in
+     *    Track 2 (positions YYMM after the `D` separator) is canonical
+     *    when standalone `5F 24` is absent.
+     * 3. Else fail `MissingRequiredTag(5F24)`.
+     */
+    @Suppress("CyclomaticComplexMethod")
+    // why: 5-branch fallback chain (5F24 present / extractor Ok / extractor
+    // Err / track2 fallback / both absent). Each branch is a distinct
+    // EMV-canonical expiry source; splitting moves the chain through more
+    // signatures without reducing complexity. Mirrors resolvePan exactly.
+    private fun resolveExpiry(nodes: List<Tlv>, track2: Track2?): ExpiryOutcome {
+        val expiryNode = findFirst(nodes, TAG_EXPIRY) as? Tlv.Primitive
+        if (expiryNode != null) {
+            return when (val r = extractExpiry(expiryNode)) {
+                is ExtractResult.Ok -> ExpiryOutcome.Ok(r.value)
+                is ExtractResult.Err -> ExpiryOutcome.Err(r.error)
+            }
+        }
+        if (track2 != null) return ExpiryOutcome.Ok(track2.expiry)
+        return ExpiryOutcome.Err(EmvCardError.MissingRequiredTag("5F24"))
     }
 
     private fun extractOptionalFields(
