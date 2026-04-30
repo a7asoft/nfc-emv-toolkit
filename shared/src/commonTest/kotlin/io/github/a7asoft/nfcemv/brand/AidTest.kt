@@ -1,6 +1,7 @@
 package io.github.a7asoft.nfcemv.brand
 
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -141,5 +142,37 @@ class AidTest {
     @Test
     fun `fromBytes rejects an array of length 4 just below the minimum`() {
         assertFailsWith<IllegalArgumentException> { Aid.fromBytes(ByteArray(4)) }
+    }
+
+    @Test
+    fun `toBytes returns the AID byte sequence for a parsed Visa Credit Debit AID`() {
+        val aid = Aid.fromHex("A0000000031010")
+        assertContentEquals(
+            byteArrayOf(0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10),
+            aid.toBytes(),
+        )
+    }
+
+    @Test
+    fun `toBytes round trips through fromBytes`() {
+        val original = Aid.fromHex("A0000000041010")
+        val roundTripped = Aid.fromBytes(original.toBytes())
+        assertEquals(original, roundTripped)
+    }
+
+    @Test
+    fun `toBytes returns a fresh array per call`() {
+        val aid = Aid.fromHex("A0000000031010")
+        val first = aid.toBytes()
+        val second = aid.toBytes()
+        first[0] = 0x00
+        assertEquals(0xA0.toByte(), second[0])
+    }
+
+    @Test
+    fun `toBytes handles the maximum length 16 byte AID`() {
+        val aid = Aid.fromHex("A0000000030000000000000000000000")
+        assertEquals(16, aid.byteCount)
+        assertEquals(aid.byteCount, aid.toBytes().size)
     }
 }

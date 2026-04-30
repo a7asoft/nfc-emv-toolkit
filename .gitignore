@@ -27,6 +27,7 @@ xcuserdata
 DerivedData/
 .swiftpm/
 .build/
+.build-ios/
 
 # Android
 *.apk

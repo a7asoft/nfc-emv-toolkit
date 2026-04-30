@@ -98,6 +98,90 @@ sealed interface io.github.a7asoft.nfcemv.emv/EmvTagLength { // io.github.a7asof
     }
 }
 
+sealed interface io.github.a7asoft.nfcemv.extract/AflError { // io.github.a7asoft.nfcemv.extract/AflError|null[0]
+    final class InvalidLength : io.github.a7asoft.nfcemv.extract/AflError { // io.github.a7asoft.nfcemv.extract/AflError.InvalidLength|null[0]
+        constructor <init>(kotlin/Int) // io.github.a7asoft.nfcemv.extract/AflError.InvalidLength.<init>|<init>(kotlin.Int){}[0]
+
+        final val byteCount // io.github.a7asoft.nfcemv.extract/AflError.InvalidLength.byteCount|{}byteCount[0]
+            final fun <get-byteCount>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidLength.byteCount.<get-byteCount>|<get-byteCount>(){}[0]
+
+        final fun component1(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidLength.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): io.github.a7asoft.nfcemv.extract/AflError.InvalidLength // io.github.a7asoft.nfcemv.extract/AflError.InvalidLength.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/AflError.InvalidLength.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidLength.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/AflError.InvalidLength.toString|toString(){}[0]
+    }
+
+    final class InvalidRecordRange : io.github.a7asoft.nfcemv.extract/AflError { // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange|null[0]
+        constructor <init>(kotlin/Int, kotlin/Int, kotlin/Int) // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+        final val first // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.first|{}first[0]
+            final fun <get-first>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.first.<get-first>|<get-first>(){}[0]
+        final val last // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.last|{}last[0]
+            final fun <get-last>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.last.<get-last>|<get-last>(){}[0]
+        final val offset // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.offset|{}offset[0]
+            final fun <get-offset>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.offset.<get-offset>|<get-offset>(){}[0]
+
+        final fun component1(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.component2|component2(){}[0]
+        final fun component3(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.component3|component3(){}[0]
+        final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/AflError.InvalidRecordRange.toString|toString(){}[0]
+    }
+
+    final class InvalidSfi : io.github.a7asoft.nfcemv.extract/AflError { // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi|null[0]
+        constructor <init>(kotlin/Int, kotlin/Int) // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi.<init>|<init>(kotlin.Int;kotlin.Int){}[0]
+
+        final val offset // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi.offset|{}offset[0]
+            final fun <get-offset>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi.offset.<get-offset>|<get-offset>(){}[0]
+        final val sfi // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi.sfi|{}sfi[0]
+            final fun <get-sfi>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi.sfi.<get-sfi>|<get-sfi>(){}[0]
+
+        final fun component1(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi.component2|component2(){}[0]
+        final fun copy(kotlin/Int = ..., kotlin/Int = ...): io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi.copy|copy(kotlin.Int;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/AflError.InvalidSfi.toString|toString(){}[0]
+    }
+
+    final object EmptyInput : io.github.a7asoft.nfcemv.extract/AflError { // io.github.a7asoft.nfcemv.extract/AflError.EmptyInput|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/AflError.EmptyInput.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflError.EmptyInput.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/AflError.EmptyInput.toString|toString(){}[0]
+    }
+}
+
+sealed interface io.github.a7asoft.nfcemv.extract/AflResult { // io.github.a7asoft.nfcemv.extract/AflResult|null[0]
+    final class Err : io.github.a7asoft.nfcemv.extract/AflResult { // io.github.a7asoft.nfcemv.extract/AflResult.Err|null[0]
+        constructor <init>(io.github.a7asoft.nfcemv.extract/AflError) // io.github.a7asoft.nfcemv.extract/AflResult.Err.<init>|<init>(io.github.a7asoft.nfcemv.extract.AflError){}[0]
+
+        final val error // io.github.a7asoft.nfcemv.extract/AflResult.Err.error|{}error[0]
+            final fun <get-error>(): io.github.a7asoft.nfcemv.extract/AflError // io.github.a7asoft.nfcemv.extract/AflResult.Err.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): io.github.a7asoft.nfcemv.extract/AflError // io.github.a7asoft.nfcemv.extract/AflResult.Err.component1|component1(){}[0]
+        final fun copy(io.github.a7asoft.nfcemv.extract/AflError = ...): io.github.a7asoft.nfcemv.extract/AflResult.Err // io.github.a7asoft.nfcemv.extract/AflResult.Err.copy|copy(io.github.a7asoft.nfcemv.extract.AflError){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/AflResult.Err.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflResult.Err.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/AflResult.Err.toString|toString(){}[0]
+    }
+
+    final class Ok : io.github.a7asoft.nfcemv.extract/AflResult { // io.github.a7asoft.nfcemv.extract/AflResult.Ok|null[0]
+        constructor <init>(io.github.a7asoft.nfcemv.extract/Afl) // io.github.a7asoft.nfcemv.extract/AflResult.Ok.<init>|<init>(io.github.a7asoft.nfcemv.extract.Afl){}[0]
+
+        final val afl // io.github.a7asoft.nfcemv.extract/AflResult.Ok.afl|{}afl[0]
+            final fun <get-afl>(): io.github.a7asoft.nfcemv.extract/Afl // io.github.a7asoft.nfcemv.extract/AflResult.Ok.afl.<get-afl>|<get-afl>(){}[0]
+
+        final fun component1(): io.github.a7asoft.nfcemv.extract/Afl // io.github.a7asoft.nfcemv.extract/AflResult.Ok.component1|component1(){}[0]
+        final fun copy(io.github.a7asoft.nfcemv.extract/Afl = ...): io.github.a7asoft.nfcemv.extract/AflResult.Ok // io.github.a7asoft.nfcemv.extract/AflResult.Ok.copy|copy(io.github.a7asoft.nfcemv.extract.Afl){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/AflResult.Ok.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflResult.Ok.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/AflResult.Ok.toString|toString(){}[0]
+    }
+}
+
 sealed interface io.github.a7asoft.nfcemv.extract/EmvCardError { // io.github.a7asoft.nfcemv.extract/EmvCardError|null[0]
     final class InvalidAid : io.github.a7asoft.nfcemv.extract/EmvCardError { // io.github.a7asoft.nfcemv.extract/EmvCardError.InvalidAid|null[0]
         constructor <init>(kotlin/Int) // io.github.a7asoft.nfcemv.extract/EmvCardError.InvalidAid.<init>|<init>(kotlin.Int){}[0]
@@ -238,6 +322,99 @@ sealed interface io.github.a7asoft.nfcemv.extract/EmvCardResult { // io.github.a
     }
 }
 
+sealed interface io.github.a7asoft.nfcemv.extract/GpoError { // io.github.a7asoft.nfcemv.extract/GpoError|null[0]
+    final class AflRejected : io.github.a7asoft.nfcemv.extract/GpoError { // io.github.a7asoft.nfcemv.extract/GpoError.AflRejected|null[0]
+        constructor <init>(io.github.a7asoft.nfcemv.extract/AflError) // io.github.a7asoft.nfcemv.extract/GpoError.AflRejected.<init>|<init>(io.github.a7asoft.nfcemv.extract.AflError){}[0]
+
+        final val cause // io.github.a7asoft.nfcemv.extract/GpoError.AflRejected.cause|{}cause[0]
+            final fun <get-cause>(): io.github.a7asoft.nfcemv.extract/AflError // io.github.a7asoft.nfcemv.extract/GpoError.AflRejected.cause.<get-cause>|<get-cause>(){}[0]
+
+        final fun component1(): io.github.a7asoft.nfcemv.extract/AflError // io.github.a7asoft.nfcemv.extract/GpoError.AflRejected.component1|component1(){}[0]
+        final fun copy(io.github.a7asoft.nfcemv.extract/AflError = ...): io.github.a7asoft.nfcemv.extract/GpoError.AflRejected // io.github.a7asoft.nfcemv.extract/GpoError.AflRejected.copy|copy(io.github.a7asoft.nfcemv.extract.AflError){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/GpoError.AflRejected.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoError.AflRejected.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/GpoError.AflRejected.toString|toString(){}[0]
+    }
+
+    final class InvalidAipLength : io.github.a7asoft.nfcemv.extract/GpoError { // io.github.a7asoft.nfcemv.extract/GpoError.InvalidAipLength|null[0]
+        constructor <init>(kotlin/Int) // io.github.a7asoft.nfcemv.extract/GpoError.InvalidAipLength.<init>|<init>(kotlin.Int){}[0]
+
+        final val byteCount // io.github.a7asoft.nfcemv.extract/GpoError.InvalidAipLength.byteCount|{}byteCount[0]
+            final fun <get-byteCount>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoError.InvalidAipLength.byteCount.<get-byteCount>|<get-byteCount>(){}[0]
+
+        final fun component1(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoError.InvalidAipLength.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): io.github.a7asoft.nfcemv.extract/GpoError.InvalidAipLength // io.github.a7asoft.nfcemv.extract/GpoError.InvalidAipLength.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/GpoError.InvalidAipLength.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoError.InvalidAipLength.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/GpoError.InvalidAipLength.toString|toString(){}[0]
+    }
+
+    final class TlvDecodeFailed : io.github.a7asoft.nfcemv.extract/GpoError { // io.github.a7asoft.nfcemv.extract/GpoError.TlvDecodeFailed|null[0]
+        constructor <init>(io.github.a7asoft.nfcemv.tlv/TlvError) // io.github.a7asoft.nfcemv.extract/GpoError.TlvDecodeFailed.<init>|<init>(io.github.a7asoft.nfcemv.tlv.TlvError){}[0]
+
+        final val cause // io.github.a7asoft.nfcemv.extract/GpoError.TlvDecodeFailed.cause|{}cause[0]
+            final fun <get-cause>(): io.github.a7asoft.nfcemv.tlv/TlvError // io.github.a7asoft.nfcemv.extract/GpoError.TlvDecodeFailed.cause.<get-cause>|<get-cause>(){}[0]
+
+        final fun component1(): io.github.a7asoft.nfcemv.tlv/TlvError // io.github.a7asoft.nfcemv.extract/GpoError.TlvDecodeFailed.component1|component1(){}[0]
+        final fun copy(io.github.a7asoft.nfcemv.tlv/TlvError = ...): io.github.a7asoft.nfcemv.extract/GpoError.TlvDecodeFailed // io.github.a7asoft.nfcemv.extract/GpoError.TlvDecodeFailed.copy|copy(io.github.a7asoft.nfcemv.tlv.TlvError){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/GpoError.TlvDecodeFailed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoError.TlvDecodeFailed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/GpoError.TlvDecodeFailed.toString|toString(){}[0]
+    }
+
+    final object EmptyInput : io.github.a7asoft.nfcemv.extract/GpoError { // io.github.a7asoft.nfcemv.extract/GpoError.EmptyInput|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/GpoError.EmptyInput.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoError.EmptyInput.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/GpoError.EmptyInput.toString|toString(){}[0]
+    }
+
+    final object MissingAfl : io.github.a7asoft.nfcemv.extract/GpoError { // io.github.a7asoft.nfcemv.extract/GpoError.MissingAfl|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/GpoError.MissingAfl.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoError.MissingAfl.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/GpoError.MissingAfl.toString|toString(){}[0]
+    }
+
+    final object MissingAip : io.github.a7asoft.nfcemv.extract/GpoError { // io.github.a7asoft.nfcemv.extract/GpoError.MissingAip|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/GpoError.MissingAip.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoError.MissingAip.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/GpoError.MissingAip.toString|toString(){}[0]
+    }
+
+    final object UnknownTemplate : io.github.a7asoft.nfcemv.extract/GpoError { // io.github.a7asoft.nfcemv.extract/GpoError.UnknownTemplate|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/GpoError.UnknownTemplate.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoError.UnknownTemplate.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/GpoError.UnknownTemplate.toString|toString(){}[0]
+    }
+}
+
+sealed interface io.github.a7asoft.nfcemv.extract/GpoResult { // io.github.a7asoft.nfcemv.extract/GpoResult|null[0]
+    final class Err : io.github.a7asoft.nfcemv.extract/GpoResult { // io.github.a7asoft.nfcemv.extract/GpoResult.Err|null[0]
+        constructor <init>(io.github.a7asoft.nfcemv.extract/GpoError) // io.github.a7asoft.nfcemv.extract/GpoResult.Err.<init>|<init>(io.github.a7asoft.nfcemv.extract.GpoError){}[0]
+
+        final val error // io.github.a7asoft.nfcemv.extract/GpoResult.Err.error|{}error[0]
+            final fun <get-error>(): io.github.a7asoft.nfcemv.extract/GpoError // io.github.a7asoft.nfcemv.extract/GpoResult.Err.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): io.github.a7asoft.nfcemv.extract/GpoError // io.github.a7asoft.nfcemv.extract/GpoResult.Err.component1|component1(){}[0]
+        final fun copy(io.github.a7asoft.nfcemv.extract/GpoError = ...): io.github.a7asoft.nfcemv.extract/GpoResult.Err // io.github.a7asoft.nfcemv.extract/GpoResult.Err.copy|copy(io.github.a7asoft.nfcemv.extract.GpoError){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/GpoResult.Err.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoResult.Err.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/GpoResult.Err.toString|toString(){}[0]
+    }
+
+    final class Ok : io.github.a7asoft.nfcemv.extract/GpoResult { // io.github.a7asoft.nfcemv.extract/GpoResult.Ok|null[0]
+        constructor <init>(io.github.a7asoft.nfcemv.extract/Gpo) // io.github.a7asoft.nfcemv.extract/GpoResult.Ok.<init>|<init>(io.github.a7asoft.nfcemv.extract.Gpo){}[0]
+
+        final val gpo // io.github.a7asoft.nfcemv.extract/GpoResult.Ok.gpo|{}gpo[0]
+            final fun <get-gpo>(): io.github.a7asoft.nfcemv.extract/Gpo // io.github.a7asoft.nfcemv.extract/GpoResult.Ok.gpo.<get-gpo>|<get-gpo>(){}[0]
+
+        final fun component1(): io.github.a7asoft.nfcemv.extract/Gpo // io.github.a7asoft.nfcemv.extract/GpoResult.Ok.component1|component1(){}[0]
+        final fun copy(io.github.a7asoft.nfcemv.extract/Gpo = ...): io.github.a7asoft.nfcemv.extract/GpoResult.Ok // io.github.a7asoft.nfcemv.extract/GpoResult.Ok.copy|copy(io.github.a7asoft.nfcemv.extract.Gpo){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/GpoResult.Ok.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoResult.Ok.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/GpoResult.Ok.toString|toString(){}[0]
+    }
+}
+
 sealed interface io.github.a7asoft.nfcemv.extract/PanError { // io.github.a7asoft.nfcemv.extract/PanError|null[0]
     final class LengthOutOfRange : io.github.a7asoft.nfcemv.extract/PanError { // io.github.a7asoft.nfcemv.extract/PanError.LengthOutOfRange|null[0]
         constructor <init>(kotlin/Int) // io.github.a7asoft.nfcemv.extract/PanError.LengthOutOfRange.<init>|<init>(kotlin.Int){}[0]
@@ -290,6 +467,80 @@ sealed interface io.github.a7asoft.nfcemv.extract/PanResult { // io.github.a7aso
         final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/PanResult.Ok.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/PanResult.Ok.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/PanResult.Ok.toString|toString(){}[0]
+    }
+}
+
+sealed interface io.github.a7asoft.nfcemv.extract/PpseError { // io.github.a7asoft.nfcemv.extract/PpseError|null[0]
+    final class InvalidAid : io.github.a7asoft.nfcemv.extract/PpseError { // io.github.a7asoft.nfcemv.extract/PpseError.InvalidAid|null[0]
+        constructor <init>(kotlin/Int) // io.github.a7asoft.nfcemv.extract/PpseError.InvalidAid.<init>|<init>(kotlin.Int){}[0]
+
+        final val byteCount // io.github.a7asoft.nfcemv.extract/PpseError.InvalidAid.byteCount|{}byteCount[0]
+            final fun <get-byteCount>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/PpseError.InvalidAid.byteCount.<get-byteCount>|<get-byteCount>(){}[0]
+
+        final fun component1(): kotlin/Int // io.github.a7asoft.nfcemv.extract/PpseError.InvalidAid.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): io.github.a7asoft.nfcemv.extract/PpseError.InvalidAid // io.github.a7asoft.nfcemv.extract/PpseError.InvalidAid.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/PpseError.InvalidAid.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/PpseError.InvalidAid.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/PpseError.InvalidAid.toString|toString(){}[0]
+    }
+
+    final class TlvDecodeFailed : io.github.a7asoft.nfcemv.extract/PpseError { // io.github.a7asoft.nfcemv.extract/PpseError.TlvDecodeFailed|null[0]
+        constructor <init>(io.github.a7asoft.nfcemv.tlv/TlvError) // io.github.a7asoft.nfcemv.extract/PpseError.TlvDecodeFailed.<init>|<init>(io.github.a7asoft.nfcemv.tlv.TlvError){}[0]
+
+        final val cause // io.github.a7asoft.nfcemv.extract/PpseError.TlvDecodeFailed.cause|{}cause[0]
+            final fun <get-cause>(): io.github.a7asoft.nfcemv.tlv/TlvError // io.github.a7asoft.nfcemv.extract/PpseError.TlvDecodeFailed.cause.<get-cause>|<get-cause>(){}[0]
+
+        final fun component1(): io.github.a7asoft.nfcemv.tlv/TlvError // io.github.a7asoft.nfcemv.extract/PpseError.TlvDecodeFailed.component1|component1(){}[0]
+        final fun copy(io.github.a7asoft.nfcemv.tlv/TlvError = ...): io.github.a7asoft.nfcemv.extract/PpseError.TlvDecodeFailed // io.github.a7asoft.nfcemv.extract/PpseError.TlvDecodeFailed.copy|copy(io.github.a7asoft.nfcemv.tlv.TlvError){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/PpseError.TlvDecodeFailed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/PpseError.TlvDecodeFailed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/PpseError.TlvDecodeFailed.toString|toString(){}[0]
+    }
+
+    final object EmptyInput : io.github.a7asoft.nfcemv.extract/PpseError { // io.github.a7asoft.nfcemv.extract/PpseError.EmptyInput|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/PpseError.EmptyInput.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/PpseError.EmptyInput.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/PpseError.EmptyInput.toString|toString(){}[0]
+    }
+
+    final object NoApplicationsFound : io.github.a7asoft.nfcemv.extract/PpseError { // io.github.a7asoft.nfcemv.extract/PpseError.NoApplicationsFound|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/PpseError.NoApplicationsFound.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/PpseError.NoApplicationsFound.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/PpseError.NoApplicationsFound.toString|toString(){}[0]
+    }
+
+    final object UnknownTemplate : io.github.a7asoft.nfcemv.extract/PpseError { // io.github.a7asoft.nfcemv.extract/PpseError.UnknownTemplate|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/PpseError.UnknownTemplate.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/PpseError.UnknownTemplate.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/PpseError.UnknownTemplate.toString|toString(){}[0]
+    }
+}
+
+sealed interface io.github.a7asoft.nfcemv.extract/PpseResult { // io.github.a7asoft.nfcemv.extract/PpseResult|null[0]
+    final class Err : io.github.a7asoft.nfcemv.extract/PpseResult { // io.github.a7asoft.nfcemv.extract/PpseResult.Err|null[0]
+        constructor <init>(io.github.a7asoft.nfcemv.extract/PpseError) // io.github.a7asoft.nfcemv.extract/PpseResult.Err.<init>|<init>(io.github.a7asoft.nfcemv.extract.PpseError){}[0]
+
+        final val error // io.github.a7asoft.nfcemv.extract/PpseResult.Err.error|{}error[0]
+            final fun <get-error>(): io.github.a7asoft.nfcemv.extract/PpseError // io.github.a7asoft.nfcemv.extract/PpseResult.Err.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): io.github.a7asoft.nfcemv.extract/PpseError // io.github.a7asoft.nfcemv.extract/PpseResult.Err.component1|component1(){}[0]
+        final fun copy(io.github.a7asoft.nfcemv.extract/PpseError = ...): io.github.a7asoft.nfcemv.extract/PpseResult.Err // io.github.a7asoft.nfcemv.extract/PpseResult.Err.copy|copy(io.github.a7asoft.nfcemv.extract.PpseError){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/PpseResult.Err.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/PpseResult.Err.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/PpseResult.Err.toString|toString(){}[0]
+    }
+
+    final class Ok : io.github.a7asoft.nfcemv.extract/PpseResult { // io.github.a7asoft.nfcemv.extract/PpseResult.Ok|null[0]
+        constructor <init>(io.github.a7asoft.nfcemv.extract/Ppse) // io.github.a7asoft.nfcemv.extract/PpseResult.Ok.<init>|<init>(io.github.a7asoft.nfcemv.extract.Ppse){}[0]
+
+        final val ppse // io.github.a7asoft.nfcemv.extract/PpseResult.Ok.ppse|{}ppse[0]
+            final fun <get-ppse>(): io.github.a7asoft.nfcemv.extract/Ppse // io.github.a7asoft.nfcemv.extract/PpseResult.Ok.ppse.<get-ppse>|<get-ppse>(){}[0]
+
+        final fun component1(): io.github.a7asoft.nfcemv.extract/Ppse // io.github.a7asoft.nfcemv.extract/PpseResult.Ok.component1|component1(){}[0]
+        final fun copy(io.github.a7asoft.nfcemv.extract/Ppse = ...): io.github.a7asoft.nfcemv.extract/PpseResult.Ok // io.github.a7asoft.nfcemv.extract/PpseResult.Ok.copy|copy(io.github.a7asoft.nfcemv.extract.Ppse){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/PpseResult.Ok.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/PpseResult.Ok.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/PpseResult.Ok.toString|toString(){}[0]
     }
 }
 
@@ -743,6 +994,41 @@ final class io.github.a7asoft.nfcemv.emv/EmvTagInfo { // io.github.a7asoft.nfcem
     final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.emv/EmvTagInfo.toString|toString(){}[0]
 }
 
+final class io.github.a7asoft.nfcemv.extract/Afl { // io.github.a7asoft.nfcemv.extract/Afl|null[0]
+    final val entries // io.github.a7asoft.nfcemv.extract/Afl.entries|{}entries[0]
+        final fun <get-entries>(): kotlin.collections/List<io.github.a7asoft.nfcemv.extract/AflEntry> // io.github.a7asoft.nfcemv.extract/Afl.entries.<get-entries>|<get-entries>(){}[0]
+
+    final fun component1(): kotlin.collections/List<io.github.a7asoft.nfcemv.extract/AflEntry> // io.github.a7asoft.nfcemv.extract/Afl.component1|component1(){}[0]
+    final fun copy(kotlin.collections/List<io.github.a7asoft.nfcemv.extract/AflEntry> = ...): io.github.a7asoft.nfcemv.extract/Afl // io.github.a7asoft.nfcemv.extract/Afl.copy|copy(kotlin.collections.List<io.github.a7asoft.nfcemv.extract.AflEntry>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/Afl.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/Afl.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/Afl.toString|toString(){}[0]
+
+    final object Companion // io.github.a7asoft.nfcemv.extract/Afl.Companion|null[0]
+}
+
+final class io.github.a7asoft.nfcemv.extract/AflEntry { // io.github.a7asoft.nfcemv.extract/AflEntry|null[0]
+    constructor <init>(kotlin/Int, kotlin/Int, kotlin/Int, kotlin/Int) // io.github.a7asoft.nfcemv.extract/AflEntry.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+    final val firstRecord // io.github.a7asoft.nfcemv.extract/AflEntry.firstRecord|{}firstRecord[0]
+        final fun <get-firstRecord>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflEntry.firstRecord.<get-firstRecord>|<get-firstRecord>(){}[0]
+    final val lastRecord // io.github.a7asoft.nfcemv.extract/AflEntry.lastRecord|{}lastRecord[0]
+        final fun <get-lastRecord>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflEntry.lastRecord.<get-lastRecord>|<get-lastRecord>(){}[0]
+    final val odaCount // io.github.a7asoft.nfcemv.extract/AflEntry.odaCount|{}odaCount[0]
+        final fun <get-odaCount>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflEntry.odaCount.<get-odaCount>|<get-odaCount>(){}[0]
+    final val sfi // io.github.a7asoft.nfcemv.extract/AflEntry.sfi|{}sfi[0]
+        final fun <get-sfi>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflEntry.sfi.<get-sfi>|<get-sfi>(){}[0]
+
+    final fun component1(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflEntry.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflEntry.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflEntry.component3|component3(){}[0]
+    final fun component4(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflEntry.component4|component4(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): io.github.a7asoft.nfcemv.extract/AflEntry // io.github.a7asoft.nfcemv.extract/AflEntry.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/AflEntry.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/AflEntry.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/AflEntry.toString|toString(){}[0]
+}
+
 final class io.github.a7asoft.nfcemv.extract/EmvCard { // io.github.a7asoft.nfcemv.extract/EmvCard|null[0]
     final val aid // io.github.a7asoft.nfcemv.extract/EmvCard.aid|{}aid[0]
         final fun <get-aid>(): io.github.a7asoft.nfcemv.brand/Aid // io.github.a7asoft.nfcemv.extract/EmvCard.aid.<get-aid>|<get-aid>(){}[0]
@@ -770,6 +1056,48 @@ final class io.github.a7asoft.nfcemv.extract/EmvCard { // io.github.a7asoft.nfce
     final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/EmvCard.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/EmvCard.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/EmvCard.toString|toString(){}[0]
+}
+
+final class io.github.a7asoft.nfcemv.extract/Gpo { // io.github.a7asoft.nfcemv.extract/Gpo|null[0]
+    final val afl // io.github.a7asoft.nfcemv.extract/Gpo.afl|{}afl[0]
+        final fun <get-afl>(): io.github.a7asoft.nfcemv.extract/Afl // io.github.a7asoft.nfcemv.extract/Gpo.afl.<get-afl>|<get-afl>(){}[0]
+    final val applicationInterchangeProfile // io.github.a7asoft.nfcemv.extract/Gpo.applicationInterchangeProfile|{}applicationInterchangeProfile[0]
+        final fun <get-applicationInterchangeProfile>(): kotlin/ByteArray // io.github.a7asoft.nfcemv.extract/Gpo.applicationInterchangeProfile.<get-applicationInterchangeProfile>|<get-applicationInterchangeProfile>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/Gpo.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/Gpo.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/Gpo.toString|toString(){}[0]
+
+    final object Companion // io.github.a7asoft.nfcemv.extract/Gpo.Companion|null[0]
+}
+
+final class io.github.a7asoft.nfcemv.extract/Ppse { // io.github.a7asoft.nfcemv.extract/Ppse|null[0]
+    final val applications // io.github.a7asoft.nfcemv.extract/Ppse.applications|{}applications[0]
+        final fun <get-applications>(): kotlin.collections/List<io.github.a7asoft.nfcemv.extract/PpseEntry> // io.github.a7asoft.nfcemv.extract/Ppse.applications.<get-applications>|<get-applications>(){}[0]
+
+    final fun component1(): kotlin.collections/List<io.github.a7asoft.nfcemv.extract/PpseEntry> // io.github.a7asoft.nfcemv.extract/Ppse.component1|component1(){}[0]
+    final fun copy(kotlin.collections/List<io.github.a7asoft.nfcemv.extract/PpseEntry> = ...): io.github.a7asoft.nfcemv.extract/Ppse // io.github.a7asoft.nfcemv.extract/Ppse.copy|copy(kotlin.collections.List<io.github.a7asoft.nfcemv.extract.PpseEntry>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/Ppse.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/Ppse.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/Ppse.toString|toString(){}[0]
+
+    final object Companion // io.github.a7asoft.nfcemv.extract/Ppse.Companion|null[0]
+}
+
+final class io.github.a7asoft.nfcemv.extract/PpseEntry { // io.github.a7asoft.nfcemv.extract/PpseEntry|null[0]
+    constructor <init>(io.github.a7asoft.nfcemv.brand/Aid, kotlin/Int?) // io.github.a7asoft.nfcemv.extract/PpseEntry.<init>|<init>(io.github.a7asoft.nfcemv.brand.Aid;kotlin.Int?){}[0]
+
+    final val aid // io.github.a7asoft.nfcemv.extract/PpseEntry.aid|{}aid[0]
+        final fun <get-aid>(): io.github.a7asoft.nfcemv.brand/Aid // io.github.a7asoft.nfcemv.extract/PpseEntry.aid.<get-aid>|<get-aid>(){}[0]
+    final val priority // io.github.a7asoft.nfcemv.extract/PpseEntry.priority|{}priority[0]
+        final fun <get-priority>(): kotlin/Int? // io.github.a7asoft.nfcemv.extract/PpseEntry.priority.<get-priority>|<get-priority>(){}[0]
+
+    final fun component1(): io.github.a7asoft.nfcemv.brand/Aid // io.github.a7asoft.nfcemv.extract/PpseEntry.component1|component1(){}[0]
+    final fun component2(): kotlin/Int? // io.github.a7asoft.nfcemv.extract/PpseEntry.component2|component2(){}[0]
+    final fun copy(io.github.a7asoft.nfcemv.brand/Aid = ..., kotlin/Int? = ...): io.github.a7asoft.nfcemv.extract/PpseEntry // io.github.a7asoft.nfcemv.extract/PpseEntry.copy|copy(io.github.a7asoft.nfcemv.brand.Aid;kotlin.Int?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/PpseEntry.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/PpseEntry.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/PpseEntry.toString|toString(){}[0]
 }
 
 final class io.github.a7asoft.nfcemv.extract/Track2 { // io.github.a7asoft.nfcemv.extract/Track2|null[0]
@@ -832,6 +1160,7 @@ final value class io.github.a7asoft.nfcemv.brand/Aid { // io.github.a7asoft.nfce
 
     final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.brand/Aid.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.brand/Aid.hashCode|hashCode(){}[0]
+    final fun toBytes(): kotlin/ByteArray // io.github.a7asoft.nfcemv.brand/Aid.toBytes|toBytes(){}[0]
     final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.brand/Aid.toString|toString(){}[0]
 
     final object Companion { // io.github.a7asoft.nfcemv.brand/Aid.Companion|null[0]
@@ -918,4 +1247,10 @@ final object io.github.a7asoft.nfcemv.tlv/TlvEncoder { // io.github.a7asoft.nfce
     final fun encode(kotlin.collections/List<io.github.a7asoft.nfcemv.tlv/Tlv>): kotlin/ByteArray // io.github.a7asoft.nfcemv.tlv/TlvEncoder.encode|encode(kotlin.collections.List<io.github.a7asoft.nfcemv.tlv.Tlv>){}[0]
 }
 
+final fun (io.github.a7asoft.nfcemv.extract/Afl.Companion).io.github.a7asoft.nfcemv.extract/parse(kotlin/ByteArray): io.github.a7asoft.nfcemv.extract/AflResult // io.github.a7asoft.nfcemv.extract/parse|parse@io.github.a7asoft.nfcemv.extract.Afl.Companion(kotlin.ByteArray){}[0]
+final fun (io.github.a7asoft.nfcemv.extract/Afl.Companion).io.github.a7asoft.nfcemv.extract/parseOrThrow(kotlin/ByteArray): io.github.a7asoft.nfcemv.extract/Afl // io.github.a7asoft.nfcemv.extract/parseOrThrow|parseOrThrow@io.github.a7asoft.nfcemv.extract.Afl.Companion(kotlin.ByteArray){}[0]
+final fun (io.github.a7asoft.nfcemv.extract/Gpo.Companion).io.github.a7asoft.nfcemv.extract/parse(kotlin/ByteArray): io.github.a7asoft.nfcemv.extract/GpoResult // io.github.a7asoft.nfcemv.extract/parse|parse@io.github.a7asoft.nfcemv.extract.Gpo.Companion(kotlin.ByteArray){}[0]
+final fun (io.github.a7asoft.nfcemv.extract/Gpo.Companion).io.github.a7asoft.nfcemv.extract/parseOrThrow(kotlin/ByteArray): io.github.a7asoft.nfcemv.extract/Gpo // io.github.a7asoft.nfcemv.extract/parseOrThrow|parseOrThrow@io.github.a7asoft.nfcemv.extract.Gpo.Companion(kotlin.ByteArray){}[0]
+final fun (io.github.a7asoft.nfcemv.extract/Ppse.Companion).io.github.a7asoft.nfcemv.extract/parse(kotlin/ByteArray): io.github.a7asoft.nfcemv.extract/PpseResult // io.github.a7asoft.nfcemv.extract/parse|parse@io.github.a7asoft.nfcemv.extract.Ppse.Companion(kotlin.ByteArray){}[0]
+final fun (io.github.a7asoft.nfcemv.extract/Ppse.Companion).io.github.a7asoft.nfcemv.extract/parseOrThrow(kotlin/ByteArray): io.github.a7asoft.nfcemv.extract/Ppse // io.github.a7asoft.nfcemv.extract/parseOrThrow|parseOrThrow@io.github.a7asoft.nfcemv.extract.Ppse.Companion(kotlin.ByteArray){}[0]
 final fun (kotlin/String).io.github.a7asoft.nfcemv.validation/isValidLuhn(): kotlin/Boolean // io.github.a7asoft.nfcemv.validation/isValidLuhn|isValidLuhn@kotlin.String(){}[0]
