@@ -19,7 +19,8 @@ max_line_length = 140
 # Compose @Composable functions are PascalCase by convention.
 ktlint_standard_function-naming = disabled
 
-# `import androidx.compose.runtime.*` is the canonical Compose import shape.
+# Compose runtime wildcard import is allowed via detekt's WildcardImport.excludeImports;
+# ktlint cannot do per-import exceptions, so we defer wildcard enforcement entirely to detekt.
 ktlint_standard_no-wildcard-imports = disabled
 
 # Test fixtures (byteArrayOf(...) hex tables) are far more readable on one line
@@ -34,10 +35,6 @@ ktlint_standard_function-expression-body = disabled
 ktlint_standard_trailing-comma-on-call-site = disabled
 ktlint_standard_trailing-comma-on-declaration-site = disabled
 
-# Class body blank-line rule occasionally fires on intentional spacing in
-# `object` declarations with KDoc-heavy member lists.
-ktlint_standard_no-empty-first-line-in-class-body = disabled
-
 # `object` / value-class single-line declarations sometimes use `=` with no body.
 ktlint_standard_multiline-expression-wrapping = disabled
 
@@ -48,10 +45,16 @@ ktlint_standard_class-signature = disabled
 # EMV AID directory tables use aligned columns for human readability.
 ktlint_standard_no-multi-spaces = disabled
 
+# Test classes universally start the body with a blank line for readability;
+# enforcing this would churn ~30 existing test files for no defect signal.
+ktlint_standard_no-empty-first-line-in-class-body = disabled
+
+# detekt enforces max line length at 140 with a per-file baseline for the EMV
+# tag-info table (which is more readable on one line). ktlint cannot baseline
+# specific occurrences, so we defer line-length enforcement entirely to detekt.
+ktlint_standard_max-line-length = disabled
+
 # Other reformat rules surfacing volume churn on the existing TLV / EMV tree:
 ktlint_standard_wrapping = disabled
 ktlint_standard_blank-line-before-declaration = disabled
 
-# `max_line_length = 140` is set above; disable the ktlint enforcement that
-# trips on long EMV hex literals where breaking would harm readability.
-ktlint_standard_max-line-length = disabled

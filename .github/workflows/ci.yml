@@ -11,6 +11,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Lint runs on ubuntu-latest. The composeApp module's AGP plugin requires
+  # the Android SDK at configure time. ubuntu-latest GitHub-hosted runners
+  # ship with the Android SDK pre-installed at /usr/local/lib/android/sdk;
+  # no explicit setup-android-sdk step is needed today. Re-evaluate if the
+  # runner image changes.
   lint:
     name: ktlint + detekt
     runs-on: ubuntu-latest
