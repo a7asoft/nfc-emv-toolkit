@@ -28,6 +28,10 @@ PRs that expand scope into payment-terminal territory will be closed.
    justification. The baseline is for legacy debt only.
 4. Open a PR. CI must pass.
 
+## Reporting a security issue
+
+If you found a way to make `Pan`, `Track2`, `EmvCard`, or any error message leak raw bytes — or any path by which malformed input crashes the parser without a typed `EmvCardResult.Err` — please follow [`SECURITY.md`](SECURITY.md). **Do not open a public issue or PR.** GitHub Private Vulnerability Reporting routes the report straight to maintainers; email fallback is documented in the security policy.
+
 ## Commit format
 
 Conventional Commits. Subject ≤ 72 chars, present tense.

@@ -4,6 +4,17 @@ All notable changes to this project will be documented here. The format follows 
 
 ## [Unreleased]
 
+### Added — Security disclosure path + Dependabot (#36)
+- `SECURITY.md` at repo root documents the responsible-disclosure path: GitHub Private Vulnerability Reporting primary, `a7asoft@gmail.com` fallback. Supported versions table covers the latest minor on `main`. SLO: first-touch in 5 business days, triage in 10, fix-and-advisory within 90 days.
+- `.github/dependabot.yml` configures weekly version updates on `gradle` (root, picks up `libs.versions.toml`, `shared`, and `composeApp`) and `github-actions` ecosystems. Minor + patch grouped per ecosystem; majors open as individual PRs. Security updates grouped separately. Maintainer auto-assigned per CODEOWNERS.
+- `CONTRIBUTING.md` cross-references `SECURITY.md` so contributors know where to route a sensitive finding.
+- `README.md` adds a "Security" section linking to `SECURITY.md` and `docs/threat-model.md`, and lists the CI gates that protect PCI-sensitive surfaces (ABI gate, `ForbiddenMethodCall`, PCI-safety regressions).
+- Repository settings to flip post-merge (NOT in this PR — UI-only):
+  - Settings → Code security → **Private vulnerability reporting** → Enable.
+  - Settings → Code security → **Dependabot alerts** → Enable.
+  - Settings → Code security → **Dependabot security updates** → Enable.
+  - Settings → Code security → Code scanning is intentionally deferred to issue **#37**.
+
 ### Added — ABI validation gate (#11)
 - Kotlin's built-in `AbiValidationExtension` (since Kotlin 2.1) is enabled on `:shared`. Reference dumps live under `shared/api/android/shared.api` (Android target) and `shared/api/shared.klib.api` (KLIB ABI; the dump tool unifies Native targets when their ABIs match — per-target files appear under `shared/api/klib/<target>/` if they diverge).
 - CI runs `./gradlew :shared:checkKotlinAbi` on every PR via the macOS `kmp` job. Public-API drift fails the build.
