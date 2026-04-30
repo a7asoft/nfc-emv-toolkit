@@ -1,6 +1,5 @@
 package io.github.a7asoft.nfcemv.reader
 
-import io.github.a7asoft.nfcemv.extract.AflError
 import io.github.a7asoft.nfcemv.extract.EmvCardError
 import io.github.a7asoft.nfcemv.extract.GpoError
 import io.github.a7asoft.nfcemv.extract.PpseError
@@ -9,15 +8,19 @@ import io.github.a7asoft.nfcemv.extract.PpseError
  * Typed reasons a [ContactlessReader] read terminated in [ReaderState.Failed].
  *
  * Variants carry only structural metadata (status words, structural
- * sub-error references). They never embed raw value bytes from the card.
+ * sub-error references, [IoReason] enum). They never embed raw value
+ * bytes from the card or arbitrary [Throwable] messages — the latter
+ * would let the underlying exception's `message` string surface in
+ * `toString()` and potentially leak PCI-sensitive context.
  */
 public sealed interface ReaderError {
 
-    /** Tag moved out of field while the read was in flight. */
-    public data object TagLost : ReaderError
-
-    /** Generic IO error from the IsoDep channel. */
-    public data class IoFailure(val cause: Throwable) : ReaderError
+    /**
+     * The IsoDep channel produced an `IOException`. The structural
+     * [reason] enum identifies the subtype without embedding the raw
+     * exception message.
+     */
+    public data class IoFailure(val reason: IoReason) : ReaderError
 
     /**
      * `SELECT 2PAY.SYS.DDF01` returned `6A 82` (file/application not
@@ -38,9 +41,23 @@ public sealed interface ReaderError {
     /** GPO response was malformed. */
     public data class GpoRejected(val cause: GpoError) : ReaderError
 
-    /** AFL bytes inside the GPO response were malformed. */
-    public data class AflRejected(val cause: AflError) : ReaderError
-
     /** `EmvParser.parse` rejected the assembled record stream. */
     public data class ParseFailed(val cause: EmvCardError) : ReaderError
+}
+
+/**
+ * Structural classification of the IO failure surfaced by
+ * [ReaderError.IoFailure]. Maps `android.nfc.tech.IsoDep`'s I/O
+ * exception classes to a closed enum so [ReaderError.toString] cannot
+ * leak whatever the underlying exception's message string carries.
+ */
+public enum class IoReason {
+    /** `android.nfc.TagLostException` was thrown — tag moved out of field. */
+    TagLost,
+
+    /** RF transceive timed out without a response (e.g. `SocketTimeoutException`). */
+    Timeout,
+
+    /** Generic `java.io.IOException` without a more specific subtype. */
+    Generic,
 }

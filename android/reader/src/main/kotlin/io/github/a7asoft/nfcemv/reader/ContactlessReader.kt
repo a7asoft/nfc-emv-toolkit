@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onCompletion
 import java.io.IOException
+import java.net.SocketTimeoutException
 
 /**
  * Orchestrates the EMV contactless read flow per Book 1 §11–12 over an
@@ -47,6 +48,14 @@ public class ContactlessReader internal constructor(
      * Returns a cold flow that, when collected, drives the contactless
      * read flow against the wrapped transport. Each emission is one
      * [ReaderState] transition.
+     *
+     * Cancellation semantics: the Flow honors collector cancellation
+     * BETWEEN APDU exchanges (at suspension points), not DURING a
+     * blocking `IsoDep.transceive` call. A cancellation that arrives
+     * mid-exchange will be observed only after the in-flight `transceive`
+     * returns (or throws). The transport is closed on completion
+     * regardless of whether the Flow ended via terminal emit, error, or
+     * cancellation.
      */
     public fun read(): Flow<ReaderState> = flow { drive() }
         .flowOn(Dispatchers.IO)
@@ -75,6 +84,9 @@ public class ContactlessReader internal constructor(
         }
     }
 
+    // why: emit progress, transceive, dispatch on status, then parse — each
+    // is a distinct EMV Book 1 §11.3.4 step. Splitting further would just
+    // ferry response bytes through more helper signatures.
     @Suppress("CyclomaticComplexMethod")
     private suspend fun FlowCollector<ReaderState>.selectPpse(): Ppse? {
         emit(ReaderState.SelectingPpse)
@@ -119,6 +131,9 @@ public class ContactlessReader internal constructor(
         return false
     }
 
+    // why: transceive, dispatch on status, parse — each is a distinct EMV
+    // Book 3 §6.5.8 step. Same shape as `selectPpse`; further splitting
+    // adds parameter shuffling without reducing real complexity.
     @Suppress("CyclomaticComplexMethod")
     private suspend fun FlowCollector<ReaderState>.readGpo(): Gpo? {
         val response = transport.transceive(ApduCommands.GPO_DEFAULT)
@@ -136,12 +151,22 @@ public class ContactlessReader internal constructor(
         }
     }
 
+    // why: nested for-loops walk the AFL's (entry × record) cross-product
+    // per EMV Book 3 §10.2. The inner branch silently drops non-9000
+    // responses (see comment below). Lifting the inner loop into a helper
+    // moves complexity rather than reducing it.
     @Suppress("CyclomaticComplexMethod")
     private fun readAllRecords(afl: Afl): List<ByteArray> {
         val collected = ArrayList<ByteArray>()
         for (entry in afl.entries) {
             for (record in entry.firstRecord..entry.lastRecord) {
                 val response = transport.transceive(ApduCommands.readRecord(record, entry.sfi))
+                // why: a non-9000 READ RECORD is silently skipped rather than aborting
+                // the whole flow. Real cards sometimes advertise records in their AFL
+                // that aren't readable (file-not-activated, end-of-file). EmvParser
+                // surfaces MissingRequiredTag downstream if essential data was in a
+                // skipped record. Trade-off accepted for v0.2.0; see docs/threat-model
+                // and follow-up issue if this turns out to mask real bugs.
                 if (ApduCommands.isSuccess(response)) {
                     collected += ApduCommands.dataField(response)
                 }
@@ -157,8 +182,16 @@ public class ContactlessReader internal constructor(
         }
     }
 
-    private fun translateIo(e: IOException): ReaderError =
-        if (e is TagLostException) ReaderError.TagLost else ReaderError.IoFailure(e)
+    // why: exhaustive `when` over the IOException subtypes we map to
+    // [IoReason]. Each branch is a single mapping, not real complexity.
+    @Suppress("CyclomaticComplexMethod")
+    private fun translateIo(e: IOException): ReaderError = ReaderError.IoFailure(
+        reason = when (e) {
+            is TagLostException -> IoReason.TagLost
+            is SocketTimeoutException -> IoReason.Timeout
+            else -> IoReason.Generic
+        },
+    )
 
     private data class PickedApplication(val aid: Aid)
 

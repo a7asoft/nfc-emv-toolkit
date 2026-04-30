@@ -18,20 +18,41 @@ import io.github.a7asoft.nfcemv.tlv.TlvParseResult
  * Construction goes through [Gpo.parse] / [Gpo.parseOrThrow]. Both
  * response formats (tag `80` format-1 and tag `77` format-2) are handled.
  */
-public data class Gpo internal constructor(
-    public val applicationInterchangeProfile: ByteArray,
+public class Gpo internal constructor(
+    aip: ByteArray,
     public val afl: Afl,
 ) {
+    private val storedAip: ByteArray = aip.copyOf()
+
+    /**
+     * Application Interchange Profile (EMV Book 3 Annex C1) — a 2-byte
+     * capability bitmap. Returns a fresh defensive copy per access so
+     * callers cannot mutate the underlying bytes (mirrors the
+     * `Tlv.Primitive` pattern from PR #1).
+     */
+    public val applicationInterchangeProfile: ByteArray
+        get() = storedAip.copyOf()
+
+    // why: hand-rolled `equals` mirrors the `Tlv.Primitive` pattern from
+    // PR #1 — each early-return is a structural invariant check
+    // (identity / type / AIP content / AFL).
     @Suppress("CyclomaticComplexMethod")
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Gpo) return false
-        return applicationInterchangeProfile.contentEquals(other.applicationInterchangeProfile) &&
-            afl == other.afl
+        if (!storedAip.contentEquals(other.storedAip)) return false
+        if (afl != other.afl) return false
+        return true
     }
 
-    override fun hashCode(): Int =
-        31 * applicationInterchangeProfile.contentHashCode() + afl.hashCode()
+    override fun hashCode(): Int {
+        var result = storedAip.contentHashCode()
+        result = 31 * result + afl.hashCode()
+        return result
+    }
+
+    override fun toString(): String =
+        "Gpo(aip=${storedAip.size} bytes, afl=$afl)"
 
     public companion object
 }
@@ -121,6 +142,9 @@ private fun composeGpo(aip: ByteArray, aflBytes: ByteArray): GpoResult =
         is AflResult.Err -> GpoResult.Err(GpoError.AflRejected(parsed.error))
     }
 
+// why: scan-and-return loop; CC includes the type-test plus tag-match
+// guard. Splitting into a helper would just ferry `parent` and `tag`
+// through a second signature.
 @Suppress("CyclomaticComplexMethod")
 private fun findChild(parent: Tlv.Constructed, tag: Tag): Tlv.Primitive? {
     for (child in parent.children) {

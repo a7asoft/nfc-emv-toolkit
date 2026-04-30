@@ -200,4 +200,46 @@ internal object Transcripts {
         0x70, 0x09,
         0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
     ) + SW_OK
+
+    /**
+     * GPO format-1 advertising AIP `00 80` and AFL covering SFI=1
+     * records 1..2. Used by the silent-skip test where the first
+     * READ RECORD returns 6A 83 and the second returns a valid record.
+     *
+     * AFL entry: `(1<<3)|4 = 0x0C` SFI byte, firstRecord=1,
+     * lastRecord=2, odaCount=0 → `0C 01 02 00`.
+     */
+    internal val VISA_GPO_RESPONSE_TWO_RECORDS: ByteArray = byteArrayOf(
+        0x80.toByte(), 0x06,
+        0x00, 0x80.toByte(),
+        0x0C, 0x01, 0x02, 0x00,
+    ) + SW_OK
+
+    /** READ RECORD returns 6A 83 (record not found) — exercises silent-skip path. */
+    internal val READ_RECORD_NOT_FOUND_RESPONSE: ByteArray = byteArrayOf(0x6A, 0x83.toByte())
+
+    /** GPO success status with structurally invalid body (unknown outer template). */
+    internal val GPO_MALFORMED_BODY_RESPONSE: ByteArray = byteArrayOf(
+        // 70 02 00 00 — valid TLV but wrong outer tag for GPO.
+        0x70, 0x02, 0x00, 0x00,
+    ) + SW_OK
+
+    /** PPSE success with structurally invalid body (wrong outer template). */
+    internal val PPSE_MALFORMED_BODY_RESPONSE: ByteArray = byteArrayOf(
+        // 70 02 00 00 — valid TLV but wrong outer tag for PPSE FCI.
+        0x70, 0x02, 0x00, 0x00,
+    ) + SW_OK
+
+    /**
+     * PPSE success with a structurally valid 6F/A5/BF0C envelope but
+     * ZERO 61 application templates inside. Drives Ppse.parse →
+     * NoApplicationsFound → ReaderError.PpseRejected.
+     *
+     * 6F 05 [A5 03 BF0C 00].
+     */
+    internal val PPSE_NO_APPLICATIONS_RESPONSE: ByteArray = byteArrayOf(
+        0x6F, 0x05,
+        0xA5.toByte(), 0x03,
+        0xBF.toByte(), 0x0C, 0x00,
+    ) + SW_OK
 }

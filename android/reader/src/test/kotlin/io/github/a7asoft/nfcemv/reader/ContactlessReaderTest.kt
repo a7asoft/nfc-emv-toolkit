@@ -5,9 +5,11 @@ import io.github.a7asoft.nfcemv.extract.EmvCardError
 import io.github.a7asoft.nfcemv.reader.internal.ApduCommands
 import io.github.a7asoft.nfcemv.reader.internal.FakeApduTransport
 import io.github.a7asoft.nfcemv.reader.internal.Transcripts
-import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,24 +51,39 @@ class ContactlessReaderTest {
     }
 
     @Test
-    fun `read emits TagLost when transport throws TagLostException on connect`() = runTest {
+    fun `read emits IoFailure with TagLost reason when transport throws TagLostException`() = runTest {
         val transport = FakeApduTransport(
             script = emptyList(),
             connectError = android.nfc.TagLostException("simulated tag lost"),
         )
         val states = ContactlessReader(transport).read().toList()
         val failed = assertIs<ReaderState.Failed>(states.last())
-        assertEquals(ReaderError.TagLost, failed.error)
+        val io = assertIs<ReaderError.IoFailure>(failed.error)
+        assertEquals(IoReason.TagLost, io.reason)
     }
 
     @Test
-    fun `read emits IoFailure when transport throws generic IOException on connect`() = runTest {
-        val cause = IOException("rf transport down")
-        val transport = FakeApduTransport(script = emptyList(), connectError = cause)
+    fun `read emits IoFailure with Generic reason on a generic IOException`() = runTest {
+        val transport = FakeApduTransport(
+            script = emptyList(),
+            connectError = IOException("rf transport down"),
+        )
         val states = ContactlessReader(transport).read().toList()
         val failed = assertIs<ReaderState.Failed>(states.last())
-        val ioFailure = assertIs<ReaderError.IoFailure>(failed.error)
-        assertEquals(cause, ioFailure.cause)
+        val io = assertIs<ReaderError.IoFailure>(failed.error)
+        assertEquals(IoReason.Generic, io.reason)
+    }
+
+    @Test
+    fun `read emits IoFailure with Timeout reason on a SocketTimeoutException`() = runTest {
+        val transport = FakeApduTransport(
+            script = emptyList(),
+            connectError = java.net.SocketTimeoutException("rf timeout"),
+        )
+        val states = ContactlessReader(transport).read().toList()
+        val failed = assertIs<ReaderState.Failed>(states.last())
+        val io = assertIs<ReaderError.IoFailure>(failed.error)
+        assertEquals(IoReason.Timeout, io.reason)
     }
 
     @Test
@@ -118,21 +135,70 @@ class ContactlessReaderTest {
     }
 
     @Test
-    fun `read closes the transport after Flow completion on a success path`() = runTest {
-        val transport = FakeApduTransport(visaScript())
-        ContactlessReader(transport).read().toList()
-        assertTrue(transport.closed)
+    fun `read emits PpseRejected when PPSE body is malformed`() = runTest {
+        val transport = FakeApduTransport(
+            listOf(ApduCommands.PPSE_SELECT to Transcripts.PPSE_MALFORMED_BODY_RESPONSE),
+        )
+        val states = ContactlessReader(transport).read().toList()
+        val failed = assertIs<ReaderState.Failed>(states.last())
+        assertIs<ReaderError.PpseRejected>(failed.error)
     }
 
     @Test
-    fun `read closes the transport after Flow cancellation`() = runTest {
-        val transport = FakeApduTransport(visaScript())
-        ContactlessReader(transport).read().take(2).toList()
-        assertTrue(transport.closed)
+    fun `read emits PpseRejected when PPSE has no application templates`() = runTest {
+        val transport = FakeApduTransport(
+            listOf(ApduCommands.PPSE_SELECT to Transcripts.PPSE_NO_APPLICATIONS_RESPONSE),
+        )
+        val states = ContactlessReader(transport).read().toList()
+        val failed = assertIs<ReaderState.Failed>(states.last())
+        assertIs<ReaderError.PpseRejected>(failed.error)
     }
 
     @Test
-    fun `read selects highest-priority application from a multi-AID PPSE`() = runTest {
+    fun `read emits GpoRejected when GPO returns a malformed body`() = runTest {
+        val transport = FakeApduTransport(
+            listOf(
+                ApduCommands.PPSE_SELECT to Transcripts.VISA_PPSE_RESPONSE,
+                selectVisaPrefix() to Transcripts.VISA_SELECT_FCI_RESPONSE,
+                ApduCommands.GPO_DEFAULT to Transcripts.GPO_MALFORMED_BODY_RESPONSE,
+            ),
+        )
+        val states = ContactlessReader(transport).read().toList()
+        val failed = assertIs<ReaderState.Failed>(states.last())
+        assertIs<ReaderError.GpoRejected>(failed.error)
+    }
+
+    @Test
+    fun `read silently skips a non-9000 READ RECORD and continues with the next`() = runTest {
+        val transport = FakeApduTransport(
+            listOf(
+                ApduCommands.PPSE_SELECT to Transcripts.VISA_PPSE_RESPONSE,
+                selectVisaPrefix() to Transcripts.VISA_SELECT_FCI_RESPONSE,
+                ApduCommands.GPO_DEFAULT to Transcripts.VISA_GPO_RESPONSE_TWO_RECORDS,
+                // First READ RECORD: returns 6A 83 (record not found).
+                readRecord1Sfi1Prefix() to Transcripts.READ_RECORD_NOT_FOUND_RESPONSE,
+                // Second READ RECORD: success — drives the EmvParser to a Done state.
+                readRecord2Sfi1Prefix() to Transcripts.VISA_RECORD_1_RESPONSE,
+            ),
+        )
+        val states = ContactlessReader(transport).read().toList()
+        assertIs<ReaderState.Done>(states.last())
+    }
+
+    @Test
+    fun `read closes the transport when the collecting coroutine is cancelled`() = runTest {
+        val transport = FakeApduTransport(visaScript())
+        val collected = mutableListOf<ReaderState>()
+        val job = launch {
+            ContactlessReader(transport).read().collect { collected += it }
+        }
+        while (collected.isEmpty()) yield()
+        job.cancelAndJoin()
+        assertTrue(transport.closed, "transport must close when collector is cancelled mid-flow")
+    }
+
+    @Test
+    fun `read selects the application with the lowest priority value among multiple PPSE entries`() = runTest {
         val transport = FakeApduTransport(
             listOf(
                 ApduCommands.PPSE_SELECT to Transcripts.MULTI_AID_PPSE_RESPONSE,
@@ -194,5 +260,9 @@ class ContactlessReaderTest {
 
     private fun readRecord1Sfi1Prefix(): ByteArray = byteArrayOf(
         0x00, 0xB2.toByte(), 0x01, 0x0C,
+    )
+
+    private fun readRecord2Sfi1Prefix(): ByteArray = byteArrayOf(
+        0x00, 0xB2.toByte(), 0x02, 0x0C,
     )
 }

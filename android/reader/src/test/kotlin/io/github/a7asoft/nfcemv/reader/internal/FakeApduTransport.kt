@@ -42,6 +42,9 @@ internal class FakeApduTransport(
         closed = true
     }
 
+    // why: tight prefix-equality loop; CC includes the early-return guard
+    // and the per-byte mismatch check. Splitting into a helper would just
+    // ferry the indices through more signatures.
     @Suppress("CyclomaticComplexMethod")
     private fun ByteArray.startsWithBytes(prefix: ByteArray): Boolean {
         if (size < prefix.size) return false

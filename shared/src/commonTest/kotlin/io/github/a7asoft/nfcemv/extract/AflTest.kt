@@ -84,14 +84,32 @@ class AflTest {
         assertFailsWith<IllegalArgumentException> { Afl.parseOrThrow(byteArrayOf()) }
     }
 
+    // why: fuzz test asserts multiple structural invariants on the Ok
+    // branch; CC counts each `assertTrue` predicate plus the when arm.
+    @Suppress("CyclomaticComplexMethod")
     @Test
-    fun `parse never crashes on random input and always returns a typed result`() {
+    fun `parse never crashes on random input and structural invariants hold`() {
         val rng = Random(seed = AFL_FUZZ_SEED)
         repeat(times = FUZZ_ITERATIONS) {
             val size = rng.nextInt(0, MAX_FUZZ_SIZE)
             val bytes = ByteArray(size).also { rng.nextBytes(it) }
-            val result = Afl.parse(bytes)
-            assertTrue(result is AflResult.Ok || result is AflResult.Err)
+            when (val result = Afl.parse(bytes)) {
+                is AflResult.Ok -> {
+                    assertTrue(
+                        result.afl.entries.all { it.sfi in 1..30 },
+                        "every Ok entry must have SFI in 1..30",
+                    )
+                    assertTrue(
+                        result.afl.entries.all { it.firstRecord >= 1 },
+                        "every Ok entry must have firstRecord >= 1",
+                    )
+                    assertTrue(
+                        result.afl.entries.all { it.firstRecord <= it.lastRecord },
+                        "every Ok entry must have firstRecord <= lastRecord",
+                    )
+                }
+                is AflResult.Err -> Unit
+            }
         }
     }
 

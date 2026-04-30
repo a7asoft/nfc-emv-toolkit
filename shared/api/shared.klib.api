@@ -1064,9 +1064,6 @@ final class io.github.a7asoft.nfcemv.extract/Gpo { // io.github.a7asoft.nfcemv.e
     final val applicationInterchangeProfile // io.github.a7asoft.nfcemv.extract/Gpo.applicationInterchangeProfile|{}applicationInterchangeProfile[0]
         final fun <get-applicationInterchangeProfile>(): kotlin/ByteArray // io.github.a7asoft.nfcemv.extract/Gpo.applicationInterchangeProfile.<get-applicationInterchangeProfile>|<get-applicationInterchangeProfile>(){}[0]
 
-    final fun component1(): kotlin/ByteArray // io.github.a7asoft.nfcemv.extract/Gpo.component1|component1(){}[0]
-    final fun component2(): io.github.a7asoft.nfcemv.extract/Afl // io.github.a7asoft.nfcemv.extract/Gpo.component2|component2(){}[0]
-    final fun copy(kotlin/ByteArray = ..., io.github.a7asoft.nfcemv.extract/Afl = ...): io.github.a7asoft.nfcemv.extract/Gpo // io.github.a7asoft.nfcemv.extract/Gpo.copy|copy(kotlin.ByteArray;io.github.a7asoft.nfcemv.extract.Afl){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/Gpo.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/Gpo.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/Gpo.toString|toString(){}[0]

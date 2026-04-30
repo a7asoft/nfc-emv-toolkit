@@ -22,8 +22,11 @@ public data class Ppse internal constructor(public val applications: List<PpseEn
  * One application entry inside a PPSE Application Template (tag `61`).
  *
  * - [aid] — EMV tag `4F`, validated through `Aid.fromBytes`.
- * - [priority] — EMV tag `87` Application Priority Indicator. Lower
- *   numeric values indicate higher priority. May be `null` when absent.
+ * - [priority] — Application Priority Indicator low nibble (1..15) per
+ *   EMV Book 1 §12.2.3, or `null` if the application has no priority
+ *   assigned (the card omitted tag `87`, sent priority 0, or sent only
+ *   RFU/flag bits). Lower value wins; absent priority sorts last via
+ *   the reader's `minByOrNull { priority ?: Int.MAX_VALUE }`.
  */
 public data class PpseEntry(
     public val aid: Aid,
@@ -130,7 +133,18 @@ private fun readEntry(template: Tlv.Constructed): PpseEntryOutcome {
     val priorityNode = template.children.firstOrNull {
         it is Tlv.Primitive && it.tag == TAG_PRIORITY
     } as? Tlv.Primitive
-    val priority = priorityNode?.let { it.copyValue().firstOrNull()?.toInt()?.and(0xFF) }
+    // why: per EMV Book 1 §12.2.3, only the low nibble of the Application
+    // Priority Indicator carries the priority value (1..15). Bit b8 is the
+    // "cardholder confirmation supported" flag and b5–b7 are RFU. A card
+    // sending 0x81 means priority 1 with confirmation required, NOT priority
+    // 0x81 = 129. Decoding the full byte ranks confirmation-requiring cards
+    // last instead of first. Treat 0x00 as "no priority assigned" (null).
+    val priority = priorityNode
+        ?.copyValue()
+        ?.firstOrNull()
+        ?.toInt()
+        ?.and(0x0F)
+        ?.takeIf { it != 0 }
     return PpseEntryOutcome.Ok(PpseEntry(Aid.fromBytes(aidBytes), priority))
 }
 

@@ -6,8 +6,16 @@ import java.io.IOException
  * Stateful APDU exchange channel. Implementations wrap `IsoDep` in
  * production and a fake byte-array recorder in unit tests.
  *
- * Implementations are NOT thread-safe; the reader's flow uses a single
- * IO-bound coroutine and closes the transport on completion.
+ * Thread-safety contract:
+ * - [connect] and [transceive] are called from the reader's IO-bound
+ *   coroutine (via `flowOn(Dispatchers.IO)`). Implementations MUST be
+ *   safe to call sequentially from a single thread; they need not be
+ *   thread-safe across threads.
+ * - [close] is called from the collector's context (via
+ *   `onCompletion`), AFTER all [transceive] calls have completed. It
+ *   may run on a different thread than [connect] / [transceive].
+ *   Implementations MUST tolerate this (e.g. `IsoDep.close()` is safe
+ *   to call from any thread per the platform docs).
  */
 internal interface ApduTransport {
     @Throws(IOException::class)

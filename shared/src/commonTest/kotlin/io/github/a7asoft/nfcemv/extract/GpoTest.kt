@@ -3,11 +3,12 @@ package io.github.a7asoft.nfcemv.extract
 import io.github.a7asoft.nfcemv.tlv.TlvError
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
-import kotlin.test.assertTrue
 
 class GpoTest {
 
@@ -131,13 +132,45 @@ class GpoTest {
     }
 
     @Test
-    fun `parse never crashes on random input and always returns a typed result`() {
+    fun `applicationInterchangeProfile returns a fresh array per access`() {
+        val gpo = Gpo.parseOrThrow(
+            byteArrayOf(0x80.toByte(), 0x06, 0x00, 0x80.toByte(), 0x08, 0x01, 0x01, 0x00),
+        )
+        val first = gpo.applicationInterchangeProfile
+        val second = gpo.applicationInterchangeProfile
+        first[0] = 0xFF.toByte()
+        assertEquals(0x00.toByte(), second[0])
+    }
+
+    @Test
+    fun `Gpo toString reports AIP byte count not raw bytes`() {
+        val gpo = Gpo.parseOrThrow(
+            byteArrayOf(0x80.toByte(), 0x06, 0x00, 0x80.toByte(), 0x08, 0x01, 0x01, 0x00),
+        )
+        val rendered = gpo.toString()
+        assertContains(rendered, "aip=2 bytes")
+        assertFalse(
+            "0x80" in rendered,
+            "AIP raw byte 0x80 must not appear in toString; was: $rendered",
+        )
+    }
+
+    // why: fuzz test combines a `when` arm with a structural invariant
+    // assertion; CC counts both. Splitting would obscure the round-trip.
+    @Suppress("CyclomaticComplexMethod")
+    @Test
+    fun `parse never crashes on random input and structural invariants hold`() {
         val rng = Random(seed = GPO_FUZZ_SEED)
         repeat(times = FUZZ_ITERATIONS) {
             val size = rng.nextInt(0, MAX_FUZZ_SIZE)
             val bytes = ByteArray(size).also { rng.nextBytes(it) }
-            val result = Gpo.parse(bytes)
-            assertTrue(result is GpoResult.Ok || result is GpoResult.Err)
+            when (val result = Gpo.parse(bytes)) {
+                is GpoResult.Ok -> {
+                    // Spec: AIP is exactly 2 bytes per EMV Book 3 Annex C1.
+                    assertEquals(2, result.gpo.applicationInterchangeProfile.size)
+                }
+                is GpoResult.Err -> Unit
+            }
         }
     }
 
