@@ -306,6 +306,50 @@ class ContactlessReaderTest {
         assertIs<ReaderState.Done>(states.last())
     }
 
+    @Test
+    fun `read returns Done for Visa Credit Chase MSD-only transcript with inline 57 and no AFL`() = runTest {
+        // why: real-card transcript captured 2026-04-30 (#59 diagnostic
+        // logs). Card returns format-2 GPO with AIP `82 02 20 00`
+        // (MSD-only mode), Track 2 inline (PAN 4111111111111111 after
+        // sanitization), and NO AFL. Reader MUST NOT issue READ RECORD
+        // and the parser MUST resolve PAN + expiry from the GPO body's
+        // inline tag 57 via the EmvParser PAN/expiry-from-Track2 fallback.
+        val transport = FakeApduTransport(
+            listOf(
+                ApduCommands.PPSE_SELECT to Transcripts.VISA_CREDIT_CHASE_PPSE_RESPONSE,
+                selectVisaPrefix() to Transcripts.VISA_CREDIT_CHASE_SELECT_AID_FCI,
+                gpoPdolFullPrefix() to Transcripts.VISA_CREDIT_CHASE_GPO_RESPONSE,
+            ),
+        )
+        val states = ContactlessReader(transport).read().toList()
+        val done = assertIs<ReaderState.Done>(states.last())
+        assertEquals(Aid.fromHex("A0000000031010"), done.card.aid)
+        assertEquals("4111111111111111", done.card.pan.unmasked())
+    }
+
+    @Test
+    fun `read returns Done for Visa Debit Chase with inline 57 and supplementary AFL record`() = runTest {
+        // why: real-card transcript captured 2026-04-30 (#59 diagnostic
+        // logs). Card returns format-2 GPO with AIP + AFL + Track 2
+        // inline (PAN 4012888888881881 after sanitization). The AFL
+        // record (record 6 SFI 1) carries only supplementary tags
+        // (5F28, 9F07) — no 5A, no 57. Reader MUST union the GPO body
+        // inline TLV with the supplementary record TLV before calling
+        // EmvParser.
+        val transport = FakeApduTransport(
+            listOf(
+                ApduCommands.PPSE_SELECT to Transcripts.VISA_DEBIT_CHASE_PPSE_RESPONSE,
+                selectVisaPrefix() to Transcripts.VISA_DEBIT_CHASE_SELECT_AID_FCI,
+                gpoPdolFullPrefix() to Transcripts.VISA_DEBIT_CHASE_GPO_RESPONSE,
+                readRecord6Sfi1Prefix() to Transcripts.VISA_DEBIT_CHASE_RECORD_6_SFI_1,
+            ),
+        )
+        val states = ContactlessReader(transport).read().toList()
+        val done = assertIs<ReaderState.Done>(states.last())
+        assertEquals(Aid.fromHex("A0000000031010"), done.card.aid)
+        assertEquals("4012888888881881", done.card.pan.unmasked())
+    }
+
     // ---- helpers -------------------------------------------------------
 
     private fun assertProgressEndsInDone(states: List<ReaderState>, expectedAid: Aid) {
@@ -358,4 +402,20 @@ class ContactlessReaderTest {
     private fun readRecord2Sfi1Prefix(): ByteArray = byteArrayOf(
         0x00, 0xB2.toByte(), 0x02, 0x0C,
     )
+
+    /**
+     * GPO command prefix for the full Visa qVSDC PDOL response.
+     * Lc = 0x23 = 35 = template-tag-and-length(2) + PDOL response (33).
+     * The actual command bytes after this prefix carry random UN bytes
+     * which we ignore via FakeApduTransport's prefix-matching.
+     */
+    private fun gpoPdolFullPrefix(): ByteArray =
+        byteArrayOf(0x80.toByte(), 0xA8.toByte(), 0x00, 0x00, 0x23)
+
+    /**
+     * READ RECORD command prefix for record 6, SFI 1.
+     * `00 B2 06 0C 00` — P1=record number, P2=(sfi shl 3) | 0x04, Le=0.
+     */
+    private fun readRecord6Sfi1Prefix(): ByteArray =
+        byteArrayOf(0x00, 0xB2.toByte(), 0x06, 0x0C, 0x00)
 }
