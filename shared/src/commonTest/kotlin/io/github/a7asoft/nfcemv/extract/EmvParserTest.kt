@@ -432,6 +432,70 @@ class EmvParserTest {
         assertEquals(aid, card.aid)
     }
 
+    /**
+     * Visa-style record: `4F` AID + `5F24` expiry + `5F20` cardholder
+     * + `50` label + `57` Track 2. NO standalone `5A` PAN. Mirrors
+     * the Visa Chase Debit failure observed in real-card QA (#59).
+     *
+     * Length math (entry size = tag + length + value):
+     *   4F (1+1+7=9) + 5F24 (2+1+3=6) + 5F20 (2+1+9=12)
+     *   + 50 (1+1+4=6) + 57 (1+1+14=16) = 49 bytes inner → 70 31.
+     * (The plan's documented 0x2F undercounted the two-byte tag headers
+     * on 5F24 and 5F20 — recomputed here.)
+     */
+    private val recordWithoutPanTagButWithTrack2: ByteArray = byteArrayOf(
+        0x70, 0x31,
+        0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+        0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        0x5F, 0x20, 0x09, 0x56, 0x49, 0x53, 0x41, 0x20, 0x54, 0x45, 0x53, 0x54,
+        0x50, 0x04, 0x56, 0x49, 0x53, 0x41,
+        0x57, 0x0E,
+        0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+    )
+
+    /**
+     * Same as [recordWithoutPanTagButWithTrack2] minus the `57` entry.
+     * Both `5A` and `57` are absent — must fail MissingRequiredTag(5A).
+     *
+     * Length math: 49 - 16 (57 entry) = 33 bytes inner → 70 21.
+     */
+    private val recordWithoutPanTagAndWithoutTrack2: ByteArray = byteArrayOf(
+        0x70, 0x21,
+        0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+        0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        0x5F, 0x20, 0x09, 0x56, 0x49, 0x53, 0x41, 0x20, 0x54, 0x45, 0x53, 0x54,
+        0x50, 0x04, 0x56, 0x49, 0x53, 0x41,
+    )
+
+    @Test
+    fun `parse falls back to Track2 PAN when tag 5A is absent and tag 57 is present`() {
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(listOf(recordWithoutPanTagButWithTrack2)),
+        )
+        assertEquals("4111111111111111", ok.card.pan.unmasked())
+        assertEquals(EmvBrand.VISA, ok.card.brand)
+    }
+
+    @Test
+    fun `parse uses tag 5A directly when both 5A and 57 are present`() {
+        // why: the canonical fixture has both; assert PAN stays sourced
+        // from 5A semantics (same digits in this fixture, so we instead
+        // assert the success path doesn't regress).
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
+        assertEquals("4111111111111111", ok.card.pan.unmasked())
+        assertNotNull(ok.card.track2)
+    }
+
+    @Test
+    fun `parse fails MissingRequiredTag 5A when both 5A and 57 are absent`() {
+        val err = assertIs<EmvCardResult.Err>(
+            EmvParser.parse(listOf(recordWithoutPanTagAndWithoutTrack2)),
+        )
+        val cause = assertIs<EmvCardError.MissingRequiredTag>(err.error)
+        assertEquals("5A", cause.tagHex)
+    }
+
     private companion object {
         const val FUZZ_SEED: Long = 0x454D5643L // "EMVC"
         const val FUZZ_ITERATIONS: Int = 1_000

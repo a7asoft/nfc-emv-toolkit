@@ -123,20 +123,25 @@ public object EmvParser {
         }
 
     @Suppress("ReturnCount", "CyclomaticComplexMethod")
-    // why: each return is a distinct EMV parse step (decode / required /
-    // optional / brand). Splitting forces ferrying nodes through more
-    // signatures without reducing real complexity.
+    // why: each return is a distinct EMV parse step (decode / track2 /
+    // required / optional / brand). Splitting forces ferrying nodes
+    // through more signatures without reducing real complexity.
     private fun parseInternal(injectedAid: Aid?, apduResponses: List<ByteArray>): EmvCardResult {
         if (apduResponses.isEmpty()) return EmvCardResult.Err(EmvCardError.EmptyInput)
         val nodes = when (val outcome = decodeAll(apduResponses)) {
             is DecodeOutcome.Ok -> outcome.nodes
             is DecodeOutcome.Err -> return EmvCardResult.Err(outcome.error)
         }
-        val required = when (val r = extractRequiredFields(injectedAid, nodes)) {
+        val track2 = when (val r = extractTrack2Once(nodes)) {
+            Track2Outcome.Absent -> null
+            is Track2Outcome.Present -> r.track2
+            is Track2Outcome.Failed -> return EmvCardResult.Err(r.error)
+        }
+        val required = when (val r = extractRequiredFields(injectedAid, nodes, track2)) {
             is RequiredOutcome.Ok -> r.fields
             is RequiredOutcome.Err -> return EmvCardResult.Err(r.error)
         }
-        val optional = when (val r = extractOptionalFields(nodes)) {
+        val optional = when (val r = extractOptionalFields(nodes, track2)) {
             is OptionalOutcome.Ok -> r.fields
             is OptionalOutcome.Err -> return EmvCardResult.Err(r.error)
         }
@@ -181,6 +186,17 @@ public object EmvParser {
         data class Err(val error: EmvCardError) : AidOutcome
     }
 
+    private sealed interface PanOutcome {
+        data class Ok(val pan: Pan) : PanOutcome
+        data class Err(val error: EmvCardError) : PanOutcome
+    }
+
+    private sealed interface Track2Outcome {
+        data object Absent : Track2Outcome
+        data class Present(val track2: Track2) : Track2Outcome
+        data class Failed(val error: EmvCardError) : Track2Outcome
+    }
+
     @Suppress("CyclomaticComplexMethod")
     // why: 4-branch sealed dispatch (find / null / Ok / Err). Splitting moves
     // the AID node lookup through more signatures without reducing complexity.
@@ -206,19 +222,21 @@ public object EmvParser {
 
     @Suppress("ReturnCount", "CyclomaticComplexMethod")
     // why: each return surfaces a distinct typed required-field rejection
-    // (missing AID / PAN / expiry, plus their per-extractor errors). Splitting
-    // moves the continuation through more signatures without reducing
-    // real complexity.
-    private fun extractRequiredFields(injectedAid: Aid?, nodes: List<Tlv>): RequiredOutcome {
+    // (missing AID / PAN / expiry, plus their per-extractor errors). PAN
+    // resolution now also accepts Track 2's embedded PAN as a fallback
+    // (see resolvePan and issue #59).
+    private fun extractRequiredFields(
+        injectedAid: Aid?,
+        nodes: List<Tlv>,
+        track2: Track2?,
+    ): RequiredOutcome {
         val aid = injectedAid ?: when (val r = resolveAid(nodes)) {
             is AidOutcome.Ok -> r.aid
             is AidOutcome.Err -> return RequiredOutcome.Err(r.error)
         }
-        val panNode = findFirst(nodes, TAG_PAN) as? Tlv.Primitive
-            ?: return RequiredOutcome.Err(EmvCardError.MissingRequiredTag("5A"))
-        val pan = when (val r = extractPan(panNode)) {
-            is ExtractResult.Ok -> r.value
-            is ExtractResult.Err -> return RequiredOutcome.Err(r.error)
+        val pan = when (val r = resolvePan(nodes, track2)) {
+            is PanOutcome.Ok -> r.pan
+            is PanOutcome.Err -> return RequiredOutcome.Err(r.error)
         }
         val expiryNode = findFirst(nodes, TAG_EXPIRY) as? Tlv.Primitive
             ?: return RequiredOutcome.Err(EmvCardError.MissingRequiredTag("5F24"))
@@ -229,19 +247,51 @@ public object EmvParser {
         return RequiredOutcome.Ok(RequiredFields(aid, pan, expiry))
     }
 
-    private fun extractOptionalFields(nodes: List<Tlv>): OptionalOutcome {
-        val cardholderName = (findFirst(nodes, TAG_CARDHOLDER) as? Tlv.Primitive)?.let { extractCardholderName(it) }
-        val applicationLabel = (findFirst(nodes, TAG_LABEL) as? Tlv.Primitive)?.let { extractApplicationLabel(it) }
-        val track2Node = findFirst(nodes, TAG_TRACK2) as? Tlv.Primitive
-        val track2 = if (track2Node == null) {
-            null
-        } else {
-            when (val r = extractTrack2(track2Node)) {
-                is ExtractResult.Ok -> r.value
-                is ExtractResult.Err -> return OptionalOutcome.Err(r.error)
+    /**
+     * Resolve PAN with the EMV-canonical fallback chain:
+     *
+     * 1. If standalone tag `5A` is present, decode it via [extractPan].
+     * 2. Else if [track2] was successfully parsed from tag `57`, use
+     *    its embedded `pan`. Per IDTECH knowledge base "Why aren't tags
+     *    57 and 5A returned" and the EMV Book 3 record layout, tag
+     *    `5A` is OPTIONAL when tag `57` is present — the embedded PAN
+     *    is the canonical source.
+     * 3. Else fail `MissingRequiredTag(5A)`.
+     */
+    private fun resolvePan(nodes: List<Tlv>, track2: Track2?): PanOutcome {
+        val panNode = findFirst(nodes, TAG_PAN) as? Tlv.Primitive
+        if (panNode != null) {
+            return when (val r = extractPan(panNode)) {
+                is ExtractResult.Ok -> PanOutcome.Ok(r.value)
+                is ExtractResult.Err -> PanOutcome.Err(r.error)
             }
         }
+        if (track2 != null) return PanOutcome.Ok(track2.pan)
+        return PanOutcome.Err(EmvCardError.MissingRequiredTag("5A"))
+    }
+
+    private fun extractOptionalFields(
+        nodes: List<Tlv>,
+        track2: Track2?,
+    ): OptionalOutcome {
+        val cardholderName = (findFirst(nodes, TAG_CARDHOLDER) as? Tlv.Primitive)?.let { extractCardholderName(it) }
+        val applicationLabel = (findFirst(nodes, TAG_LABEL) as? Tlv.Primitive)?.let { extractApplicationLabel(it) }
         return OptionalOutcome.Ok(OptionalFields(cardholderName, applicationLabel, track2))
+    }
+
+    /**
+     * Pre-parse Track 2 (tag `57`) once so both required-field PAN
+     * fallback and optional-field exposure see the same instance.
+     * Returns a [Track2Outcome] sealed result rather than a nullable
+     * to surface decode errors as `EmvCardError.Track2Rejected`.
+     */
+    private fun extractTrack2Once(nodes: List<Tlv>): Track2Outcome {
+        val node = findFirst(nodes, TAG_TRACK2) as? Tlv.Primitive
+            ?: return Track2Outcome.Absent
+        return when (val r = extractTrack2(node)) {
+            is ExtractResult.Ok -> Track2Outcome.Present(r.value)
+            is ExtractResult.Err -> Track2Outcome.Failed(r.error)
+        }
     }
 
     // ----- IAE message rendering -----
