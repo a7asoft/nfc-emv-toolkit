@@ -69,6 +69,38 @@ If you need any of the above, talk to a payment processor, not a GitHub library.
 
 ---
 
+## API Docs
+
+Generated from the latest released tag via [Dokka 2](https://kotlinlang.org/docs/dokka-introduction.html):
+
+**[https://a7asoft.github.io/nfc-emv-toolkit/](https://a7asoft.github.io/nfc-emv-toolkit/)**
+
+For unreleased `develop` snapshots, run locally:
+
+```bash
+./gradlew :shared:dokkaGenerate
+open docs/api/kotlin/index.html
+```
+
+The published site is regenerated automatically by GitHub Actions on every `v*` tag.
+
+---
+
+## Security
+
+This library handles PCI-class data (PAN, Track 2, ARQC). Defaults are conservative — see [`docs/threat-model.md`](docs/threat-model.md) for what we do and do not protect against.
+
+If you found a vulnerability, please follow [`SECURITY.md`](SECURITY.md). Do not open a public issue.
+
+CI gates that protect the surface:
+- `:shared:checkKotlinAbi` — public-API drift fails the build.
+- `detekt` `ForbiddenMethodCall` — no `println` / `Log.*` / `Thread.sleep` / `runBlocking` in `commonMain` or platform `*Main` source sets.
+- PCI-safety regression tests pin that `toString()` masks PAN / Track 2 / ARQC.
+
+Dependency hygiene runs weekly via Dependabot.
+
+---
+
 ## Quickstart
 
 ### Android (Kotlin)
