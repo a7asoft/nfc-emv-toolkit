@@ -28,6 +28,20 @@ PRs that expand scope into payment-terminal territory will be closed.
    justification. The baseline is for legacy debt only.
 4. Open a PR. CI must pass.
 
+## Reporting a security issue
+
+If you found a way to make `Pan`, `Track2`, `EmvCard`, or any error message leak raw bytes — or any path by which malformed input crashes the parser without a typed `EmvCardResult.Err` — please follow [`SECURITY.md`](SECURITY.md). **Do not open a public issue or PR.** GitHub Private Vulnerability Reporting routes the report straight to maintainers; email fallback is documented in the security policy.
+
+## Test fixture PANs
+
+Every PAN appearing in a `commonTest` fixture (Kotlin constant or otherwise) MUST come from a publicly published test range — Visa `4111111111111111`, Mastercard `5500000000000004` / `2223000000000007`, Amex `378282246310005`, Discover `6011111111111117`, etc. Stripe and Adyen publish canonical lists.
+
+Why: `EmvParserFixturesTest` calls `card.pan.unmasked()` to assert parser correctness; on assertion failure the test framework prints both expected and actual values to stdout. For a public test PAN this is safe; for a real or unknown-provenance PAN it is a PCI leak.
+
+A fixture PAN that fails Luhn (synthetic but invalid) cannot be used either — the parser rejects it before any test assertion runs.
+
+When in doubt, ask in the PR.
+
 ## Commit format
 
 Conventional Commits. Subject ≤ 72 chars, present tense.
