@@ -390,6 +390,8 @@ public final class io/github/a7asoft/nfcemv/extract/EmvParser {
 	public final fun parse-Pux_Fmc (Ljava/lang/String;Ljava/util/List;)Lio/github/a7asoft/nfcemv/extract/EmvCardResult;
 	public final fun parseOrThrow (Ljava/util/List;)Lio/github/a7asoft/nfcemv/extract/EmvCard;
 	public final fun parseOrThrow-Pux_Fmc (Ljava/lang/String;Ljava/util/List;)Lio/github/a7asoft/nfcemv/extract/EmvCard;
+	public final fun parseOrThrowTlv (Ljava/lang/String;Ljava/util/List;)Lio/github/a7asoft/nfcemv/extract/EmvCard;
+	public final fun parseTlv (Ljava/lang/String;Ljava/util/List;)Lio/github/a7asoft/nfcemv/extract/EmvCardResult;
 }
 
 public final class io/github/a7asoft/nfcemv/extract/Gpo {
@@ -397,6 +399,7 @@ public final class io/github/a7asoft/nfcemv/extract/Gpo {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAfl ()Lio/github/a7asoft/nfcemv/extract/Afl;
 	public final fun getApplicationInterchangeProfile ()[B
+	public final fun getInlineTlv ()Ljava/util/List;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -432,13 +435,6 @@ public final class io/github/a7asoft/nfcemv/extract/GpoError$InvalidAipLength : 
 	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/GpoError$InvalidAipLength;IILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/GpoError$InvalidAipLength;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getByteCount ()I
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class io/github/a7asoft/nfcemv/extract/GpoError$MissingAfl : io/github/a7asoft/nfcemv/extract/GpoError {
-	public static final field INSTANCE Lio/github/a7asoft/nfcemv/extract/GpoError$MissingAfl;
-	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

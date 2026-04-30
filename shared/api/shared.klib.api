@@ -368,12 +368,6 @@ sealed interface io.github.a7asoft.nfcemv.extract/GpoError { // io.github.a7asof
         final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/GpoError.EmptyInput.toString|toString(){}[0]
     }
 
-    final object MissingAfl : io.github.a7asoft.nfcemv.extract/GpoError { // io.github.a7asoft.nfcemv.extract/GpoError.MissingAfl|null[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/GpoError.MissingAfl.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoError.MissingAfl.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/GpoError.MissingAfl.toString|toString(){}[0]
-    }
-
     final object MissingAip : io.github.a7asoft.nfcemv.extract/GpoError { // io.github.a7asoft.nfcemv.extract/GpoError.MissingAip|null[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/GpoError.MissingAip.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/GpoError.MissingAip.hashCode|hashCode(){}[0]
@@ -1196,6 +1190,8 @@ final class io.github.a7asoft.nfcemv.extract/Gpo { // io.github.a7asoft.nfcemv.e
         final fun <get-afl>(): io.github.a7asoft.nfcemv.extract/Afl // io.github.a7asoft.nfcemv.extract/Gpo.afl.<get-afl>|<get-afl>(){}[0]
     final val applicationInterchangeProfile // io.github.a7asoft.nfcemv.extract/Gpo.applicationInterchangeProfile|{}applicationInterchangeProfile[0]
         final fun <get-applicationInterchangeProfile>(): kotlin/ByteArray // io.github.a7asoft.nfcemv.extract/Gpo.applicationInterchangeProfile.<get-applicationInterchangeProfile>|<get-applicationInterchangeProfile>(){}[0]
+    final val inlineTlv // io.github.a7asoft.nfcemv.extract/Gpo.inlineTlv|{}inlineTlv[0]
+        final fun <get-inlineTlv>(): kotlin.collections/List<io.github.a7asoft.nfcemv.tlv/Tlv> // io.github.a7asoft.nfcemv.extract/Gpo.inlineTlv.<get-inlineTlv>|<get-inlineTlv>(){}[0]
 
     final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/Gpo.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/Gpo.hashCode|hashCode(){}[0]
@@ -1451,8 +1447,10 @@ final object io.github.a7asoft.nfcemv.emv/EmvTags { // io.github.a7asoft.nfcemv.
 }
 
 final object io.github.a7asoft.nfcemv.extract/EmvParser { // io.github.a7asoft.nfcemv.extract/EmvParser|null[0]
+    final fun parse(io.github.a7asoft.nfcemv.brand/Aid, kotlin.collections/List<io.github.a7asoft.nfcemv.tlv/Tlv>): io.github.a7asoft.nfcemv.extract/EmvCardResult // io.github.a7asoft.nfcemv.extract/EmvParser.parse|parse(io.github.a7asoft.nfcemv.brand.Aid;kotlin.collections.List<io.github.a7asoft.nfcemv.tlv.Tlv>){}[0]
     final fun parse(io.github.a7asoft.nfcemv.brand/Aid, kotlin.collections/List<kotlin/ByteArray>): io.github.a7asoft.nfcemv.extract/EmvCardResult // io.github.a7asoft.nfcemv.extract/EmvParser.parse|parse(io.github.a7asoft.nfcemv.brand.Aid;kotlin.collections.List<kotlin.ByteArray>){}[0]
     final fun parse(kotlin.collections/List<kotlin/ByteArray>): io.github.a7asoft.nfcemv.extract/EmvCardResult // io.github.a7asoft.nfcemv.extract/EmvParser.parse|parse(kotlin.collections.List<kotlin.ByteArray>){}[0]
+    final fun parseOrThrow(io.github.a7asoft.nfcemv.brand/Aid, kotlin.collections/List<io.github.a7asoft.nfcemv.tlv/Tlv>): io.github.a7asoft.nfcemv.extract/EmvCard // io.github.a7asoft.nfcemv.extract/EmvParser.parseOrThrow|parseOrThrow(io.github.a7asoft.nfcemv.brand.Aid;kotlin.collections.List<io.github.a7asoft.nfcemv.tlv.Tlv>){}[0]
     final fun parseOrThrow(io.github.a7asoft.nfcemv.brand/Aid, kotlin.collections/List<kotlin/ByteArray>): io.github.a7asoft.nfcemv.extract/EmvCard // io.github.a7asoft.nfcemv.extract/EmvParser.parseOrThrow|parseOrThrow(io.github.a7asoft.nfcemv.brand.Aid;kotlin.collections.List<kotlin.ByteArray>){}[0]
     final fun parseOrThrow(kotlin.collections/List<kotlin/ByteArray>): io.github.a7asoft.nfcemv.extract/EmvCard // io.github.a7asoft.nfcemv.extract/EmvParser.parseOrThrow|parseOrThrow(kotlin.collections.List<kotlin.ByteArray>){}[0]
 }
