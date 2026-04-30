@@ -39,7 +39,7 @@ public fun ErrorPanel(error: ReaderError, onTryAgain: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(text = friendlyMessage(error), style = MaterialTheme.typography.titleMedium)
-            OutlinedButton(onClick = { expandedState.value = !expanded }) {
+            OutlinedButton(onClick = { expandedState.value = !expandedState.value }) {
                 Text(if (expanded) "Hide details" else "Show details")
             }
             if (expanded) {
@@ -53,18 +53,24 @@ public fun ErrorPanel(error: ReaderError, onTryAgain: () -> Unit) {
 }
 
 @Suppress("CyclomaticComplexMethod")
-// why: exhaustive when over sealed [ReaderError] + [IoReason]. Each branch
-// is a single mapping, not real complexity.
+// why: exhaustive when over sealed [ReaderError] catalogue. Each branch is
+// a single mapping, not real complexity.
 private fun friendlyMessage(error: ReaderError): String = when (error) {
-    is ReaderError.IoFailure -> when (error.reason) {
-        IoReason.TagLost -> "The card was moved away too quickly. Hold it steady."
-        IoReason.Timeout -> "The card took too long to respond. Try again."
-        IoReason.Generic -> "Communication with the card failed."
-    }
+    is ReaderError.IoFailure -> friendlyIoMessage(error.reason)
     ReaderError.PpseUnsupported -> "This card does not advertise a contactless EMV directory."
     ReaderError.NoApplicationSelected -> "The card listed no contactless applications."
     is ReaderError.ApduStatusError -> "The card returned an unexpected status."
     is ReaderError.PpseRejected -> "The PPSE response could not be parsed."
     is ReaderError.GpoRejected -> "The GET PROCESSING OPTIONS response could not be parsed."
     is ReaderError.ParseFailed -> "The card data could not be parsed into an EMV card."
+}
+
+@Suppress("CyclomaticComplexMethod")
+// why: 3-branch sealed dispatch over [IoReason]; detekt counts the
+// function itself as +1, tipping the threshold. The suppression matches
+// that algorithm.
+private fun friendlyIoMessage(reason: IoReason): String = when (reason) {
+    IoReason.TagLost -> "The card was moved away too quickly. Hold it steady."
+    IoReason.Timeout -> "The card took too long to respond. Try again."
+    IoReason.Generic -> "Communication with the card failed."
 }

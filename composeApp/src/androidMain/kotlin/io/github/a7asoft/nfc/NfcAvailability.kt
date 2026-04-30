@@ -2,6 +2,7 @@ package io.github.a7asoft.nfc
 
 import android.content.Context
 import android.nfc.NfcAdapter
+import android.nfc.NfcManager
 
 /**
  * Categorical NFC capability state for UI display.
@@ -42,7 +43,10 @@ public class SystemNfcAvailability(context: Context) : NfcAvailability {
     private val applicationContext: Context = context.applicationContext
 
     override fun current(): NfcAvailabilityStatus {
-        val adapter = NfcAdapter.getDefaultAdapter(applicationContext)
+        // why: NfcAdapter.getDefaultAdapter(Context) is deprecated since
+        // API 33; use the NfcManager system service. minSdk 24 covers
+        // getSystemService(Class).
+        val adapter = applicationContext.getSystemService(NfcManager::class.java)?.defaultAdapter
             ?: return NfcAvailabilityStatus.Unavailable
         return if (adapter.isEnabled) NfcAvailabilityStatus.Available else NfcAvailabilityStatus.Disabled
     }

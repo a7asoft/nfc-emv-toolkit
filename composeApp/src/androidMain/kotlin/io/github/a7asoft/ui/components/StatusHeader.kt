@@ -44,25 +44,37 @@ public fun StatusHeader(
 }
 
 @Suppress("CyclomaticComplexMethod")
-// why: exhaustive when over sealed UI state; intermediate progress states
-// collapse via `else ->`. Each branch is a single mapping.
+// why: exhaustive when over sealed UI state. Intermediate progress states
+// share text but are listed explicitly so adding a new state to
+// ReaderUiState produces a compile error here, preserving exhaustiveness
+// (CLAUDE.md §3.2). Each branch is a single mapping.
 private fun headlineFor(state: ReaderUiState): String = when (state) {
     ReaderUiState.NfcUnavailable -> "NFC not supported"
     ReaderUiState.NfcDisabled -> "NFC is off"
     ReaderUiState.Idle -> "Tap a card"
     is ReaderUiState.Done -> "Card read"
     is ReaderUiState.Failed -> "Read failed"
-    else -> "Reading"
+    ReaderUiState.TagDetected,
+    ReaderUiState.SelectingPpse,
+    is ReaderUiState.SelectingApplication,
+    ReaderUiState.ReadingRecords,
+    -> "Reading"
 }
 
 @Suppress("CyclomaticComplexMethod")
-// why: exhaustive when over sealed UI state; intermediate progress states
-// collapse via `else ->`. Each branch is a single mapping.
+// why: exhaustive when over sealed UI state. Intermediate progress states
+// share text but are listed explicitly so adding a new state to
+// ReaderUiState produces a compile error here, preserving exhaustiveness
+// (CLAUDE.md §3.2). Each branch is a single mapping.
 private fun subtitleFor(state: ReaderUiState): String = when (state) {
     ReaderUiState.NfcUnavailable -> "This device has no NFC hardware. The reader cannot run here."
     ReaderUiState.NfcDisabled -> "Enable NFC in system settings to read a card."
     ReaderUiState.Idle -> "Hold a contactless EMV card against the back of the device."
     is ReaderUiState.Done -> "Hold another card to read again."
     is ReaderUiState.Failed -> "Try again, or use a different card."
-    else -> "Hold the card steady"
+    ReaderUiState.TagDetected,
+    ReaderUiState.SelectingPpse,
+    is ReaderUiState.SelectingApplication,
+    ReaderUiState.ReadingRecords,
+    -> "Hold the card steady"
 }

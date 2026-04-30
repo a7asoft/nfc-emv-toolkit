@@ -1,6 +1,7 @@
 package io.github.a7asoft
 
 import android.nfc.NfcAdapter
+import android.nfc.NfcManager
 import android.nfc.Tag
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -28,7 +29,11 @@ public class MainActivity : ComponentActivity() {
         ReaderViewModel.provideFactory(SystemNfcAvailability(applicationContext))
     }
 
-    private val nfcAdapter: NfcAdapter? by lazy { NfcAdapter.getDefaultAdapter(this) }
+    // why: NfcAdapter.getDefaultAdapter(Context) is deprecated since API 33;
+    // use the NfcManager system service. minSdk 24 covers getSystemService(Class).
+    private val nfcAdapter: NfcAdapter? by lazy {
+        getSystemService(NfcManager::class.java)?.defaultAdapter
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -39,7 +44,10 @@ public class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshNfcAvailability()
-        nfcAdapter?.enableReaderMode(this, ::onTagDiscovered, READER_MODE_FLAGS, null)
+        val adapter = nfcAdapter
+        if (adapter != null && adapter.isEnabled) {
+            adapter.enableReaderMode(this, ::onTagDiscovered, READER_MODE_FLAGS, null)
+        }
     }
 
     override fun onPause() {

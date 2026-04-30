@@ -8,6 +8,7 @@ import io.github.a7asoft.nfcemv.reader.ReaderError
 import io.github.a7asoft.nfcemv.reader.ReaderState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -90,11 +91,38 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `onReadRequested is ignored when state is mid read`() = runTest {
+        val flow = MutableSharedFlow<ReaderState>(replay = 1).also { it.tryEmit(ReaderState.TagDetected) }
+        val vm = ReaderViewModel(
+            nfcAvailability = FakeNfcAvailability(NfcAvailabilityStatus.Available),
+        )
+        vm.onReadRequested(ReaderHandle { flow })
+        assertEquals(ReaderUiState.TagDetected, vm.state.value)
+        vm.onReadRequested(ReaderHandle { flowOf(ReaderState.Done(sampleCard())) })
+        assertEquals(ReaderUiState.TagDetected, vm.state.value)
+    }
+
+    @Test
     fun `reset returns to Idle from Done`() = runTest {
         val vm = ReaderViewModel(
             nfcAvailability = FakeNfcAvailability(NfcAvailabilityStatus.Available),
         )
         vm.onReadRequested(ReaderHandle { flowOf(ReaderState.Done(sampleCard())) })
+        vm.reset()
+        assertEquals(ReaderUiState.Idle, vm.state.value)
+    }
+
+    @Test
+    fun `reset returns to Idle from Failed`() = runTest {
+        val vm = ReaderViewModel(
+            nfcAvailability = FakeNfcAvailability(NfcAvailabilityStatus.Available),
+        )
+        vm.onReadRequested(
+            ReaderHandle {
+                flowOf(ReaderState.TagDetected, ReaderState.Failed(ReaderError.PpseUnsupported))
+            },
+        )
+        require(vm.state.value is ReaderUiState.Failed) { "precondition failed: state must be Failed" }
         vm.reset()
         assertEquals(ReaderUiState.Idle, vm.state.value)
     }
@@ -108,6 +136,34 @@ class ReaderViewModelTest {
         assertEquals(ReaderUiState.Idle, vm.state.value)
     }
 
+    @Test
+    fun `refreshNfcAvailability preserves Done state`() = runTest {
+        val availability = FakeNfcAvailability(NfcAvailabilityStatus.Available)
+        val vm = ReaderViewModel(nfcAvailability = availability)
+        vm.onReadRequested(ReaderHandle { flowOf(ReaderState.Done(sampleCard())) })
+        val before = vm.state.value
+        require(before is ReaderUiState.Done) { "precondition failed: state must be Done" }
+        availability.set(NfcAvailabilityStatus.Disabled)
+        vm.refreshNfcAvailability()
+        assertEquals(before, vm.state.value)
+    }
+
+    @Test
+    fun `refreshNfcAvailability preserves Failed state`() = runTest {
+        val availability = FakeNfcAvailability(NfcAvailabilityStatus.Available)
+        val vm = ReaderViewModel(nfcAvailability = availability)
+        vm.onReadRequested(
+            ReaderHandle {
+                flowOf(ReaderState.TagDetected, ReaderState.Failed(ReaderError.PpseUnsupported))
+            },
+        )
+        val before = vm.state.value
+        require(before is ReaderUiState.Failed) { "precondition failed: state must be Failed" }
+        availability.set(NfcAvailabilityStatus.Disabled)
+        vm.refreshNfcAvailability()
+        assertEquals(before, vm.state.value)
+    }
+
     private fun vm(status: NfcAvailabilityStatus): ReaderViewModel = ReaderViewModel(
         nfcAvailability = FakeNfcAvailability(status),
     )
@@ -118,6 +174,9 @@ class ReaderViewModelTest {
     // module's tests. We rebuild it by parsing the canonical Visa fixture
     // bytes (verbatim copy of `:shared:commonTest:Fixtures.VISA_CLASSIC`).
     // EmvParser.parseOrThrow is the supported construction path.
+    //
+    // KEEP IN SYNC: if Fixtures.VISA_CLASSIC bytes change in :shared,
+    // update this constant too. There is no compile-time link.
     private fun sampleCard(): EmvCard {
         val fixture = byteArrayOf(
             0x70, 0x3D,
