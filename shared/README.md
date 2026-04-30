@@ -211,6 +211,35 @@ Resolution layers:
 
 The AID directory ships 23 entries across 9 brands; the BIN table covers the same 9 plus broad UnionPay catch-all. Both are paraphrased from EMVCo and ISO/IEC 7816-5 sources.
 
+## Top-level EMV parser
+
+Compose a card snapshot from a list of APDU response data fields:
+
+```kotlin
+import io.github.a7asoft.nfcemv.extract.EmvParser
+import io.github.a7asoft.nfcemv.extract.EmvCardResult
+
+val responses: List<ByteArray> = collectApduResponses() // SW1 SW2 already stripped
+
+when (val result = EmvParser.parse(responses)) {
+    is EmvCardResult.Ok -> {
+        val card = result.card
+        // card.pan        — io.github.a7asoft.nfcemv.extract.Pan (masked toString)
+        // card.expiry     — kotlinx.datetime.YearMonth
+        // card.brand      — io.github.a7asoft.nfcemv.brand.EmvBrand
+        // card.aid        — io.github.a7asoft.nfcemv.brand.Aid
+        // card.track2     — io.github.a7asoft.nfcemv.extract.Track2? (nullable)
+        // card.cardholderName — String? (PCI-scoped — see KDoc)
+        // card.applicationLabel — String? (operational metadata, safe to log)
+    }
+    is EmvCardResult.Err -> reportRefusal(result.error)
+}
+```
+
+Required tags: `4F` AID, `5A` PAN, `5F24` expiry. Optional: `5F20` cardholder name, `50` application label, `57` Track 2. Brand is resolved via `BrandResolver.resolveBrand(aid, pan)`.
+
+`EmvCard.toString` masks the PAN, Track 2 (PAN + discretionary), and cardholder name (length-only placeholder); other fields render raw.
+
 ## Tests
 
 179 tests on `commonMain` cover happy paths, all error variants, the EMV padding behavior, the documented X.690 deviation, fuzz over 10,000 random buffers (strict + lenient), OOM-resistance regression, PCI-safety regressions for tags `5A`, `57`, and `9F26`, encoder round-trip fixtures, 5,000-iteration encoder fuzz, encoder PCI-safety regressions. Run with:
