@@ -266,17 +266,18 @@ internal object Transcripts {
     /**
      * Expected GPO command prefix when the reader has parsed
      * [VISA_SELECT_FCI_WITH_PDOL_RESPONSE] with the default
-     * `TerminalConfig.default()` TTQ (`36 00 80 00`).
+     * `TerminalConfig.default()` TTQ (`36 00 00 00`, online-crypto
+     * bit cleared per issue #59).
      *
-     * `80 A8 00 00 06 83 04 36 00 80 00 00`
+     * `80 A8 00 00 06 83 04 36 00 00 00 00`
      * - Lc = 0x06 = 2 (template) + 4 (TTQ)
      * - 83 04 = template tag + length
-     * - 36 00 80 00 = TTQ
+     * - 36 00 00 00 = TTQ
      * - Le = 0x00
      */
     internal val VISA_GPO_COMMAND_PDOL: ByteArray = byteArrayOf(
         0x80.toByte(), 0xA8.toByte(), 0x00, 0x00, 0x06,
-        0x83.toByte(), 0x04, 0x36, 0x00, 0x80.toByte(), 0x00,
+        0x83.toByte(), 0x04, 0x36, 0x00, 0x00, 0x00,
         0x00,
     )
 
