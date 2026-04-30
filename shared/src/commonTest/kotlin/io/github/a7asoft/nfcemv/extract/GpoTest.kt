@@ -56,14 +56,21 @@ class GpoTest {
     }
 
     @Test
-    fun `parse rejects format-2 missing AFL with MissingAfl`() {
+    fun `parse accepts format-2 without AFL when AIP is present`() {
+        // why: real-card observation (#59) — Visa kernel-3 in MSD-only
+        // mode returns format-2 with AIP + Track 2 inline + NO AFL.
+        // EMV Book 3 §10 / EMVCo Book C-3 §5.4.3 treat AFL as OPTIONAL
+        // when application data is delivered inline in the format-2
+        // template. The previous contract (rejecting with MissingAfl)
+        // was a spec violation.
         // 77 04 82 02 00 80
-        val err = assertIs<GpoResult.Err>(
+        val ok = assertIs<GpoResult.Ok>(
             Gpo.parse(
                 byteArrayOf(0x77, 0x04, 0x82.toByte(), 0x02, 0x00, 0x80.toByte()),
             ),
         )
-        assertEquals(GpoError.MissingAfl, err.error)
+        assertEquals(emptyList(), ok.gpo.afl.entries)
+        assertEquals(emptyList(), ok.gpo.inlineTlv)
     }
 
     @Test

@@ -70,7 +70,6 @@ public sealed interface GpoError {
     public data class TlvDecodeFailed(val cause: TlvError) : GpoError
     public data object UnknownTemplate : GpoError
     public data object MissingAip : GpoError
-    public data object MissingAfl : GpoError
     public data class InvalidAipLength(val byteCount: Int) : GpoError
     public data class AflRejected(val cause: AflError) : GpoError
 }
@@ -133,18 +132,25 @@ private fun parseFormat1(node: Tlv.Primitive): GpoResult {
 @Suppress("ReturnCount", "CyclomaticComplexMethod")
 private fun parseFormat2(node: Tlv.Constructed): GpoResult {
     val aipNode = findChild(node, TAG_AIP) ?: return GpoResult.Err(GpoError.MissingAip)
-    val aflNode = findChild(node, TAG_AFL) ?: return GpoResult.Err(GpoError.MissingAfl)
     val aip = aipNode.copyValue()
     if (aip.size != AIP_BYTES) return GpoResult.Err(GpoError.InvalidAipLength(aip.size))
+    val aflNode = findChild(node, TAG_AFL)
+    val aflBytes = aflNode?.copyValue() ?: ByteArray(0)
     val inline = node.children.filter { it.tag != TAG_AIP && it.tag != TAG_AFL }
-    return composeGpo(aip, aflNode.copyValue(), inline)
+    return composeGpo(aip, aflBytes, inline)
 }
 
-private fun composeGpo(aip: ByteArray, aflBytes: ByteArray, inlineTlv: List<Tlv>): GpoResult =
-    when (val parsed = Afl.parse(aflBytes)) {
+// why: empty-AFL fast-path is a spec invariant (EMV Book 3 §10 / EMVCo
+// Book C-3 §5.4.3 — AFL is OPTIONAL when format-2 carries application
+// data inline). The `when` arms then cover the AFL parse outcomes.
+@Suppress("CyclomaticComplexMethod")
+private fun composeGpo(aip: ByteArray, aflBytes: ByteArray, inlineTlv: List<Tlv>): GpoResult {
+    if (aflBytes.isEmpty()) return GpoResult.Ok(Gpo(aip, Afl(emptyList()), inlineTlv))
+    return when (val parsed = Afl.parse(aflBytes)) {
         is AflResult.Ok -> GpoResult.Ok(Gpo(aip, parsed.afl, inlineTlv))
         is AflResult.Err -> GpoResult.Err(GpoError.AflRejected(parsed.error))
     }
+}
 
 // why: scan-and-return loop; CC includes the type-test plus tag-match
 // guard. Splitting into a helper would just ferry `parent` and `tag`
@@ -164,7 +170,6 @@ private fun messageForGpoError(error: GpoError): String = when (error) {
     is GpoError.TlvDecodeFailed -> "GPO TLV decode failed"
     GpoError.UnknownTemplate -> "GPO outer template is neither tag 80 nor tag 77"
     GpoError.MissingAip -> "GPO format-2 missing AIP (tag 82)"
-    GpoError.MissingAfl -> "GPO format-2 missing AFL (tag 94)"
     is GpoError.InvalidAipLength -> "GPO AIP length must be 2 bytes, was ${error.byteCount}"
     is GpoError.AflRejected -> "GPO AFL rejected"
 }
