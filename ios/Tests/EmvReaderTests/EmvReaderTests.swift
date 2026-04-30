@@ -244,6 +244,95 @@ final class EmvReaderTests: XCTestCase {
                       "transport must close when collecting Task is cancelled")
     }
 
+    // MARK: PDOL-aware GPO + AID injection
+
+    func testReadParsesPdolFromVisaFciAndSendsCorrectGpoCommandBody() async {
+        let transport = FakeIso7816Transport(script: [
+            (ApduCommands.ppseSelect, Transcripts.visaPpseResponse),
+            (selectVisaPrefix(), Transcripts.visaSelectFciWithPdolResponse),
+            (Transcripts.visaGpoCommandPdol, Transcripts.visaGpoResponse),
+            (readRecord1Sfi1Prefix(), Transcripts.visaRecord1Response),
+        ])
+        let states = await collectStates(transport: transport)
+        guard case .done = states.last else {
+            return XCTFail("Expected .done after PDOL flow, got \(String(describing: states.last))")
+        }
+    }
+
+    func testReadUsesInjectedAidAndParsesRecordsLacking4F() async {
+        let transport = FakeIso7816Transport(script: [
+            (ApduCommands.ppseSelect, Transcripts.visaPpseResponse),
+            (selectVisaPrefix(), Transcripts.visaSelectFciResponse),
+            (ApduCommands.gpoDefault, Transcripts.visaGpoResponse),
+            (readRecord1Sfi1Prefix(), Transcripts.visaRecordWithout4FResponse),
+        ])
+        let states = await collectStates(transport: transport)
+        guard case .done(let card) = states.last else {
+            return XCTFail("Expected .done, got \(String(describing: states.last))")
+        }
+        XCTAssertEqual(Mapping.aidHex(card.aid), "A0000000031010")
+    }
+
+    func testReadEmitsSelectAidFciRejectedOnMalformedFciBody() async {
+        let transport = FakeIso7816Transport(script: [
+            (ApduCommands.ppseSelect, Transcripts.visaPpseResponse),
+            (selectVisaPrefix(), Transcripts.selectFciMalformedResponse),
+        ])
+        let states = await collectStates(transport: transport)
+        guard case .failed(let error) = states.last,
+              case .selectAidFciRejected = error else {
+            return XCTFail("Expected .selectAidFciRejected, got \(String(describing: states.last))")
+        }
+    }
+
+    func testReadEmitsPdolRejectedOnTruncatedPdolBytes() async {
+        let transport = FakeIso7816Transport(script: [
+            (ApduCommands.ppseSelect, Transcripts.visaPpseResponse),
+            (selectVisaPrefix(), Transcripts.selectFciTruncatedPdolResponse),
+        ])
+        let states = await collectStates(transport: transport)
+        guard case .failed(let error) = states.last,
+              case .pdolRejected = error else {
+            return XCTFail("Expected .pdolRejected, got \(String(describing: states.last))")
+        }
+    }
+
+    func testReadWithCustomTerminalConfigOverridesDefaultTtq() async {
+        let customTtq = Data([0x26, 0x00, 0x00, 0x00])
+        let expectedGpo = Data([
+            0x80, 0xA8, 0x00, 0x00, 0x06,
+            0x83, 0x04, 0x26, 0x00, 0x00, 0x00,
+            0x00,
+        ])
+        let transport = FakeIso7816Transport(script: [
+            (ApduCommands.ppseSelect, Transcripts.visaPpseResponse),
+            (selectVisaPrefix(), Transcripts.visaSelectFciWithPdolResponse),
+            (expectedGpo, Transcripts.visaGpoResponse),
+            (readRecord1Sfi1Prefix(), Transcripts.visaRecord1Response),
+        ])
+        let custom = TerminalConfig(
+            terminalTransactionQualifiers: customTtq,
+            terminalCountryCode: TerminalConfig.default.terminalCountryCode,
+            transactionCurrencyCode: TerminalConfig.default.transactionCurrencyCode,
+            amountAuthorised: TerminalConfig.default.amountAuthorised,
+            amountOther: TerminalConfig.default.amountOther,
+            terminalVerificationResults: TerminalConfig.default.terminalVerificationResults,
+            transactionType: TerminalConfig.default.transactionType,
+            terminalType: TerminalConfig.default.terminalType,
+            terminalCapabilities: TerminalConfig.default.terminalCapabilities,
+            additionalTerminalCapabilities: TerminalConfig.default.additionalTerminalCapabilities,
+            applicationVersionNumber: TerminalConfig.default.applicationVersionNumber
+        )
+        let reader = EmvReader(transportFactory: { transport })
+        var collected: [ReaderState] = []
+        for await state in reader.read(config: custom) {
+            collected.append(state)
+        }
+        guard case .done = collected.last else {
+            return XCTFail("Expected .done with custom config, got \(String(describing: collected.last))")
+        }
+    }
+
     // MARK: PCI regression — done(card) bridged description must not leak PAN
 
     func testDoneStateStringDescribingDoesNotLeakRawPan() async {

@@ -62,6 +62,8 @@ private fun friendlyMessage(error: ReaderError): String = when (error) {
     is ReaderError.ApduStatusError -> "The card returned an unexpected status."
     is ReaderError.PpseRejected -> "The PPSE response could not be parsed."
     is ReaderError.GpoRejected -> "The GET PROCESSING OPTIONS response could not be parsed."
+    is ReaderError.SelectAidFciRejected -> "The card's application directory could not be parsed."
+    is ReaderError.PdolRejected -> "The card's processing options request could not be parsed."
     is ReaderError.ParseFailed -> "The card data could not be parsed into an EMV card."
 }
 

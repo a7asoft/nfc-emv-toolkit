@@ -242,4 +242,84 @@ internal object Transcripts {
         0xA5.toByte(), 0x03,
         0xBF.toByte(), 0x0C, 0x00,
     ) + SW_OK
+
+    /**
+     * Visa SELECT-AID FCI containing 9F38 (PDOL). PDOL value asks for
+     * a single tag — TTQ (`9F66 04`).
+     *
+     * Length math (verified by hand):
+     * - 84 07 [aid:7]                = 9 bytes
+     * - 50 04 V I S A                = 6 bytes
+     * - 9F38 03 9F66 04              = 6 bytes (2-byte tag + length + 3-byte value)
+     * - A5 inner = 6 + 6             = 12 bytes → A5 0C
+     * - A5 outer                     = 14 bytes
+     * - 6F inner = 9 + 14            = 23 bytes → 6F 17
+     */
+    internal val VISA_SELECT_FCI_WITH_PDOL_RESPONSE: ByteArray = byteArrayOf(
+        0x6F, 0x17,
+        0x84.toByte(), 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+        0xA5.toByte(), 0x0C,
+        0x50, 0x04, 0x56, 0x49, 0x53, 0x41,
+        0x9F.toByte(), 0x38, 0x03, 0x9F.toByte(), 0x66, 0x04,
+    ) + SW_OK
+
+    /**
+     * Expected GPO command prefix when the reader has parsed
+     * [VISA_SELECT_FCI_WITH_PDOL_RESPONSE] with the default
+     * `TerminalConfig.default()` TTQ (`36 00 80 00`).
+     *
+     * `80 A8 00 00 06 83 04 36 00 80 00 00`
+     * - Lc = 0x06 = 2 (template) + 4 (TTQ)
+     * - 83 04 = template tag + length
+     * - 36 00 80 00 = TTQ
+     * - Le = 0x00
+     */
+    internal val VISA_GPO_COMMAND_PDOL: ByteArray = byteArrayOf(
+        0x80.toByte(), 0xA8.toByte(), 0x00, 0x00, 0x06,
+        0x83.toByte(), 0x04, 0x36, 0x00, 0x80.toByte(), 0x00,
+        0x00,
+    )
+
+    /**
+     * Visa READ RECORD response WITHOUT a `4F` AID entry. Mirrors
+     * the real-card pattern where AID lives only in PPSE / SELECT FCI.
+     *
+     * Built from [VISA_RECORD_1_RESPONSE] minus the 9-byte 4F entry.
+     * Original outer = 70 3D = 61 inner; minus 9 = 52 inner → 70 34.
+     */
+    internal val VISA_RECORD_WITHOUT_4F_RESPONSE: ByteArray = byteArrayOf(
+        0x70, 0x34,
+        0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        0x5F, 0x20, 0x09, 0x56, 0x49, 0x53, 0x41, 0x20, 0x54, 0x45, 0x53, 0x54,
+        0x50, 0x04, 0x56, 0x49, 0x53, 0x41,
+        0x57, 0x10,
+        0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00, 0x00, 0x00,
+    ) + SW_OK
+
+    /**
+     * Malformed SELECT-AID FCI: outer tag is `70` not `6F` so
+     * `SelectAidFci.parse` returns `MissingFciTemplate`.
+     */
+    internal val SELECT_FCI_MALFORMED_RESPONSE: ByteArray = byteArrayOf(
+        0x70, 0x02, 0x00, 0x00,
+    ) + SW_OK
+
+    /**
+     * SELECT-AID FCI with structurally invalid PDOL bytes:
+     * `9F` is the start of a 2-byte tag but the stream ends.
+     *
+     * Length math:
+     * - 84 07 [aid:7]                = 9 bytes
+     * - 9F38 01 9F                   = 4 bytes (tag-only, truncated)
+     * - A5 inner                     = 4 → A5 04
+     * - 6F inner = 9 + 6             = 15 bytes → 6F 0F
+     */
+    internal val SELECT_FCI_TRUNCATED_PDOL_RESPONSE: ByteArray = byteArrayOf(
+        0x6F, 0x0F,
+        0x84.toByte(), 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+        0xA5.toByte(), 0x04,
+        0x9F.toByte(), 0x38, 0x01, 0x9F.toByte(),
+    ) + SW_OK
 }

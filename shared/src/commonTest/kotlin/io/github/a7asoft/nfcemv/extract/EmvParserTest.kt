@@ -375,6 +375,63 @@ class EmvParserTest {
         assertEquals(3, malformed.offset)
     }
 
+    /**
+     * Real-card record: 4F removed, outer 70 length recomputed.
+     * Original canonical inner = 0x3B = 59 bytes. Removing the 9-byte
+     * 4F entry → inner = 50 bytes → 70 32.
+     */
+    private val recordWithoutAid: ByteArray = byteArrayOf(
+        0x70, 0x32,
+        0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        0x5F, 0x20, 0x09, 0x56, 0x49, 0x53, 0x41, 0x20, 0x54, 0x45, 0x53, 0x54,
+        0x50, 0x04, 0x56, 0x49, 0x53, 0x41,
+        0x57, 0x0E,
+        0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+    )
+
+    @Test
+    fun `parse with aid uses the injected aid even when records lack 4F`() {
+        val aid = Aid.fromHex("A0000000031010")
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(aid, listOf(recordWithoutAid)))
+        assertEquals(aid, ok.card.aid)
+        assertEquals(EmvBrand.VISA, ok.card.brand)
+    }
+
+    @Test
+    fun `parse with aid still extracts PAN from records`() {
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), listOf(recordWithoutAid)),
+        )
+        assertEquals("4111111111111111", ok.card.pan.unmasked())
+    }
+
+    @Test
+    fun `parse 1-arg overload preserves existing fixture behavior`() {
+        // why: pinning back-compat — the canonical fixture (with 4F inline)
+        // continues to parse via the 1-arg overload.
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
+        assertEquals(Aid.fromHex("A0000000031010"), ok.card.aid)
+    }
+
+    @Test
+    fun `parse with aid prefers the injected aid over any 4F in records`() {
+        // why: documented contract — when both are available the injected aid wins.
+        val mastercardAid = Aid.fromHex("A0000000041010")
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(mastercardAid, listOf(canonicalRecord)),
+        )
+        assertEquals(mastercardAid, ok.card.aid)
+    }
+
+    @Test
+    fun `parseOrThrow with aid returns the EmvCard on a valid input`() {
+        val aid = Aid.fromHex("A0000000031010")
+        val card = EmvParser.parseOrThrow(aid, listOf(recordWithoutAid))
+        assertEquals(aid, card.aid)
+    }
+
     private companion object {
         const val FUZZ_SEED: Long = 0x454D5643L // "EMVC"
         const val FUZZ_ITERATIONS: Int = 1_000

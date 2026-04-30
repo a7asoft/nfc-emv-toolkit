@@ -9,8 +9,14 @@ import io.github.a7asoft.nfcemv.extract.EmvCardResult
 import io.github.a7asoft.nfcemv.extract.EmvParser
 import io.github.a7asoft.nfcemv.extract.Gpo
 import io.github.a7asoft.nfcemv.extract.GpoResult
+import io.github.a7asoft.nfcemv.extract.Pdol
+import io.github.a7asoft.nfcemv.extract.PdolResponseBuilder
+import io.github.a7asoft.nfcemv.extract.PdolResult
 import io.github.a7asoft.nfcemv.extract.Ppse
 import io.github.a7asoft.nfcemv.extract.PpseResult
+import io.github.a7asoft.nfcemv.extract.SelectAidFci
+import io.github.a7asoft.nfcemv.extract.SelectAidFciResult
+import io.github.a7asoft.nfcemv.extract.TerminalConfig
 import io.github.a7asoft.nfcemv.extract.parse
 import io.github.a7asoft.nfcemv.reader.internal.ApduCommands
 import io.github.a7asoft.nfcemv.reader.internal.ApduTransport
@@ -21,17 +27,23 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onCompletion
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import java.io.IOException
 import java.net.SocketTimeoutException
+import kotlin.random.Random
 
 /**
  * Orchestrates the EMV contactless read flow per Book 1 §11–12 over an
  * Android `IsoDep` channel. Read-only by design (CLAUDE.md §1):
  * - Sends `SELECT 2PAY.SYS.DDF01`, parses the PPSE FCI.
  * - Selects the highest-priority advertised application.
- * - Issues `GET PROCESSING OPTIONS` with empty PDOL data.
+ * - Sends `SELECT [AID]`, parses the FCI for the optional `9F38` PDOL.
+ * - Builds a PDOL response from [TerminalConfig] (or the empty `83 00`
+ *   form when the card omits `9F38`) and issues
+ *   `GET PROCESSING OPTIONS`.
  * - Walks the AFL, issuing one `READ RECORD` per record.
- * - Hands the accumulated record stream to [EmvParser].
+ * - Hands the accumulated record stream + the AID to [EmvParser].
  *
  * Exposed as a `Flow<ReaderState>` so consumers can drive a UI off
  * progress states. Terminal states are [ReaderState.Done] (success) and
@@ -46,8 +58,8 @@ public class ContactlessReader internal constructor(
 
     /**
      * Returns a cold flow that, when collected, drives the contactless
-     * read flow against the wrapped transport. Each emission is one
-     * [ReaderState] transition.
+     * read flow against the wrapped transport using the default
+     * [TerminalConfig]. Each emission is one [ReaderState] transition.
      *
      * Cancellation semantics: the Flow honors collector cancellation
      * BETWEEN APDU exchanges (at suspension points), not DURING a
@@ -57,28 +69,38 @@ public class ContactlessReader internal constructor(
      * regardless of whether the Flow ended via terminal emit, error, or
      * cancellation.
      */
-    public fun read(): Flow<ReaderState> = flow { drive() }
+    public fun read(): Flow<ReaderState> = read(TerminalConfig.default())
+
+    /**
+     * Returns a cold flow driving the read with [config] supplying the
+     * terminal-side PDOL response defaults (TTQ, country, currency,
+     * etc.). Use this overload to override the standard defaults — for
+     * example to flip TTQ bits when validating against a card that
+     * rejects the conservative `36 00 80 00`.
+     */
+    public fun read(config: TerminalConfig): Flow<ReaderState> = flow { drive(config) }
         .flowOn(Dispatchers.IO)
         .onCompletion { runCatching { transport.close() } }
 
     @Suppress(
         // why: each return is a distinct EMV Book 1 §11–12 step
-        // (PPSE / app-pick / SELECT / GPO / parse). Collapsing obscures the
-        // flow without reducing real complexity.
+        // (PPSE / app-pick / SELECT / FCI / PDOL / GPO / parse). Collapsing
+        // obscures the flow without reducing real complexity.
         "ReturnCount",
         "CyclomaticComplexMethod",
     )
-    private suspend fun FlowCollector<ReaderState>.drive() {
+    private suspend fun FlowCollector<ReaderState>.drive(config: TerminalConfig) {
         emit(ReaderState.TagDetected)
         try {
             transport.connect()
             val ppse = selectPpse() ?: return
             val chosen = chooseApplication(ppse) ?: return
             emit(ReaderState.SelectingAid(chosen.aid))
-            if (!selectAid(chosen.aid)) return
+            val fciBody = selectAid(chosen.aid) ?: return
+            val gpoBody = buildGpoBody(fciBody, config) ?: return
             emit(ReaderState.ReadingRecords)
-            val gpo = readGpo() ?: return
-            emitParseOutcome(readAllRecords(gpo.afl))
+            val gpo = readGpo(gpoBody) ?: return
+            emitParseOutcome(chosen.aid, readAllRecords(gpo.afl))
         } catch (e: IOException) {
             emit(ReaderState.Failed(translateIo(e)))
         }
@@ -123,20 +145,47 @@ public class ContactlessReader internal constructor(
         return PickedApplication(entry.aid)
     }
 
-    private suspend fun FlowCollector<ReaderState>.selectAid(aid: Aid): Boolean {
+    private suspend fun FlowCollector<ReaderState>.selectAid(aid: Aid): ByteArray? {
         val response = transport.transceive(ApduCommands.selectAid(aid))
-        if (ApduCommands.isSuccess(response)) return true
+        if (ApduCommands.isSuccess(response)) return ApduCommands.dataField(response)
         val (sw1, sw2) = ApduCommands.statusWord(response)
         emit(ReaderState.Failed(ReaderError.ApduStatusError(sw1, sw2)))
-        return false
+        return null
+    }
+
+    @Suppress("ReturnCount", "CyclomaticComplexMethod")
+    // why: each return surfaces a distinct typed reader error per the
+    // EMV Book 3 §6.5.5–§6.5.8 SELECT FCI / PDOL / GPO sequence.
+    // Splitting into helpers ferries continuation + collector through
+    // more signatures without reducing real complexity.
+    private suspend fun FlowCollector<ReaderState>.buildGpoBody(
+        fciBody: ByteArray,
+        config: TerminalConfig,
+    ): ByteArray? {
+        val pdolBytes = when (val parsed = SelectAidFci.parse(fciBody)) {
+            is SelectAidFciResult.Ok -> parsed.fci.pdolBytes
+            is SelectAidFciResult.Err -> {
+                emit(ReaderState.Failed(ReaderError.SelectAidFciRejected(parsed.error)))
+                return null
+            }
+        } ?: return ApduCommands.gpoCommand(EMPTY_BYTES)
+        val pdol = when (val parsed = Pdol.parse(pdolBytes)) {
+            is PdolResult.Ok -> parsed.pdol
+            is PdolResult.Err -> {
+                emit(ReaderState.Failed(ReaderError.PdolRejected(parsed.error)))
+                return null
+            }
+        }
+        val response = PdolResponseBuilder.build(pdol, config, transactionDate(), unpredictableNumber())
+        return ApduCommands.gpoCommand(response)
     }
 
     // why: transceive, dispatch on status, parse — each is a distinct EMV
     // Book 3 §6.5.8 step. Same shape as `selectPpse`; further splitting
     // adds parameter shuffling without reducing real complexity.
     @Suppress("CyclomaticComplexMethod")
-    private suspend fun FlowCollector<ReaderState>.readGpo(): Gpo? {
-        val response = transport.transceive(ApduCommands.GPO_DEFAULT)
+    private suspend fun FlowCollector<ReaderState>.readGpo(gpoCommand: ByteArray): Gpo? {
+        val response = transport.transceive(gpoCommand)
         if (!ApduCommands.isSuccess(response)) {
             val (sw1, sw2) = ApduCommands.statusWord(response)
             emit(ReaderState.Failed(ReaderError.ApduStatusError(sw1, sw2)))
@@ -175,8 +224,11 @@ public class ContactlessReader internal constructor(
         return collected
     }
 
-    private suspend fun FlowCollector<ReaderState>.emitParseOutcome(records: List<ByteArray>) {
-        when (val parsed = EmvParser.parse(records)) {
+    private suspend fun FlowCollector<ReaderState>.emitParseOutcome(
+        chosenAid: Aid,
+        records: List<ByteArray>,
+    ) {
+        when (val parsed = EmvParser.parse(chosenAid, records)) {
             is EmvCardResult.Ok -> emit(ReaderState.Done(parsed.card))
             is EmvCardResult.Err -> emit(ReaderState.Failed(ReaderError.ParseFailed(parsed.error)))
         }
@@ -209,5 +261,38 @@ public class ContactlessReader internal constructor(
 
         private const val SW_FILE_NOT_FOUND_HI: Byte = 0x6A.toByte()
         private const val SW_FILE_NOT_FOUND_LO: Byte = 0x82.toByte()
+        private val EMPTY_BYTES: ByteArray = ByteArray(0)
+
+        // why: BCD-encoded YYMMDD from the current wall clock — UTC for
+        // deterministic behavior across devices. Tag 9A is informational
+        // for our read-only flow; the card uses it to seed cryptograms we
+        // do not validate.
+        @OptIn(kotlin.time.ExperimentalTime::class)
+        @Suppress("MagicNumber")
+        private fun transactionDate(): ByteArray {
+            val now = kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.UTC)
+            val yy = now.year % 100
+            return byteArrayOf(
+                bcd(yy / 10, yy % 10),
+                bcd(now.monthNumber / 10, now.monthNumber % 10),
+                bcd(now.dayOfMonth / 10, now.dayOfMonth % 10),
+            )
+        }
+
+        @Suppress("MagicNumber")
+        private fun bcd(high: Int, low: Int): Byte =
+            (((high and 0x0F) shl 4) or (low and 0x0F)).toByte()
+
+        // why: 4 random bytes for tag 9F37. NOT crypto-grade — the
+        // unpredictable number is anti-replay protocol-level only and
+        // we never validate the card cryptogram.
+        @Suppress("MagicNumber")
+        private fun unpredictableNumber(): ByteArray {
+            val bytes = ByteArray(UN_BYTES)
+            Random.nextBytes(bytes)
+            return bytes
+        }
+
+        private const val UN_BYTES: Int = 4
     }
 }
