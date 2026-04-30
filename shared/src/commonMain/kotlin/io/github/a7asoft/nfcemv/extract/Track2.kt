@@ -152,7 +152,7 @@ public class Track2 internal constructor(
         private fun scanInput(raw: ByteArray, effective: Int): SeparatorScan {
             var separator: Int? = null
             for (i in 0 until effective) {
-                when (val nibble = raw.nibbleAt(i)) {
+                when (raw.nibbleAt(i)) {
                     in 0..9 -> Unit
                     SEPARATOR_NIBBLE -> {
                         if (separator != null) return SeparatorScan.IllegalNibble(i)
