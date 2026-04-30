@@ -6,7 +6,6 @@ plugins {
     alias(libs.plugins.androidLibrary)
 }
 
-@OptIn(ExperimentalAbiValidation::class)
 kotlin {
     androidTarget {
         compilerOptions {
@@ -33,6 +32,7 @@ kotlin {
         }
     }
 
+    @OptIn(ExperimentalAbiValidation::class)
     abiValidation {
         enabled.set(true)
     }

@@ -352,8 +352,8 @@ public final class io/github/a7asoft/nfcemv/extract/PanResult$Ok : io/github/a7a
 }
 
 public final class io/github/a7asoft/nfcemv/extract/ServiceCode {
+	public static final field Companion Lio/github/a7asoft/nfcemv/extract/ServiceCode$Companion;
 	public static final synthetic fun box-impl (Ljava/lang/String;)Lio/github/a7asoft/nfcemv/extract/ServiceCode;
-	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
 	public fun equals (Ljava/lang/Object;)Z
 	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
 	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
@@ -362,6 +362,68 @@ public final class io/github/a7asoft/nfcemv/extract/ServiceCode {
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/ServiceCode$Companion {
+	public final fun parse (Ljava/lang/String;)Lio/github/a7asoft/nfcemv/extract/ServiceCodeResult;
+	public final fun parseOrThrow-dW2pD_Y (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public abstract interface class io/github/a7asoft/nfcemv/extract/ServiceCodeError {
+}
+
+public final class io/github/a7asoft/nfcemv/extract/ServiceCodeError$EmptyInput : io/github/a7asoft/nfcemv/extract/ServiceCodeError {
+	public static final field INSTANCE Lio/github/a7asoft/nfcemv/extract/ServiceCodeError$EmptyInput;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/ServiceCodeError$NonDigitCharacter : io/github/a7asoft/nfcemv/extract/ServiceCodeError {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Lio/github/a7asoft/nfcemv/extract/ServiceCodeError$NonDigitCharacter;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/ServiceCodeError$NonDigitCharacter;IILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/ServiceCodeError$NonDigitCharacter;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOffset ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/ServiceCodeError$WrongLength : io/github/a7asoft/nfcemv/extract/ServiceCodeError {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Lio/github/a7asoft/nfcemv/extract/ServiceCodeError$WrongLength;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/ServiceCodeError$WrongLength;IILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/ServiceCodeError$WrongLength;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLength ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class io/github/a7asoft/nfcemv/extract/ServiceCodeResult {
+}
+
+public final class io/github/a7asoft/nfcemv/extract/ServiceCodeResult$Err : io/github/a7asoft/nfcemv/extract/ServiceCodeResult {
+	public fun <init> (Lio/github/a7asoft/nfcemv/extract/ServiceCodeError;)V
+	public final fun component1 ()Lio/github/a7asoft/nfcemv/extract/ServiceCodeError;
+	public final fun copy (Lio/github/a7asoft/nfcemv/extract/ServiceCodeError;)Lio/github/a7asoft/nfcemv/extract/ServiceCodeResult$Err;
+	public static synthetic fun copy$default (Lio/github/a7asoft/nfcemv/extract/ServiceCodeResult$Err;Lio/github/a7asoft/nfcemv/extract/ServiceCodeError;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/ServiceCodeResult$Err;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Lio/github/a7asoft/nfcemv/extract/ServiceCodeError;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/a7asoft/nfcemv/extract/ServiceCodeResult$Ok : io/github/a7asoft/nfcemv/extract/ServiceCodeResult {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-2ybdlf4 ()Ljava/lang/String;
+	public final fun copy-EebBu7Y (Ljava/lang/String;)Lio/github/a7asoft/nfcemv/extract/ServiceCodeResult$Ok;
+	public static synthetic fun copy-EebBu7Y$default (Lio/github/a7asoft/nfcemv/extract/ServiceCodeResult$Ok;Ljava/lang/String;ILjava/lang/Object;)Lio/github/a7asoft/nfcemv/extract/ServiceCodeResult$Ok;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getServiceCode-2ybdlf4 ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/github/a7asoft/nfcemv/extract/Track2 {

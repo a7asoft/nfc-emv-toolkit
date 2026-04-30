@@ -56,8 +56,8 @@ docs(readme): clarify iOS entitlement steps
 
 The `:shared` module's public API is gated by Kotlin's built-in ABI validation. Reference dumps live under `shared/api/`:
 
-- `shared/api/android/shared.api` — JVM/Android signatures
-- `shared/api/shared.klib.api` — KLIB ABI for all Native targets (the dump tool unifies targets when their ABIs match; per-target files appear under `shared/api/klib/<target>/` if they diverge)
+- `shared/api/android/shared.api` — captures `commonMain + androidMain` (JVM/Android signatures, ProGuard format)
+- `shared/api/shared.klib.api` — captures `commonMain + iosMain` (KLIB ABI, unified across iOS targets while their ABIs match; per-target files appear under `shared/api/klib/<target>/` only when targets diverge)
 
 If your change adds, removes, renames, or alters a public symbol on `commonMain`, `androidMain`, or `iosMain`, run:
 

@@ -293,6 +293,68 @@ sealed interface io.github.a7asoft.nfcemv.extract/PanResult { // io.github.a7aso
     }
 }
 
+sealed interface io.github.a7asoft.nfcemv.extract/ServiceCodeError { // io.github.a7asoft.nfcemv.extract/ServiceCodeError|null[0]
+    final class NonDigitCharacter : io.github.a7asoft.nfcemv.extract/ServiceCodeError { // io.github.a7asoft.nfcemv.extract/ServiceCodeError.NonDigitCharacter|null[0]
+        constructor <init>(kotlin/Int) // io.github.a7asoft.nfcemv.extract/ServiceCodeError.NonDigitCharacter.<init>|<init>(kotlin.Int){}[0]
+
+        final val offset // io.github.a7asoft.nfcemv.extract/ServiceCodeError.NonDigitCharacter.offset|{}offset[0]
+            final fun <get-offset>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/ServiceCodeError.NonDigitCharacter.offset.<get-offset>|<get-offset>(){}[0]
+
+        final fun component1(): kotlin/Int // io.github.a7asoft.nfcemv.extract/ServiceCodeError.NonDigitCharacter.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): io.github.a7asoft.nfcemv.extract/ServiceCodeError.NonDigitCharacter // io.github.a7asoft.nfcemv.extract/ServiceCodeError.NonDigitCharacter.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/ServiceCodeError.NonDigitCharacter.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/ServiceCodeError.NonDigitCharacter.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/ServiceCodeError.NonDigitCharacter.toString|toString(){}[0]
+    }
+
+    final class WrongLength : io.github.a7asoft.nfcemv.extract/ServiceCodeError { // io.github.a7asoft.nfcemv.extract/ServiceCodeError.WrongLength|null[0]
+        constructor <init>(kotlin/Int) // io.github.a7asoft.nfcemv.extract/ServiceCodeError.WrongLength.<init>|<init>(kotlin.Int){}[0]
+
+        final val length // io.github.a7asoft.nfcemv.extract/ServiceCodeError.WrongLength.length|{}length[0]
+            final fun <get-length>(): kotlin/Int // io.github.a7asoft.nfcemv.extract/ServiceCodeError.WrongLength.length.<get-length>|<get-length>(){}[0]
+
+        final fun component1(): kotlin/Int // io.github.a7asoft.nfcemv.extract/ServiceCodeError.WrongLength.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): io.github.a7asoft.nfcemv.extract/ServiceCodeError.WrongLength // io.github.a7asoft.nfcemv.extract/ServiceCodeError.WrongLength.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/ServiceCodeError.WrongLength.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/ServiceCodeError.WrongLength.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/ServiceCodeError.WrongLength.toString|toString(){}[0]
+    }
+
+    final object EmptyInput : io.github.a7asoft.nfcemv.extract/ServiceCodeError { // io.github.a7asoft.nfcemv.extract/ServiceCodeError.EmptyInput|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/ServiceCodeError.EmptyInput.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/ServiceCodeError.EmptyInput.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/ServiceCodeError.EmptyInput.toString|toString(){}[0]
+    }
+}
+
+sealed interface io.github.a7asoft.nfcemv.extract/ServiceCodeResult { // io.github.a7asoft.nfcemv.extract/ServiceCodeResult|null[0]
+    final class Err : io.github.a7asoft.nfcemv.extract/ServiceCodeResult { // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Err|null[0]
+        constructor <init>(io.github.a7asoft.nfcemv.extract/ServiceCodeError) // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Err.<init>|<init>(io.github.a7asoft.nfcemv.extract.ServiceCodeError){}[0]
+
+        final val error // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Err.error|{}error[0]
+            final fun <get-error>(): io.github.a7asoft.nfcemv.extract/ServiceCodeError // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Err.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): io.github.a7asoft.nfcemv.extract/ServiceCodeError // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Err.component1|component1(){}[0]
+        final fun copy(io.github.a7asoft.nfcemv.extract/ServiceCodeError = ...): io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Err // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Err.copy|copy(io.github.a7asoft.nfcemv.extract.ServiceCodeError){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Err.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Err.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Err.toString|toString(){}[0]
+    }
+
+    final class Ok : io.github.a7asoft.nfcemv.extract/ServiceCodeResult { // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Ok|null[0]
+        constructor <init>(io.github.a7asoft.nfcemv.extract/ServiceCode) // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Ok.<init>|<init>(io.github.a7asoft.nfcemv.extract.ServiceCode){}[0]
+
+        final val serviceCode // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Ok.serviceCode|{}serviceCode[0]
+            final fun <get-serviceCode>(): io.github.a7asoft.nfcemv.extract/ServiceCode // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Ok.serviceCode.<get-serviceCode>|<get-serviceCode>(){}[0]
+
+        final fun component1(): io.github.a7asoft.nfcemv.extract/ServiceCode // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Ok.component1|component1(){}[0]
+        final fun copy(io.github.a7asoft.nfcemv.extract/ServiceCode = ...): io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Ok // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Ok.copy|copy(io.github.a7asoft.nfcemv.extract.ServiceCode){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Ok.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Ok.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/ServiceCodeResult.Ok.toString|toString(){}[0]
+    }
+}
+
 sealed interface io.github.a7asoft.nfcemv.extract/Track2Error { // io.github.a7asoft.nfcemv.extract/Track2Error|null[0]
     final class ExpiryTooShort : io.github.a7asoft.nfcemv.extract/Track2Error { // io.github.a7asoft.nfcemv.extract/Track2Error.ExpiryTooShort|null[0]
         constructor <init>(kotlin/Int) // io.github.a7asoft.nfcemv.extract/Track2Error.ExpiryTooShort.<init>|<init>(kotlin.Int){}[0]
@@ -791,11 +853,14 @@ final value class io.github.a7asoft.nfcemv.extract/Pan { // io.github.a7asoft.nf
 }
 
 final value class io.github.a7asoft.nfcemv.extract/ServiceCode { // io.github.a7asoft.nfcemv.extract/ServiceCode|null[0]
-    constructor <init>(kotlin/String) // io.github.a7asoft.nfcemv.extract/ServiceCode.<init>|<init>(kotlin.String){}[0]
-
     final fun equals(kotlin/Any?): kotlin/Boolean // io.github.a7asoft.nfcemv.extract/ServiceCode.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // io.github.a7asoft.nfcemv.extract/ServiceCode.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // io.github.a7asoft.nfcemv.extract/ServiceCode.toString|toString(){}[0]
+
+    final object Companion { // io.github.a7asoft.nfcemv.extract/ServiceCode.Companion|null[0]
+        final fun parse(kotlin/String): io.github.a7asoft.nfcemv.extract/ServiceCodeResult // io.github.a7asoft.nfcemv.extract/ServiceCode.Companion.parse|parse(kotlin.String){}[0]
+        final fun parseOrThrow(kotlin/String): io.github.a7asoft.nfcemv.extract/ServiceCode // io.github.a7asoft.nfcemv.extract/ServiceCode.Companion.parseOrThrow|parseOrThrow(kotlin.String){}[0]
+    }
 }
 
 final value class io.github.a7asoft.nfcemv.tlv/Tag { // io.github.a7asoft.nfcemv.tlv/Tag|null[0]
