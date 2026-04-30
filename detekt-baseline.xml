@@ -1,0 +1,102 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:BcdNibbles.kt$internal fun ByteArray.nibbleAt(index: Int): Int</ID>
+    <ID>CyclomaticComplexMethod:BrandResolver.kt$BrandResolver$public fun resolveBrand(aid: Aid?, pan: Pan?): EmvBrand</ID>
+    <ID>CyclomaticComplexMethod:EmvFieldExtractors.kt$internal fun extractPan(node: Tlv.Primitive): ExtractResult&lt;Pan&gt;</ID>
+    <ID>CyclomaticComplexMethod:EmvFieldExtractors.kt$private fun unpackPanDigits(bytes: ByteArray): UnpackResult</ID>
+    <ID>CyclomaticComplexMethod:EmvParser.kt$EmvParser$private fun decodeAll(apduResponses: List&lt;ByteArray&gt;): DecodeOutcome</ID>
+    <ID>CyclomaticComplexMethod:EmvParser.kt$EmvParser$private fun describePanError(cause: PanError): String</ID>
+    <ID>CyclomaticComplexMethod:EmvParser.kt$EmvParser$private fun describeTlvError(cause: TlvError): String</ID>
+    <ID>CyclomaticComplexMethod:EmvParser.kt$EmvParser$private fun describeTrack2Error(cause: Track2Error): String</ID>
+    <ID>CyclomaticComplexMethod:EmvParser.kt$EmvParser$private fun extractOptionalFields(nodes: List&lt;Tlv&gt;): OptionalOutcome</ID>
+    <ID>CyclomaticComplexMethod:EmvParser.kt$EmvParser$private fun extractRequiredFields(nodes: List&lt;Tlv&gt;): RequiredOutcome</ID>
+    <ID>CyclomaticComplexMethod:EmvParser.kt$EmvParser$private fun messageFor(error: EmvCardError): String</ID>
+    <ID>CyclomaticComplexMethod:EmvParser.kt$EmvParser$public fun parse(apduResponses: List&lt;ByteArray&gt;): EmvCardResult</ID>
+    <ID>CyclomaticComplexMethod:EmvParserTest.kt$EmvParserTest$@Test fun `parser never crashes on arbitrary List of ByteArray input`()</ID>
+    <ID>CyclomaticComplexMethod:LengthReader.kt$internal fun readLength(reader: TlvReader, options: TlvOptions): Int</ID>
+    <ID>CyclomaticComplexMethod:Luhn.kt$public fun String.isValidLuhn(): Boolean</ID>
+    <ID>CyclomaticComplexMethod:LuhnTest.kt$LuhnTest$private fun referenceLuhn(s: String): Boolean</ID>
+    <ID>CyclomaticComplexMethod:NodeReader.kt$private fun readChildren(ctx: ParseContext, bodyStart: Int, end: Int, declared: Int): List&lt;Tlv&gt;</ID>
+    <ID>CyclomaticComplexMethod:Pan.kt$Pan.Companion$public fun parse(raw: String): PanResult</ID>
+    <ID>CyclomaticComplexMethod:TagReader.kt$private fun validateLeadingZero(currentSize: Int, next: Byte, strictness: Strictness, startOffset: Int)</ID>
+    <ID>CyclomaticComplexMethod:Tlv.kt$Tlv.Constructed$override fun equals(other: Any?): Boolean</ID>
+    <ID>CyclomaticComplexMethod:Tlv.kt$Tlv.Primitive$override fun equals(other: Any?): Boolean</ID>
+    <ID>CyclomaticComplexMethod:TlvDecoder.kt$TlvDecoder$private fun decodeAll(input: ByteArray, options: TlvOptions): List&lt;Tlv&gt;</ID>
+    <ID>CyclomaticComplexMethod:TlvSearch.kt$internal fun findFirst(tlvs: List&lt;Tlv&gt;, target: Tag): Tlv?</ID>
+    <ID>CyclomaticComplexMethod:Track2.kt$Track2$override fun equals(other: Any?): Boolean</ID>
+    <ID>CyclomaticComplexMethod:Track2.kt$Track2.Companion$private fun describePanError(cause: PanError): String</ID>
+    <ID>CyclomaticComplexMethod:Track2.kt$Track2.Companion$private fun locateSeparator(raw: ByteArray, effective: Int): Int</ID>
+    <ID>CyclomaticComplexMethod:Track2.kt$Track2.Companion$private fun messageFor(error: Track2Error): String</ID>
+    <ID>CyclomaticComplexMethod:Track2.kt$Track2.Companion$private fun scanInput(raw: ByteArray, effective: Int): SeparatorScan</ID>
+    <ID>CyclomaticComplexMethod:Track2Test.kt$Track2Test$@Test fun `parser never crashes on arbitrary input`()</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:EmvCardTest.kt$EmvCardTest$val (pan, expiry, cardholderName, brand, applicationLabel, track2, aid) = card</ID>
+    <ID>ForbiddenClassName:ServiceCode.kt$ServiceCode</ID>
+    <ID>ForbiddenClassName:ServiceCodeTest.kt$ServiceCodeTest</ID>
+    <ID>LongParameterList:LengthReader.kt$(reader: TlvReader, octets: Int, startOffset: Int, options: TlvOptions)</ID>
+    <ID>LongParameterList:NodeReader.kt$(ctx: ParseContext, bodyStart: Int, end: Int, declared: Int)</ID>
+    <ID>LongParameterList:NodeReader.kt$(currentPos: Int, bodyStart: Int, end: Int, declared: Int)</ID>
+    <ID>LongParameterList:NodeWriter.kt$(node: Tlv, dst: ByteArray, offset: Int, depth: Int)</ID>
+    <ID>LongParameterList:NodeWriter.kt$(node: Tlv.Constructed, dst: ByteArray, offset: Int, depth: Int)</ID>
+    <ID>LongParameterList:TagReader.kt$( reader: TlvReader, firstByte: Byte, startOffset: Int, options: TlvOptions, )</ID>
+    <ID>LongParameterList:TagReader.kt$(currentSize: Int, next: Byte, strictness: Strictness, startOffset: Int)</ID>
+    <ID>LongParameterList:Track2.kt$Track2$( public val pan: Pan, /** * Card expiry month. Two-digit year is mapped to 21st century * (`YY` ⇒ `20YY`); cards expiring in 2100 or later would be * mis-mapped — out of scope for this milestone. */ public val expiry: YearMonth, public val serviceCode: ServiceCode, private val discretionary: String, )</ID>
+    <ID>MagicNumber:Aid.kt$Aid.Companion$4</ID>
+    <ID>MagicNumber:BcdNibbles.kt$4</ID>
+    <ID>MagicNumber:EmvFieldExtractors.kt$10</ID>
+    <ID>MagicNumber:EmvFieldExtractors.kt$3</ID>
+    <ID>MagicNumber:EmvFieldExtractors.kt$9</ID>
+    <ID>MagicNumber:EmvTags.kt$EmvTags$10</ID>
+    <ID>MagicNumber:EmvTags.kt$EmvTags$19</ID>
+    <ID>MagicNumber:EmvTags.kt$EmvTags$222</ID>
+    <ID>MagicNumber:EmvTags.kt$EmvTags$248</ID>
+    <ID>MagicNumber:EmvTags.kt$EmvTags$252</ID>
+    <ID>MagicNumber:EmvTags.kt$EmvTags$26</ID>
+    <ID>MagicNumber:EmvTags.kt$EmvTags$3</ID>
+    <ID>MagicNumber:EmvTags.kt$EmvTags$4</ID>
+    <ID>MagicNumber:EmvTags.kt$EmvTags$6</ID>
+    <ID>MagicNumber:HexCodec.kt$4</ID>
+    <ID>MagicNumber:Luhn.kt$10</ID>
+    <ID>MagicNumber:Luhn.kt$9</ID>
+    <ID>MagicNumber:ServiceCode.kt$ServiceCode$3</ID>
+    <ID>MagicNumber:TagClass.kt$TagClass.Companion$3</ID>
+    <ID>MagicNumber:TagClass.kt$TagClass.Private$0b11</ID>
+    <ID>MagicNumber:TlvOptions.kt$TlvOptions$4</ID>
+    <ID>MagicNumber:Track2.kt$Track2.Companion$4</ID>
+    <ID>MagicNumber:Track2.kt$Track2.Companion$9</ID>
+    <ID>MatchingDeclarationName:EmvFieldExtractors.kt$ExtractResult&lt;out T&gt;</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("4F"), "Application Identifier (AID)", EmvTagFormat.B, EmvTagLength.Variable(16), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("50"), "Application Label", EmvTagFormat.AN, EmvTagLength.Variable(16), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("57"), "Track 2 Equivalent Data", EmvTagFormat.B, EmvTagLength.Variable(19), TagSensitivity.PCI)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("5A"), "Application Primary Account Number (PAN)", EmvTagFormat.CN, EmvTagLength.Variable(10), TagSensitivity.PCI)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("5F20"), "Cardholder Name", EmvTagFormat.AN, EmvTagLength.Variable(26), TagSensitivity.PCI)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("5F24"), "Application Expiration Date (YYMMDD)", EmvTagFormat.N, EmvTagLength.Fixed(3), TagSensitivity.PCI)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("5F25"), "Application Effective Date (YYMMDD)", EmvTagFormat.N, EmvTagLength.Fixed(3), TagSensitivity.PCI)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("5F28"), "Issuer Country Code (ISO 3166-1 numeric)", EmvTagFormat.N, EmvTagLength.Fixed(2), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("5F2A"), "Transaction Currency Code (ISO 4217 numeric)", EmvTagFormat.N, EmvTagLength.Fixed(2), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("5F2D"), "Language Preference (ISO 639-1 codes)", EmvTagFormat.AN, EmvTagLength.Variable(8), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("5F34"), "Application PAN Sequence Number", EmvTagFormat.N, EmvTagLength.Fixed(1), TagSensitivity.PCI)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("82"), "Application Interchange Profile (AIP)", EmvTagFormat.B, EmvTagLength.Fixed(2), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("84"), "Dedicated File (DF) Name", EmvTagFormat.B, EmvTagLength.Variable(16), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("8C"), "CDOL1 (Card Risk Management DOL 1)", EmvTagFormat.B, EmvTagLength.Variable(252), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("8D"), "CDOL2 (Card Risk Management DOL 2)", EmvTagFormat.B, EmvTagLength.Variable(252), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("94"), "Application File Locator (AFL)", EmvTagFormat.B, EmvTagLength.Variable(252), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("9F02"), "Amount, Authorised (Numeric)", EmvTagFormat.N, EmvTagLength.Fixed(6), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("9F10"), "Issuer Application Data (IAD)", EmvTagFormat.B, EmvTagLength.Variable(32), TagSensitivity.PCI)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("9F12"), "Application Preferred Name", EmvTagFormat.AN, EmvTagLength.Variable(16), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("9F26"), "Application Cryptogram", EmvTagFormat.B, EmvTagLength.Fixed(8), TagSensitivity.PCI)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("9F27"), "Cryptogram Information Data (CID)", EmvTagFormat.B, EmvTagLength.Fixed(1), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("9F36"), "Application Transaction Counter (ATC)", EmvTagFormat.B, EmvTagLength.Fixed(2), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("9F37"), "Unpredictable Number", EmvTagFormat.B, EmvTagLength.Fixed(4), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("9F4B"), "Signed Dynamic Application Data", EmvTagFormat.B, EmvTagLength.Variable(248), TagSensitivity.PCI)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("9F6B"), "Track 2 Data (Mastercard kernel C-2)", EmvTagFormat.B, EmvTagLength.Variable(19), TagSensitivity.PCI)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("9F6C"), "Card Transaction Qualifiers (CTQ)", EmvTagFormat.B, EmvTagLength.Fixed(2), TagSensitivity.PUBLIC)</ID>
+    <ID>MaxLineLength:EmvTags.kt$EmvTags$EmvTagInfo(Tag.fromHex("BF0C"), "FCI Issuer Discretionary Data", EmvTagFormat.B, EmvTagLength.Variable(222), TagSensitivity.PUBLIC)</ID>
+    <ID>ReturnCount:EmvParser.kt$EmvParser$private fun extractRequiredFields(nodes: List&lt;Tlv&gt;): RequiredOutcome</ID>
+    <ID>ReturnCount:EmvParser.kt$EmvParser$public fun parse(apduResponses: List&lt;ByteArray&gt;): EmvCardResult</ID>
+    <ID>ReturnCount:Pan.kt$Pan.Companion$public fun parse(raw: String): PanResult</ID>
+    <ID>ReturnCount:Track2.kt$Track2.Companion$private fun scanInput(raw: ByteArray, effective: Int): SeparatorScan</ID>
+    <ID>LongMethod:App.kt$@Composable @Preview fun App()</ID>
+  </CurrentIssues>
+</SmellBaseline>

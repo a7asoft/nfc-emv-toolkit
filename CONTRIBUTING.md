@@ -19,8 +19,13 @@ PRs that expand scope into payment-terminal territory will be closed.
 2. Branch from `main`: `feat/<short-name>`, `fix/<short-name>`, `docs/<short-name>`.
 3. Run formatters + tests locally before pushing:
    ```bash
-   ./gradlew ktlintFormat detekt :shared:allTests
+   ./gradlew ktlintFormat ktlintCheck detekt :shared:allTests
    ```
+   CI runs `ktlintCheck` and `detekt` on every PR (the `lint` job gates `kmp` and `ios`).
+
+   If you hit a detekt finding you believe is wrong, do **not** add it to
+   `detekt-baseline.xml` — open a PR adjusting `detekt.yml` instead, with a
+   justification. The baseline is for legacy debt only.
 4. Open a PR. CI must pass.
 
 ## Commit format

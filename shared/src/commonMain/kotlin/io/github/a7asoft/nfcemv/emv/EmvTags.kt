@@ -37,7 +37,7 @@ public object EmvTags {
         // derived attacks; we err on the conservative side and flag PCI.
         EmvTagInfo(Tag.fromHex("5F25"), "Application Effective Date (YYMMDD)",         EmvTagFormat.N,  EmvTagLength.Fixed(3),      TagSensitivity.PCI),
         EmvTagInfo(Tag.fromHex("5F28"), "Issuer Country Code (ISO 3166-1 numeric)",    EmvTagFormat.N,  EmvTagLength.Fixed(2),      TagSensitivity.PUBLIC),
-        EmvTagInfo(Tag.fromHex("5F2A"), "Transaction Currency Code (ISO 4217 numeric)",EmvTagFormat.N,  EmvTagLength.Fixed(2),      TagSensitivity.PUBLIC),
+        EmvTagInfo(Tag.fromHex("5F2A"), "Transaction Currency Code (ISO 4217 numeric)", EmvTagFormat.N,  EmvTagLength.Fixed(2),      TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("5F2D"), "Language Preference (ISO 639-1 codes)",       EmvTagFormat.AN, EmvTagLength.Variable(8),   TagSensitivity.PUBLIC),
         EmvTagInfo(Tag.fromHex("5F34"), "Application PAN Sequence Number",             EmvTagFormat.N,  EmvTagLength.Fixed(1),      TagSensitivity.PCI),
         EmvTagInfo(Tag.fromHex("82"),   "Application Interchange Profile (AIP)",       EmvTagFormat.B,  EmvTagLength.Fixed(2),      TagSensitivity.PUBLIC),

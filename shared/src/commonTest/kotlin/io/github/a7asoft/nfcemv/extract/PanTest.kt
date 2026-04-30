@@ -128,7 +128,7 @@ class PanTest {
     fun `toString never embeds the full raw PAN`() {
         val raw = "4111111111111111"
         val pan = Pan.parseOrThrow(raw)
-        assertFalse(raw in pan.toString(), "raw embedded in ${pan.toString()}")
+        assertFalse(raw in pan.toString(), "raw embedded in $pan")
     }
 
     @Test

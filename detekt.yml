@@ -1,0 +1,131 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+
+complexity:
+  active: true
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 4
+  LongMethod:
+    active: true
+    threshold: 25
+  LongParameterList:
+    active: true
+    functionThreshold: 4
+    constructorThreshold: 4
+  TooManyFunctions:
+    active: false
+
+style:
+  active: true
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+  MagicNumber:
+    active: true
+    excludes:
+      - '**/test/**'
+      - '**/*Test.kt'
+      - '**/commonTest/**'
+      - '**/androidUnitTest/**'
+      - '**/iosTest/**'
+    ignoreNumbers:
+      - '-1'
+      - '0'
+      - '1'
+      - '2'
+      - '8'
+      - '16'
+      - '255'
+      - '0xFF'
+      - '0x7F'
+      - '0x80'
+      - '0x1F'
+      - '0x40'
+      - '0x20'
+  WildcardImport:
+    active: true
+    excludeImports:
+      - 'androidx.compose.runtime.*'
+  ReturnCount:
+    active: true
+    max: 3
+  ForbiddenMethodCall:
+    active: true
+    includes:
+      - '**/shared/**/commonMain/**'
+      - '**/shared/**/androidMain/**'
+      - '**/shared/**/iosMain/**'
+    methods:
+      - reason: 'Use the Logger interface (CLAUDE.md §5.9). println leaks PCI data.'
+        value: 'kotlin.io.println'
+      - reason: 'Use the Logger interface (CLAUDE.md §5.9). Direct Log.* leaks PCI data.'
+        value: 'android.util.Log.d'
+      - reason: 'Use the Logger interface (CLAUDE.md §5.9). Direct Log.* leaks PCI data.'
+        value: 'android.util.Log.i'
+      - reason: 'Use the Logger interface (CLAUDE.md §5.9). Direct Log.* leaks PCI data.'
+        value: 'android.util.Log.w'
+      - reason: 'Use the Logger interface (CLAUDE.md §5.9). Direct Log.* leaks PCI data.'
+        value: 'android.util.Log.e'
+      - reason: 'Thread.sleep is forbidden in production (CLAUDE.md §9).'
+        value: 'java.lang.Thread.sleep'
+      - reason: 'runBlocking is forbidden outside tests (CLAUDE.md §9).'
+        value: 'kotlinx.coroutines.runBlocking'
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    functionPattern: '[a-z][a-zA-Z0-9]*'
+    excludes:
+      - '**/test/**'
+      - '**/*Test.kt'
+      - '**/commonTest/**'
+      - '**/androidUnitTest/**'
+      - '**/iosTest/**'
+    ignoreAnnotated:
+      - 'Composable'
+  ForbiddenClassName:
+    active: true
+    forbiddenName:
+      - 'Manager'
+      - 'Helper'
+      - 'Util'
+      - 'Service'
+
+empty-blocks:
+  active: true
+  EmptyCatchBlock:
+    active: true
+
+exceptions:
+  active: true
+  TooGenericExceptionCaught:
+    active: true
+  SwallowedException:
+    active: true
+  ThrowingExceptionsWithoutMessageOrCause:
+    active: true
+  RethrowCaughtException:
+    active: true
+  ReturnFromFinally:
+    active: true
+
+potential-bugs:
+  active: true
+  UnreachableCode:
+    active: true
+  UnsafeCallOnNullableType:
+    active: true
+  LateinitUsage:
+    active: true
+    excludes:
+      - '**/test/**'
+      - '**/*Test.kt'
+      - '**/commonTest/**'
+      - '**/androidUnitTest/**'
+      - '**/iosTest/**'
