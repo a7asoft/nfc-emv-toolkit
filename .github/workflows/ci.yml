@@ -50,6 +50,8 @@ jobs:
         run: ./gradlew :shared:checkKotlinAbi --stacktrace
       - name: Run common tests
         run: ./gradlew :shared:allTests --stacktrace
+      - name: Build and test android-reader module
+        run: ./gradlew :android:reader:assembleDebug :android:reader:check --stacktrace
       - name: Build Android sample
         run: ./gradlew :composeApp:assembleDebug --stacktrace
 

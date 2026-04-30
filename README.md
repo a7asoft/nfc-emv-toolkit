@@ -208,6 +208,8 @@ struct PayView: View {
 nfc-emv-toolkit/
 ├── shared/         ← KMP module: TLV parser, AID dir, brand detection (commonMain)
 │   └── src/{commonMain, androidMain, iosMain, commonTest}
+├── android/
+│   └── reader/     ← IsoDep wrapper, Flow-based contactless read API (v0.2.0)
 ├── composeApp/     ← Android sample app (Compose) consuming the lib
 ├── iosApp/         ← iOS sample app (SwiftUI) consuming the lib
 └── docs/           ← threat model, recipes
