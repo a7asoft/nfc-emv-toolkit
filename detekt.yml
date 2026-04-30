@@ -91,11 +91,14 @@ naming:
       - 'Composable'
   ForbiddenClassName:
     active: true
+    # Patterns match as regex; anchor with `$` so we ban the SUFFIX (per
+    # CLAUDE.md §5.6 "no Manager/Helper/Util/Service suffixes") without
+    # false-positives on spec terms like `ServiceCode` (ISO/IEC 7813 §10.3).
     forbiddenName:
-      - 'Manager'
-      - 'Helper'
-      - 'Util'
-      - 'Service'
+      - 'Manager$'
+      - 'Helper$'
+      - 'Util$'
+      - 'Service$'
 
 empty-blocks:
   active: true

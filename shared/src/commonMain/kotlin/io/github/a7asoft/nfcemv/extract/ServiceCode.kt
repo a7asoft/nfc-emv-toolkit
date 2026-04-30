@@ -47,18 +47,27 @@ public value class ServiceCode internal constructor(private val raw: String) {
          *
          * Mirrors `Pan.parse` for callers who prefer sealed result-driven
          * control flow over try / catch.
+         *
+         * Validation order — each step is one ISO/IEC 7813 §10.3 contract:
+         * 1. Non-empty input.
+         * 2. Length is exactly [REQUIRED_LENGTH] characters.
+         * 3. Every codepoint is in `'0'..'9'`.
          */
+        @Suppress(
+            // why: each return is one of the three spec checks above;
+            // collapsing them obscures the validation order without
+            // reducing real complexity. Same idiom is used by `Pan.parse`
+            // and `Track2.Companion.parse`.
+            "ReturnCount",
+            "CyclomaticComplexMethod",
+        )
         public fun parse(raw: String): ServiceCodeResult {
-            if (raw.isEmpty()) {
-                return ServiceCodeResult.Err(ServiceCodeError.EmptyInput)
-            }
+            if (raw.isEmpty()) return ServiceCodeResult.Err(ServiceCodeError.EmptyInput)
             if (raw.length != REQUIRED_LENGTH) {
                 return ServiceCodeResult.Err(ServiceCodeError.WrongLength(raw.length))
             }
             val badIndex = raw.indexOfFirst { it !in '0'..'9' }
-            if (badIndex >= 0) {
-                return ServiceCodeResult.Err(ServiceCodeError.NonDigitCharacter(badIndex))
-            }
+            if (badIndex >= 0) return ServiceCodeResult.Err(ServiceCodeError.NonDigitCharacter(badIndex))
             return ServiceCodeResult.Ok(ServiceCode(raw))
         }
 
@@ -75,6 +84,10 @@ public value class ServiceCode internal constructor(private val raw: String) {
             is ServiceCodeResult.Err -> throw IllegalArgumentException(messageFor(result.error))
         }
 
+        // why: exhaustive `when` over the sealed `ServiceCodeError` catalogue
+        // is the project idiom (CLAUDE.md §3.2). Each branch is a single
+        // mapping, not an arm of real cyclomatic complexity.
+        @Suppress("CyclomaticComplexMethod")
         private fun messageFor(error: ServiceCodeError): String = when (error) {
             ServiceCodeError.EmptyInput -> "ServiceCode input is empty"
             is ServiceCodeError.WrongLength ->
