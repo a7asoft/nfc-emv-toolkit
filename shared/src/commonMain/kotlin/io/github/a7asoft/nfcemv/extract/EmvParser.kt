@@ -124,8 +124,8 @@ public object EmvParser {
 
     @Suppress("ReturnCount", "CyclomaticComplexMethod")
     // why: each return is a distinct EMV parse step (decode / track2 /
-    // required / optional / brand). Splitting forces ferrying nodes
-    // through more signatures without reducing real complexity.
+    // required / optional). Splitting forces ferrying nodes through
+    // more signatures without reducing real complexity.
     private fun parseInternal(injectedAid: Aid?, apduResponses: List<ByteArray>): EmvCardResult {
         if (apduResponses.isEmpty()) return EmvCardResult.Err(EmvCardError.EmptyInput)
         val nodes = when (val outcome = decodeAll(apduResponses)) {
@@ -145,14 +145,16 @@ public object EmvParser {
             is OptionalOutcome.Ok -> r.fields
             is OptionalOutcome.Err -> return EmvCardResult.Err(r.error)
         }
+        return EmvCardResult.Ok(composeCard(required, optional))
+    }
+
+    private fun composeCard(required: RequiredFields, optional: OptionalFields): EmvCard {
         val brand = BrandResolver.resolveBrand(aid = required.aid, pan = required.pan)
-        return EmvCardResult.Ok(
-            EmvCard(
-                pan = required.pan, expiry = required.expiry,
-                cardholderName = optional.cardholderName, brand = brand,
-                applicationLabel = optional.applicationLabel,
-                track2 = optional.track2, aid = required.aid,
-            ),
+        return EmvCard(
+            pan = required.pan, expiry = required.expiry,
+            cardholderName = optional.cardholderName, brand = brand,
+            applicationLabel = optional.applicationLabel,
+            track2 = optional.track2, aid = required.aid,
         )
     }
 
@@ -258,6 +260,11 @@ public object EmvParser {
      *    is the canonical source.
      * 3. Else fail `MissingRequiredTag(5A)`.
      */
+    @Suppress("CyclomaticComplexMethod")
+    // why: 5-branch fallback chain (5A present / extractor Ok / extractor
+    // Err / track2 fallback / both absent). Each branch is a distinct
+    // EMV-canonical PAN source; splitting moves the chain through more
+    // signatures without reducing complexity.
     private fun resolvePan(nodes: List<Tlv>, track2: Track2?): PanOutcome {
         val panNode = findFirst(nodes, TAG_PAN) as? Tlv.Primitive
         if (panNode != null) {
@@ -285,6 +292,10 @@ public object EmvParser {
      * Returns a [Track2Outcome] sealed result rather than a nullable
      * to surface decode errors as `EmvCardError.Track2Rejected`.
      */
+    @Suppress("CyclomaticComplexMethod")
+    // why: 4-branch sealed dispatch (find / null / Ok / Err), mirroring
+    // resolveAid. Splitting moves the Track 2 node lookup through more
+    // signatures without reducing complexity.
     private fun extractTrack2Once(nodes: List<Tlv>): Track2Outcome {
         val node = findFirst(nodes, TAG_TRACK2) as? Tlv.Primitive
             ?: return Track2Outcome.Absent
