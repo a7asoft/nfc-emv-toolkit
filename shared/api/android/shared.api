@@ -776,6 +776,7 @@ public final class io/github/a7asoft/nfcemv/extract/PpseResult$Ok : io/github/a7
 public final class io/github/a7asoft/nfcemv/extract/SelectAidFci {
 	public static final field Companion Lio/github/a7asoft/nfcemv/extract/SelectAidFci$Companion;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInlineTlv ()Ljava/util/List;
 	public final fun getPdolBytes ()[B
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;

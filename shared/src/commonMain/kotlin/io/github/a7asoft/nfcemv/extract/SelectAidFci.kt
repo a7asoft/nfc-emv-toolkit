@@ -26,14 +26,30 @@ import io.github.a7asoft.nfcemv.tlv.TlvParseResult
 public class SelectAidFci internal constructor(
     /** Raw `9F38` value bytes, or `null` if the FCI lacks the tag. */
     public val pdolBytes: ByteArray?,
+    /**
+     * The `A5` (FCI Proprietary Template) children excluding `9F38`
+     * (which was already consumed by the GPO PDOL response builder).
+     *
+     * Typically carries `50` (Application Label), `87` (Application
+     * Priority Indicator), `5F 2D` (Language Preference), `9F 11`
+     * (Issuer Code Table Index), `9F 12` (Application Preferred Name),
+     * `BF 0C` (Issuer Discretionary Data). The reader unions this list
+     * with the GPO body's inline TLV and the AFL READ RECORD bodies
+     * before passing them to [EmvParser.parse].
+     *
+     * Empty when the FCI omits the `A5` template entirely (rare) or
+     * when the `A5` template carries only `9F 38`.
+     */
+    public val inlineTlv: List<Tlv>,
 ) {
 
     @Suppress("CyclomaticComplexMethod")
-    // why: structural equals over a nullable ByteArray field; auto-equals
-    // would compare references, breaking value semantics.
+    // why: structural equals over a nullable ByteArray + List<Tlv>; auto-equals
+    // would compare ByteArray references, breaking value semantics.
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is SelectAidFci) return false
+        if (inlineTlv != other.inlineTlv) return false
         return when {
             pdolBytes == null && other.pdolBytes == null -> true
             pdolBytes == null || other.pdolBytes == null -> false
@@ -41,9 +57,14 @@ public class SelectAidFci internal constructor(
         }
     }
 
-    override fun hashCode(): Int = pdolBytes?.contentHashCode() ?: 0
+    override fun hashCode(): Int {
+        var result = pdolBytes?.contentHashCode() ?: 0
+        result = 31 * result + inlineTlv.hashCode()
+        return result
+    }
 
-    override fun toString(): String = "SelectAidFci(pdol=${pdolBytes?.size ?: 0} bytes)"
+    override fun toString(): String =
+        "SelectAidFci(pdol=${pdolBytes?.size ?: 0} bytes, inlineTlv.size=${inlineTlv.size})"
 
     public companion object
 }
@@ -83,8 +104,21 @@ public fun SelectAidFci.Companion.parse(bytes: ByteArray): SelectAidFciResult {
     }
     val fciTemplate = findFirst(tlvs, TAG_FCI) as? Tlv.Constructed
         ?: return SelectAidFciResult.Err(SelectAidFciError.MissingFciTemplate)
+    val proprietary = findFirstChild(fciTemplate, TAG_FCI_PROPRIETARY) as? Tlv.Constructed
     val pdol = (findFirst(listOf(fciTemplate), TAG_PDOL) as? Tlv.Primitive)?.copyValue()
-    return SelectAidFciResult.Ok(SelectAidFci(pdolBytes = pdol))
+    val inline = proprietary?.children?.filter { it.tag != TAG_PDOL } ?: emptyList()
+    return SelectAidFciResult.Ok(SelectAidFci(pdolBytes = pdol, inlineTlv = inline))
+}
+
+// why: scan-and-return loop; CC includes the type-test plus tag-match
+// guard. Splitting into a helper would just ferry `parent` and `tag`
+// through a second signature.
+@Suppress("CyclomaticComplexMethod")
+private fun findFirstChild(parent: Tlv.Constructed, tag: Tag): Tlv? {
+    for (child in parent.children) {
+        if (child.tag == tag) return child
+    }
+    return null
 }
 
 /**
@@ -98,4 +132,5 @@ public fun SelectAidFci.Companion.parseOrThrow(bytes: ByteArray): SelectAidFci =
     }
 
 private val TAG_FCI = Tag.fromHex("6F")
+private val TAG_FCI_PROPRIETARY = Tag.fromHex("A5")
 private val TAG_PDOL = Tag.fromHex("9F38")

@@ -76,6 +76,7 @@ public object EmvParser {
     private val TAG_CARDHOLDER = Tag.fromHex("5F20")
     private val TAG_LABEL = Tag.fromHex("50")
     private val TAG_TRACK2 = Tag.fromHex("57")
+    private val TAG_PREFERRED_NAME = Tag.fromHex("9F12")
 
     /**
      * Parse [apduResponses] (each ByteArray = one APDU response data
@@ -353,8 +354,33 @@ public object EmvParser {
         track2: Track2?,
     ): OptionalOutcome {
         val cardholderName = (findFirst(nodes, TAG_CARDHOLDER) as? Tlv.Primitive)?.let { extractCardholderName(it) }
-        val applicationLabel = (findFirst(nodes, TAG_LABEL) as? Tlv.Primitive)?.let { extractApplicationLabel(it) }
+        val applicationLabel = resolveApplicationLabel(nodes)
         return OptionalOutcome.Ok(OptionalFields(cardholderName, applicationLabel, track2))
+    }
+
+    /**
+     * Resolve the human-readable application label per EMV Book 1
+     * §12.2.2:
+     *
+     * 1. If tag `9F 12` (Application Preferred Name) is present, use it
+     *    — issuers configure the preferred name with the marketing
+     *    string (e.g. "CAPITAL ONE", "Discover Credit") that should
+     *    appear on a terminal.
+     * 2. Else fall back to tag `50` (Application Label) — typically the
+     *    generic brand string (e.g. "MASTERCARD", "VISA CREDIT").
+     * 3. Else return null.
+     */
+    @Suppress("CyclomaticComplexMethod")
+    // why: 4-branch fallback chain (preferred present / preferred decoded /
+    // label present / both absent). Each branch is a distinct EMV-canonical
+    // label source per Book 1 §12.2.2; splitting moves the chain through
+    // more signatures without reducing complexity.
+    private fun resolveApplicationLabel(nodes: List<Tlv>): String? {
+        val preferredNode = findFirst(nodes, TAG_PREFERRED_NAME) as? Tlv.Primitive
+        val preferred = preferredNode?.let { extractApplicationLabel(it) }
+        if (preferred != null) return preferred
+        val labelNode = findFirst(nodes, TAG_LABEL) as? Tlv.Primitive
+        return labelNode?.let { extractApplicationLabel(it) }
     }
 
     /**

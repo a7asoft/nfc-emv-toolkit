@@ -596,6 +596,73 @@ class EmvParserTest {
         assertEquals("5F24", cause.tagHex)
     }
 
+    @Test
+    fun `parse uses 9F12 Application Preferred Name when both 9F12 and 50 are present`() {
+        // why: EMV Book 1 §12.2.2 — preferred name wins over label when
+        // both are present. Real-card observation (#59) — Capital One MC
+        // ships 50="MASTERCARD" + 9F12="CAPITAL ONE" in the FCI A5
+        // template; UI should show "CAPITAL ONE".
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD3.toByte(), 0x00, 0x52, 0x20, 0x10, 0x00,
+        )
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("50"),
+                "MASTERCARD".encodeToByteArray(),
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("9F12"),
+                "CAPITAL ONE".encodeToByteArray(),
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000041010"), nodes),
+        )
+        assertEquals("CAPITAL ONE", ok.card.applicationLabel)
+    }
+
+    @Test
+    fun `parse falls back to tag 50 when 9F12 is absent`() {
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD3.toByte(), 0x00, 0x52, 0x20, 0x10, 0x00,
+        )
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("50"),
+                "VISA CREDIT".encodeToByteArray(),
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        assertEquals("VISA CREDIT", ok.card.applicationLabel)
+    }
+
+    @Test
+    fun `parse returns null applicationLabel when both 9F12 and 50 are absent`() {
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD3.toByte(), 0x00, 0x52, 0x20, 0x10, 0x00,
+        )
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        assertEquals(null, ok.card.applicationLabel)
+    }
+
     private companion object {
         const val FUZZ_SEED: Long = 0x454D5643L // "EMVC"
         const val FUZZ_ITERATIONS: Int = 1_000

@@ -121,7 +121,7 @@ class SelectAidFciTest {
     @Test
     fun `toString reports byte count without leaking values`() {
         val fci = SelectAidFci.parseOrThrow(visaFciWithPdol)
-        assertEquals("SelectAidFci(pdol=9 bytes)", fci.toString())
+        assertEquals("SelectAidFci(pdol=9 bytes, inlineTlv.size=1)", fci.toString())
     }
 
     @Test
@@ -133,5 +133,63 @@ class SelectAidFciTest {
             val result = SelectAidFci.parse(bytes)
             assertTrue(result is SelectAidFciResult.Ok || result is SelectAidFciResult.Err)
         }
+    }
+
+    @Test
+    fun `parse populates inlineTlv with A5 children excluding 9F38`() {
+        // why: real-card observation (#59) — Capital One MC FCI A5 template
+        // contains 50 (label) + 87 (priority) + 5F2D (lang) + 9F11
+        // (issuer code table) + 9F12 (preferred name) + 9F38 (PDOL) +
+        // BF0C (issuer discretionary). Reader needs all of those except
+        // 9F38 (already consumed by the GPO PDOL response builder).
+        // Length math: 50 0A [MASTERCARD:10] = 12, 9F38 03 [9F 66 04] = 6
+        // A5 inner = 18 → A5 12, A5 total = 20
+        // 84 07 [aid:7] = 9
+        // 6F inner = 9 + 20 = 29 → 6F 1D
+        val ok = assertIs<SelectAidFciResult.Ok>(
+            SelectAidFci.parse(
+                byteArrayOf(
+                    0x6F, 0x1D,
+                    0x84.toByte(), 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x04, 0x10, 0x10,
+                    0xA5.toByte(), 0x12,
+                    0x50, 0x0A, 0x4D, 0x41, 0x53, 0x54, 0x45, 0x52, 0x43, 0x41, 0x52, 0x44,
+                    0x9F.toByte(), 0x38, 0x03, 0x9F.toByte(), 0x66, 0x04,
+                ),
+            ),
+        )
+        assertEquals(1, ok.fci.inlineTlv.size)
+        val first = assertIs<io.github.a7asoft.nfcemv.tlv.Tlv.Primitive>(ok.fci.inlineTlv[0])
+        assertEquals(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("50"), first.tag)
+    }
+
+    @Test
+    fun `parse returns empty inlineTlv when FCI A5 template has only 9F38`() {
+        // 6F 14 84 07 A0 00 00 00 04 10 10 A5 09 9F 38 06 9F 66 04 9F 1A 02
+        val ok = assertIs<SelectAidFciResult.Ok>(
+            SelectAidFci.parse(
+                byteArrayOf(
+                    0x6F, 0x14,
+                    0x84.toByte(), 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x04, 0x10, 0x10,
+                    0xA5.toByte(), 0x09,
+                    0x9F.toByte(), 0x38, 0x06,
+                    0x9F.toByte(), 0x66, 0x04, 0x9F.toByte(), 0x1A, 0x02,
+                ),
+            ),
+        )
+        assertEquals(emptyList(), ok.fci.inlineTlv)
+    }
+
+    @Test
+    fun `parse returns empty inlineTlv when FCI lacks A5 proprietary template`() {
+        // 6F 09 84 07 A0 00 00 00 04 10 10 — bare DF Name, no A5
+        val ok = assertIs<SelectAidFciResult.Ok>(
+            SelectAidFci.parse(
+                byteArrayOf(
+                    0x6F, 0x09,
+                    0x84.toByte(), 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x04, 0x10, 0x10,
+                ),
+            ),
+        )
+        assertEquals(emptyList(), ok.fci.inlineTlv)
     }
 }

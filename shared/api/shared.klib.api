@@ -1257,6 +1257,8 @@ final class io.github.a7asoft.nfcemv.extract/PpseEntry { // io.github.a7asoft.nf
 }
 
 final class io.github.a7asoft.nfcemv.extract/SelectAidFci { // io.github.a7asoft.nfcemv.extract/SelectAidFci|null[0]
+    final val inlineTlv // io.github.a7asoft.nfcemv.extract/SelectAidFci.inlineTlv|{}inlineTlv[0]
+        final fun <get-inlineTlv>(): kotlin.collections/List<io.github.a7asoft.nfcemv.tlv/Tlv> // io.github.a7asoft.nfcemv.extract/SelectAidFci.inlineTlv.<get-inlineTlv>|<get-inlineTlv>(){}[0]
     final val pdolBytes // io.github.a7asoft.nfcemv.extract/SelectAidFci.pdolBytes|{}pdolBytes[0]
         final fun <get-pdolBytes>(): kotlin/ByteArray? // io.github.a7asoft.nfcemv.extract/SelectAidFci.pdolBytes.<get-pdolBytes>|<get-pdolBytes>(){}[0]
 
