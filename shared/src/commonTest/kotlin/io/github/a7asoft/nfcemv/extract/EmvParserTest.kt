@@ -496,6 +496,42 @@ class EmvParserTest {
         assertEquals("5A", cause.tagHex)
     }
 
+    @Test
+    fun `parse with aid and TLV nodes resolves PAN from inline tag 57 alone`() {
+        // why: simulates the union of (GPO format-2 body inline tags) + 0
+        // record TLV — the MSD-only flow where Track 2 is the ONLY
+        // PAN-bearing tag (no 5A, no records). Mirrors Visa Credit Chase
+        // (#59) at the parser level.
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+        )
+        val expiryBytes = byteArrayOf(0x28, 0x12, 0x31)
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F24"), expiryBytes,
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        assertEquals("4111111111111111", ok.card.pan.unmasked())
+    }
+
+    @Test
+    fun `parse with aid and TLV nodes returns EmptyInput when nodes list is empty`() {
+        val err = assertIs<EmvCardResult.Err>(
+            EmvParser.parse(
+                Aid.fromHex("A0000000031010"),
+                emptyList<io.github.a7asoft.nfcemv.tlv.Tlv>(),
+            ),
+        )
+        assertEquals(EmvCardError.EmptyInput, err.error)
+    }
+
     private companion object {
         const val FUZZ_SEED: Long = 0x454D5643L // "EMVC"
         const val FUZZ_ITERATIONS: Int = 1_000

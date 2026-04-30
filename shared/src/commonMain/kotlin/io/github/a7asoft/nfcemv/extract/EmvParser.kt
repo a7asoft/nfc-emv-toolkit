@@ -18,6 +18,7 @@ import io.github.a7asoft.nfcemv.tlv.TlvError
 import io.github.a7asoft.nfcemv.tlv.TlvOptions
 import io.github.a7asoft.nfcemv.tlv.TlvParseResult
 import kotlinx.datetime.YearMonth
+import kotlin.jvm.JvmName
 
 /**
  * Top-level EMV card composer.
@@ -102,6 +103,26 @@ public object EmvParser {
         parseInternal(injectedAid = aid, apduResponses = apduResponses)
 
     /**
+     * Parse pre-decoded [tlvNodes] (the TLV union of all card data
+     * sources — typically GPO body inline tags concatenated with the
+     * decoded READ RECORD bodies) using [aid] as the application
+     * identifier.
+     *
+     * This is the canonical entry point. The
+     * [parse]\(aid, apduResponses) overload exists for callers that
+     * still hold raw APDU response byte arrays; it decodes each then
+     * delegates here.
+     *
+     * Returns [EmvCardResult.Err]\([EmvCardError.EmptyInput]) when
+     * [tlvNodes] is empty.
+     */
+    @JvmName("parseTlv")
+    public fun parse(aid: Aid, tlvNodes: List<Tlv>): EmvCardResult {
+        if (tlvNodes.isEmpty()) return EmvCardResult.Err(EmvCardError.EmptyInput)
+        return parseFromNodes(injectedAid = aid, nodes = tlvNodes)
+    }
+
+    /**
      * Parse [apduResponses] into an [EmvCard], or throw
      * [IllegalArgumentException] on the first detected violation.
      */
@@ -122,16 +143,36 @@ public object EmvParser {
             is EmvCardResult.Err -> throw IllegalArgumentException(messageFor(result.error))
         }
 
+    /**
+     * Parse [tlvNodes] using [aid] or throw [IllegalArgumentException].
+     * Mirrors [parseOrThrow] for the TLV-native overload.
+     */
+    @JvmName("parseOrThrowTlv")
+    public fun parseOrThrow(aid: Aid, tlvNodes: List<Tlv>): EmvCard =
+        when (val result = parse(aid, tlvNodes)) {
+            is EmvCardResult.Ok -> result.card
+            is EmvCardResult.Err -> throw IllegalArgumentException(messageFor(result.error))
+        }
+
     @Suppress("ReturnCount", "CyclomaticComplexMethod")
-    // why: each return is a distinct EMV parse step (decode / track2 /
-    // required / optional). Splitting forces ferrying nodes through
-    // more signatures without reducing real complexity.
+    // why: thin adapter — empty-input gate + decode + delegate. Each
+    // return is a distinct typed exit (EmptyInput / TlvDecodeFailed /
+    // delegate result); splitting further moves the gate through more
+    // signatures without reducing real complexity.
     private fun parseInternal(injectedAid: Aid?, apduResponses: List<ByteArray>): EmvCardResult {
         if (apduResponses.isEmpty()) return EmvCardResult.Err(EmvCardError.EmptyInput)
         val nodes = when (val outcome = decodeAll(apduResponses)) {
             is DecodeOutcome.Ok -> outcome.nodes
             is DecodeOutcome.Err -> return EmvCardResult.Err(outcome.error)
         }
+        return parseFromNodes(injectedAid, nodes)
+    }
+
+    @Suppress("ReturnCount", "CyclomaticComplexMethod")
+    // why: each return is a distinct EMV parse step (track2 / required /
+    // optional). Splitting forces ferrying nodes through more signatures
+    // without reducing real complexity.
+    private fun parseFromNodes(injectedAid: Aid?, nodes: List<Tlv>): EmvCardResult {
         val track2 = when (val r = extractTrack2Once(nodes)) {
             Track2Outcome.Absent -> null
             is Track2Outcome.Present -> r.track2
