@@ -4,6 +4,12 @@ All notable changes to this project will be documented here. The format follows 
 
 ## [Unreleased]
 
+### Added — ABI validation gate (#11)
+- Kotlin's built-in `AbiValidationExtension` (since Kotlin 2.1) is enabled on `:shared`. Reference dumps live under `shared/api/android/shared.api` (Android target) and `shared/api/shared.klib.api` (KLIB ABI; the dump tool unifies Native targets when their ABIs match — per-target files appear under `shared/api/klib/<target>/` if they diverge).
+- CI runs `./gradlew :shared:checkKotlinAbi` on every PR via the macOS `kmp` job. Public-API drift fails the build.
+- `CONTRIBUTING.md` documents the workflow: any PR touching public symbols on `commonMain`, `androidMain`, or `iosMain` must run `./gradlew :shared:updateKotlinAbi` and commit the regenerated dump.
+- Implementation note: chose the built-in `AbiValidationExtension` over the standalone `org.jetbrains.kotlinx.binary-compatibility-validator` named in issue #11 because the built-in handles KMP KLIB ABI per target without experimental flags and is already on the Kotlin Gradle plugin classpath. Functionally equivalent for the issue's intent.
+
 ### Added — EmvCard model + EmvParser entry point (#8)
 - `EmvCard` data class composing every parser shipped so far: `pan: Pan`, `expiry: YearMonth` (kotlinx.datetime), `cardholderName: String?`, `brand: EmvBrand`, `applicationLabel: String?`, `track2: Track2?`, `aid: Aid`.
 - `EmvParser.parse(apduResponses: List<ByteArray>): EmvCardResult` (sealed `Ok` / `Err(EmvCardError)`) and `EmvParser.parseOrThrow` for the throw form. Mirrors `Pan.parse` / `parseOrThrow` and `Track2.parse` / `parseOrThrow`.

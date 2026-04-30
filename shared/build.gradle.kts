@@ -1,10 +1,12 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
 }
 
+@OptIn(ExperimentalAbiValidation::class)
 kotlin {
     androidTarget {
         compilerOptions {
@@ -29,6 +31,10 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
+    }
+
+    abiValidation {
+        enabled.set(true)
     }
 }
 
