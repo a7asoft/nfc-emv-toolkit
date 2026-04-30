@@ -66,6 +66,36 @@ docs(readme): clarify iOS entitlement steps
 - Every public API ships with at least one happy-path and one error-path test.
 - PCI-safety: any new field carrying PAN/track2/ARQC must include a test that proves `toString()` does not expose it.
 
+## iOS Swift package (`ios/`)
+
+The `ios/` Swift Package consumes the KMP `:shared` module via a local
+`binaryTarget` pointing at `shared/build/XCFrameworks/release/Shared.xcframework`.
+Build the framework BEFORE opening the package in Xcode or running tests:
+
+```bash
+./gradlew :shared:assembleSharedReleaseXCFramework
+xcodebuild \
+  -scheme EmvReader \
+  -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+  -derivedDataPath ios/.build-ios \
+  test \
+  -workspace ios/.swiftpm/xcode/package.xcworkspace
+```
+
+The ONLY file in `ios/Sources/EmvReader` that imports `CoreNFC` is
+`NFCISO7816TagTransport.swift`. New reader-flow code MUST go through the
+`Iso7816Transport` protocol abstraction (mirrors the Android module's
+"only `IsoDepTransport.kt` imports `android.nfc.*`" rule). iOS Simulator
+does NOT support CoreNFC, so the production transport is exercised only
+on real-device manual QA — automated tests run against
+`FakeIso7816Transport`.
+
+Kotlin `@JvmInline value class` types (`Aid`, `Pan`) cannot expose
+methods through the ObjC interop bridge — they appear as boxed `Any` to
+Swift. Their `description` (Kotlin `toString()`) is the only accessible
+method. Helpers in `Mapping.swift` reconstitute byte arrays by
+hex-decoding the description.
+
 ## Public API discipline
 
 The `:shared` module's public API is gated by Kotlin's built-in ABI validation. Reference dumps live under `shared/api/`:

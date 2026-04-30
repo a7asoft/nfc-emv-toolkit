@@ -148,41 +148,39 @@ fun PayScreen() {
 
 ### iOS (Swift)
 
-```swift
-// Package.swift
-.package(url: "https://github.com/a7asoft/nfc-emv-toolkit", from: "0.1.0")
+The `EmvReader` Swift Package lives at `ios/Package.swift` and consumes the
+KMP `Shared.xcframework` via a local `binaryTarget`. Build the framework
+once, then open the package in Xcode (or run `xcodebuild` headlessly):
+
+```bash
+./gradlew :shared:assembleSharedReleaseXCFramework
+open ios/Package.swift
 ```
 
 ```swift
-import EmvToolkit
 import EmvReader
 
-// Pure parser (KMP core, swift-bridged)
-let card = try EmvParser.parse(apduResponses: responses)
-print(card.pan.masked)   // "4111********1111"
-print(card.brand)        // .visa
-
-// Reader (async)
 let reader = EmvReader()
-let card = try await reader.read()
-
-// AsyncSequence
-for try await event in reader.events {
-    switch event {
-    case .detected:        print("card detected")
-    case .read(let card):  print(card.pan.masked)
-    case .failed(let err): print("error: \(err)")
-    }
-}
-
-// SwiftUI
-struct PayView: View {
-    @StateObject var reader = EmvReaderState()
-    var body: some View {
-        EmvReaderView(state: reader)
+for await state in reader.read() {
+    switch state {
+    case .tagDetected:           print("tag detected")
+    case .selectingPpse:         print("PPSE")
+    case .selectingAid(let aid): print("AID \(aid)")
+    case .readingRecords:        print("reading records")
+    case .done(let card):        print("done — brand \(card.brand), AID \(card.aid)")
+    case .failed(let error):     print("error: \(error)")
     }
 }
 ```
+
+`EmvReader().read()` returns an `AsyncStream<ReaderState>` that drives the
+EMV Book 1 §11–12 contactless flow (PPSE → SELECT AID → GPO → READ RECORD
+→ `EmvParser.parse`). Each stage emits a discrete state; terminal states
+are `.done(EmvCard)` and `.failed(ReaderError)`.
+
+NFC reader sessions must be initiated by user gesture (e.g., a button
+tap). Cancelling the consuming `Task` invalidates the underlying
+`NFCTagReaderSession`.
 
 #### iOS setup checklist
 
@@ -195,7 +193,7 @@ struct PayView: View {
    <array>
      <string>A0000000031010</string>  <!-- Visa -->
      <string>A0000000041010</string>  <!-- Mastercard -->
-     <string>A000000025010801</string><!-- Amex -->
+     <string>A000000025010701</string><!-- Amex ExpressPay -->
    </array>
    ```
 3. Real device required (NFC unavailable on simulator).
@@ -210,6 +208,8 @@ nfc-emv-toolkit/
 │   └── src/{commonMain, androidMain, iosMain, commonTest}
 ├── android/
 │   └── reader/     ← IsoDep wrapper, Flow-based contactless read API (v0.2.0)
+├── ios/            ← Swift Package: EmvReader (NFCTagReaderSession + AsyncStream) (v0.2.0)
+│   └── Sources/EmvReader, Tests/EmvReaderTests
 ├── composeApp/     ← Android sample app (Compose) consuming the lib
 ├── iosApp/         ← iOS sample app (SwiftUI) consuming the lib
 └── docs/           ← threat model, recipes
