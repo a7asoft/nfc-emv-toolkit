@@ -11,15 +11,22 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 /**
- * Drives every brand fixture in [Fixtures] through [EmvParser.parse]
- * and asserts the result matches its [FixtureExpectation]. One assertion
- * concept per test (CLAUDE.md §6).
+ * Drives every brand fixture in [Fixtures] through [EmvParser.parse] and
+ * asserts the resulting [io.github.a7asoft.nfcemv.extract.EmvCard] matches
+ * its [FixtureExpectation].
  *
- * Adding a new fixture: declare a `ByteArray` in [Fixtures], a
- * matching [FixtureExpectation] entry below, and copy the per-field
- * test block — keep one test per concept rather than parametrising
- * across fixtures (parametric tests obscure the failure surface
- * when only one fixture regresses).
+ * Each test is an **integration pin** for one brand fixture: a single test
+ * walks the full end-to-end parse and asserts every observable field of
+ * the resulting `EmvCard` (PAN, expiry, cardholder, brand, application
+ * label, AID) plus the Track 2 sub-components (PAN, expiry, service code)
+ * in one go. This is deliberately multi-concept — a per-brand integration
+ * pin reads more clearly than nine narrow tests that each redo the parse.
+ * Mirrors the pre-existing per-fixture integration pattern in
+ * `EmvParserTest` (see `EmvParserTest.kt:258-289`).
+ *
+ * Adding a new fixture: declare a `ByteArray` accessor in [Fixtures], a
+ * matching [FixtureExpectation] entry below, and add one
+ * `assertCardMatches` test driving the new fixture.
  */
 class EmvParserFixturesTest {
 
@@ -38,65 +45,16 @@ class EmvParserFixturesTest {
         assertCardMatches(AMEX, Fixtures.AMEX_EXPRESSPAY)
     }
 
-    @Test
-    fun `Visa fixture resolves the PAN exactly`() {
-        val ok = parseOk(Fixtures.VISA_CLASSIC)
-        assertEquals(VISA.pan, ok.card.pan.unmasked())
-    }
-
-    @Test
-    fun `Mastercard fixture resolves the PAN exactly`() {
-        val ok = parseOk(Fixtures.MASTERCARD_PAYPASS)
-        assertEquals(MASTERCARD.pan, ok.card.pan.unmasked())
-    }
-
-    @Test
-    fun `Amex fixture resolves the 15 digit PAN exactly`() {
-        val ok = parseOk(Fixtures.AMEX_EXPRESSPAY)
-        assertEquals(AMEX.pan, ok.card.pan.unmasked())
-    }
-
-    @Test
-    fun `Visa fixture resolves the brand to VISA`() {
-        val ok = parseOk(Fixtures.VISA_CLASSIC)
-        assertEquals(EmvBrand.VISA, ok.card.brand)
-    }
-
-    @Test
-    fun `Mastercard fixture resolves the brand to MASTERCARD`() {
-        val ok = parseOk(Fixtures.MASTERCARD_PAYPASS)
-        assertEquals(EmvBrand.MASTERCARD, ok.card.brand)
-    }
-
-    @Test
-    fun `Amex fixture resolves the brand to AMERICAN_EXPRESS`() {
-        val ok = parseOk(Fixtures.AMEX_EXPRESSPAY)
-        assertEquals(EmvBrand.AMERICAN_EXPRESS, ok.card.brand)
-    }
-
-    @Test
-    fun `Visa fixture exposes a non null Track 2`() {
-        val ok = parseOk(Fixtures.VISA_CLASSIC)
-        assertNotNull(ok.card.track2)
-    }
-
-    @Test
-    fun `Mastercard fixture exposes a non null Track 2`() {
-        val ok = parseOk(Fixtures.MASTERCARD_PAYPASS)
-        assertNotNull(ok.card.track2)
-    }
-
-    @Test
-    fun `Amex fixture exposes a non null Track 2`() {
-        val ok = parseOk(Fixtures.AMEX_EXPRESSPAY)
-        assertNotNull(ok.card.track2)
-    }
-
     private fun parseOk(fixture: ByteArray): EmvCardResult.Ok =
         assertIs(EmvParser.parse(listOf(fixture)))
 
     private fun assertCardMatches(expected: FixtureExpectation, fixture: ByteArray) {
         val card = parseOk(fixture).card
+        // why: every fixture PAN MUST come from a public test range (Visa 4111…,
+        // MC 5500…0004, Amex 3782…0005). The unmasked accessor is safe here ONLY
+        // because of that constraint — see CONTRIBUTING.md "Test fixture PANs"
+        // and Fixtures.kt class-level KDoc. NEVER copy-paste this assertion
+        // pattern with a non-public PAN.
         assertEquals(expected.pan, card.pan.unmasked(), "${expected.name} PAN")
         assertEquals(expected.expiry, card.expiry, "${expected.name} expiry")
         assertEquals(expected.cardholderName, card.cardholderName, "${expected.name} cardholderName")
