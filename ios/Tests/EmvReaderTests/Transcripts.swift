@@ -225,9 +225,10 @@ internal enum Transcripts {
 
     /// Expected GPO command after the reader parses
     /// [visaSelectFciWithPdolResponse] with `TerminalConfig.default`.
+    /// TTQ bytes match the Kotlin `36 00 00 00` default (issue #59).
     static let visaGpoCommandPdol: Data = Data([
         0x80, 0xA8, 0x00, 0x00, 0x06,
-        0x83, 0x04, 0x36, 0x00, 0x80, 0x00,
+        0x83, 0x04, 0x36, 0x00, 0x00, 0x00,
         0x00,
     ])
 

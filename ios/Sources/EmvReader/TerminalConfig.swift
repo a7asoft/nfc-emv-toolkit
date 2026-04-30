@@ -61,10 +61,13 @@ public struct TerminalConfig: Sendable {
         self.applicationVersionNumber = applicationVersionNumber
     }
 
-    /// "Standard payment terminal" defaults — same byte values as the
-    /// Kotlin `TerminalConfig.Companion.default()` factory.
+    /// "Read-only contactless terminal" defaults — same byte values as
+    /// the Kotlin `TerminalConfig.Companion.default()` factory. TTQ
+    /// `36 00 00 00` keeps the online-cryptogram bit cleared so issuer
+    /// kernels (Visa kernel-3 in particular) emit the AFL in the GPO
+    /// response. See issue #59 for the failure mode this avoids.
     public static let `default`: TerminalConfig = TerminalConfig(
-        terminalTransactionQualifiers: Data([0x36, 0x00, 0x80, 0x00]),
+        terminalTransactionQualifiers: Data([0x36, 0x00, 0x00, 0x00]),
         terminalCountryCode: Data([0x08, 0x40]),
         transactionCurrencyCode: Data([0x08, 0x40]),
         amountAuthorised: Data(repeating: 0, count: 6),
