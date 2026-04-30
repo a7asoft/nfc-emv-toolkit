@@ -193,7 +193,7 @@ tap). Cancelling the consuming `Task` invalidates the underlying
    <array>
      <string>A0000000031010</string>  <!-- Visa -->
      <string>A0000000041010</string>  <!-- Mastercard -->
-     <string>A000000025010801</string><!-- Amex -->
+     <string>A000000025010701</string><!-- Amex ExpressPay -->
    </array>
    ```
 3. Real device required (NFC unavailable on simulator).

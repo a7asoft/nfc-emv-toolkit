@@ -21,17 +21,32 @@ import Foundation
 /// triggered by user gesture per Apple's NFC reader rules. Library
 /// consumers must ensure ``EmvReader/read()`` is invoked in
 /// response to a UI button or similar gesture.
+///
+/// Thread-safety contract:
+/// - `session`, `connectedTag`, and `connectContinuation` are all
+///   guarded by `lock`. EVERY read or write goes through ``withLock(_:)``.
+/// - The CoreNFC delegate callbacks (`tagReaderSession(_:didDetect:)`,
+///   `tagReaderSession(_:didInvalidateWithError:)`) and the
+///   `DispatchQueue.main.async` block in ``connect()`` may fire on any
+///   thread, so the lock discipline must hold across them too.
+/// - The `withCheckedThrowingContinuation` body itself runs WITHOUT
+///   the lock held; the lock only guards property accesses (resuming a
+///   continuation while holding the lock would risk re-entry).
 internal final class NFCISO7816TagTransport: NSObject, Iso7816Transport, @unchecked Sendable {
     private var session: NFCTagReaderSession?
     private var connectedTag: NFCISO7816Tag?
     private var connectContinuation: CheckedContinuation<Void, Error>?
     private let lock = NSLock()
 
+    private func withLock<T>(_ body: () -> T) -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return body()
+    }
+
     func connect() async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            lock.lock()
-            self.connectContinuation = continuation
-            lock.unlock()
+            withLock { self.connectContinuation = continuation }
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 let session = NFCTagReaderSession(
@@ -40,15 +55,23 @@ internal final class NFCISO7816TagTransport: NSObject, Iso7816Transport, @unchec
                     queue: nil
                 )
                 session?.alertMessage = "Hold your card near the device"
-                self.session = session
+                // why: assigning self.session must hold the lock — close()
+                // observed on another thread between the dispatch enqueue
+                // and this body running would otherwise race with us, leak
+                // the new session, and leave the NFC sheet visible.
+                self.withLock { self.session = session }
                 session?.begin()
             }
         }
     }
 
     func transceive(_ command: Data) async throws -> Data {
-        guard let tag = connectedTag else {
-            throw TransportError.io(.timeout)
+        let tag: NFCISO7816Tag? = withLock { self.connectedTag }
+        guard let tag = tag else {
+            // why: connectedTag becomes nil only when close() ran, not
+            // because of a CoreNFC timeout. .generic is the right
+            // category for "session was torn down externally."
+            throw TransportError.io(.generic)
         }
         guard let apdu = NFCISO7816APDU(data: command) else {
             throw TransportError.io(.generic)
@@ -82,19 +105,21 @@ internal final class NFCISO7816TagTransport: NSObject, Iso7816Transport, @unchec
     }
 
     func close() async {
-        lock.lock()
-        let s = self.session
-        self.session = nil
-        self.connectedTag = nil
-        lock.unlock()
+        let s: NFCTagReaderSession? = withLock {
+            let captured = self.session
+            self.session = nil
+            self.connectedTag = nil
+            return captured
+        }
         s?.invalidate()
     }
 
     private func resumeConnect(_ result: Result<Void, Error>) {
-        lock.lock()
-        let cont = self.connectContinuation
-        self.connectContinuation = nil
-        lock.unlock()
+        let cont: CheckedContinuation<Void, Error>? = withLock {
+            let captured = self.connectContinuation
+            self.connectContinuation = nil
+            return captured
+        }
         cont?.resume(with: result)
     }
 }
@@ -115,7 +140,7 @@ extension NFCISO7816TagTransport: NFCTagReaderSessionDelegate {
                 self.resumeConnect(.failure(Self.translate(error)))
                 return
             }
-            self.connectedTag = tag
+            self.withLock { self.connectedTag = tag }
             self.resumeConnect(.success(()))
         }
     }

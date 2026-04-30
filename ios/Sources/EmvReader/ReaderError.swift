@@ -21,9 +21,6 @@ public enum ReaderError: @unchecked Sendable {
     /// fallback is out of scope for v0.2.x.
     case ppseUnsupported
 
-    /// PPSE was structurally valid but listed zero applications.
-    case noApplicationSelected
-
     /// A card APDU returned a non-`90 00` status word at a stage
     /// other than PPSE-not-found. Status-word bytes are non-sensitive
     /// (public protocol).

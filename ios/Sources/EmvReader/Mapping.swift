@@ -27,6 +27,11 @@ internal enum Mapping {
 
     // MARK: - Aid
 
+    // why: hex-decoding String(describing:) is scoped to Aid (a non-PCI
+    // value class whose toString returns uppercase hex). MUST NOT be
+    // applied to Pan/Track2 — those mask their toString and the decode
+    // would either misbehave or fire `decodeHex`'s preconditionFailure.
+
     /// Uppercase hex string for an `Aid` (Kotlin value class, boxed
     /// into Swift as `Any`). Kotlin's `Aid.toString()` returns the
     /// normalised uppercase hex; we call `description` on the boxed

@@ -74,16 +74,20 @@ jobs:
         run: ./gradlew :shared:assembleSharedReleaseXCFramework --stacktrace
       - name: Test EmvReader Swift package
         working-directory: ios
+        shell: bash
         run: |
+          set -o pipefail
           xcodebuild \
             -scheme EmvReader \
             -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
             -derivedDataPath .build-ios \
-            test 2>&1 | xcpretty || exit ${PIPESTATUS[0]}
+            test 2>&1 | xcpretty
       - name: Build iOS sample app
+        shell: bash
         run: |
+          set -o pipefail
           xcodebuild -project iosApp/iosApp.xcodeproj \
             -scheme iosApp \
             -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
             -configuration Debug \
-            build | xcpretty || exit ${PIPESTATUS[0]}
+            build | xcpretty

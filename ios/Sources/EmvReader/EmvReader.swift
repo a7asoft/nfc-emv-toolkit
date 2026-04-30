@@ -37,6 +37,11 @@ public final class EmvReader {
     /// Apple's NFC reader rules require this to be invoked in response
     /// to a user gesture; the library cannot enforce this, so callers
     /// are responsible.
+    ///
+    /// Cancellation observed BETWEEN APDU exchanges (not during them).
+    /// Cancellation during the initial NFC presentation sheet (while
+    /// `connect()` awaits user gesture) is also not observed; the system
+    /// sheet remains until the user dismisses or the session times out.
     public func read() -> AsyncStream<ReaderState> {
         let transport = transportFactory()
         return AsyncStream { continuation in
@@ -114,11 +119,11 @@ public final class EmvReader {
         ppse: Ppse,
         continuation: AsyncStream<ReaderState>.Continuation
     ) -> Any? {
+        // why: ppse.applications is never empty here because Ppse.parse
+        // returns Err(NoApplicationsFound) → ppseRejected before we can
+        // construct an empty Ppse. The lowest-priority pick is therefore
+        // total over the non-empty list.
         let entries = ppse.applications
-        guard !entries.isEmpty else {
-            continuation.yield(.failed(.noApplicationSelected))
-            return nil
-        }
         let chosen = entries.min(by: { lhs, rhs in
             priorityValue(lhs.priority) < priorityValue(rhs.priority)
         })
@@ -134,7 +139,11 @@ public final class EmvReader {
         transport: Iso7816Transport,
         continuation: AsyncStream<ReaderState>.Continuation
     ) async throws -> Bool {
-        let command = ApduCommands.selectAid(aidBytes: Mapping.aidBytes(aid))
+        // why: try! is intentional. AID bytes come from Ppse.parse, which
+        // already enforces the 5..16 length bound (EMV Book 1 §12.2.3 +
+        // ISO/IEC 7816-4 §5.4.1). A throw here would mean Ppse.parse
+        // contract was violated — a programming error, not a runtime one.
+        let command = try! ApduCommands.selectAid(aidBytes: Mapping.aidBytes(aid))
         let response = try await transport.transceive(command)
         if ApduCommands.isSuccess(response) { return true }
         let (sw1, sw2) = ApduCommands.statusWord(response)
@@ -178,7 +187,11 @@ public final class EmvReader {
         let last = Int(entry.lastRecord)
         let sfi = UInt8(entry.sfi)
         for record in first...last {
-            let cmd = ApduCommands.readRecord(recordNumber: UInt8(record), sfi: sfi)
+            // why: try! is intentional. recordNumber and sfi come from
+            // Afl.parse, which already validates 1..254 and 1..30 per
+            // ISO/IEC 7816-4 §7.3.3. A throw here would mean Afl.parse
+            // contract was violated — a programming error, not a runtime one.
+            let cmd = try! ApduCommands.readRecord(recordNumber: UInt8(record), sfi: sfi)
             let response = try await transport.transceive(cmd)
             // why: a non-9000 READ RECORD is silently skipped rather than aborting
             // the whole flow. Real cards sometimes advertise records that aren't

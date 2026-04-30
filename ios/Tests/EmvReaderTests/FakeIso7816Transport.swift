@@ -17,6 +17,11 @@ internal final class FakeIso7816Transport: Iso7816Transport, @unchecked Sendable
     private var connectedFlag = false
     private var closedFlag = false
 
+    /// Lock + state for ``waitForClose()`` — separate from `lock` so a
+    /// caller awaiting close can never deadlock against transceive/close.
+    private let closeLock = NSLock()
+    private var closeContinuation: CheckedContinuation<Void, Never>?
+
     init(script: [(prefix: Data, response: Data)], connectError: Error? = nil) {
         self.script = script
         self.connectError = connectError
@@ -54,5 +59,27 @@ internal final class FakeIso7816Transport: Iso7816Transport, @unchecked Sendable
         lock.lock()
         closedFlag = true
         lock.unlock()
+        closeLock.lock()
+        let cont = closeContinuation
+        closeContinuation = nil
+        closeLock.unlock()
+        cont?.resume()
+    }
+
+    /// Suspend until ``close()`` has fired at least once. Resumes
+    /// immediately if close already happened. Used by the cancellation
+    /// test to avoid `Task.sleep(...)`-based flakiness.
+    func waitForClose() async {
+        if closed { return }
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            closeLock.lock()
+            if closed {
+                closeLock.unlock()
+                continuation.resume()
+                return
+            }
+            closeContinuation = continuation
+            closeLock.unlock()
+        }
     }
 }
