@@ -1167,6 +1167,8 @@ final class io.github.a7asoft.nfcemv.extract/EmvCard { // io.github.a7asoft.nfce
         final fun <get-cardholderName>(): kotlin/String? // io.github.a7asoft.nfcemv.extract/EmvCard.cardholderName.<get-cardholderName>|<get-cardholderName>(){}[0]
     final val expiry // io.github.a7asoft.nfcemv.extract/EmvCard.expiry|{}expiry[0]
         final fun <get-expiry>(): kotlinx.datetime/YearMonth // io.github.a7asoft.nfcemv.extract/EmvCard.expiry.<get-expiry>|<get-expiry>(){}[0]
+    final val maskedPan // io.github.a7asoft.nfcemv.extract/EmvCard.maskedPan|{}maskedPan[0]
+        final fun <get-maskedPan>(): kotlin/String // io.github.a7asoft.nfcemv.extract/EmvCard.maskedPan.<get-maskedPan>|<get-maskedPan>(){}[0]
     final val pan // io.github.a7asoft.nfcemv.extract/EmvCard.pan|{}pan[0]
         final fun <get-pan>(): io.github.a7asoft.nfcemv.extract/Pan // io.github.a7asoft.nfcemv.extract/EmvCard.pan.<get-pan>|<get-pan>(){}[0]
     final val track2 // io.github.a7asoft.nfcemv.extract/EmvCard.track2|{}track2[0]

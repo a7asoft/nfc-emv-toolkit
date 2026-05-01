@@ -15,7 +15,9 @@ import io.github.a7asoft.nfcemv.extract.EmvCard
 
 /**
  * Renders an [EmvCard] using only its safe accessors:
- * - `pan.toString()` (always masked per [io.github.a7asoft.nfcemv.extract.Pan]).
+ * - `maskedPan` (always masked per [io.github.a7asoft.nfcemv.extract.Pan];
+ *   shared single-source-of-truth getter that also survives the iOS
+ *   ObjC bridge — see #68).
  * - `brand.displayName` (human-readable label per
  *   [io.github.a7asoft.nfcemv.brand.EmvBrand]).
  * - `expiry`, `cardholderName?`, `applicationLabel?`, `aid` — non-PCI
@@ -31,7 +33,7 @@ public fun CardSummary(card: EmvCard, onTryAgain: () -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Field(label = "PAN", value = card.pan.toString())
+            Field(label = "PAN", value = card.maskedPan)
             Field(label = "Brand", value = card.brand.displayName)
             Field(label = "Expiry", value = card.expiry.toString())
             Field(label = "Cardholder", value = card.cardholderName ?: "<not provided>")

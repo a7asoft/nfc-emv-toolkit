@@ -4,6 +4,14 @@ All notable changes to this project will be documented here. The format follows 
 
 ## [Unreleased]
 
+### Fixed — iOS PAN masking via `EmvCard.maskedPan` getter (#68)
+- Added `EmvCard.maskedPan: String` to `:shared/commonMain`. Kotlin/Native unboxes `Pan` (`@JvmInline value class<String>`) through the ObjC bridge to a plain `NSString` carrying the raw PAN — `String(describing: card.pan)` from Swift bypasses `Pan.toString()`'s masking. The new getter exposes the masked form as a regular `String` that survives the bridge. Surfaced by the iOS test target wiring (#67) which added a regression test that pins the masked-PAN contract end-to-end.
+- iOS `EmvCardSummary.from(_ card:)` now uses `card.maskedPan` instead of `String(describing: card.pan)`. Android composeApp `CardSummary` adopts `card.maskedPan` for parity (Kotlin call sites box the value class correctly so the Android display already masked, but the consolidated getter is the new single-source-of-truth).
+- ABI delta: additive `EmvCard.maskedPan` getter.
+
+### Added — iosAppTests Xcode test target (#67)
+- The `iosAppTests/` Swift sources from PR #66 are now wired into a `PBXNativeTarget` of type `com.apple.product-type.bundle.unit-test`. `xcodebuild test` runs the suite (21 tests including the PCI-safety regression that surfaced #68).
+
 ### Added — iOS sample app integration (#65)
 - `iosApp/` now ships a working SwiftUI sample app that drives the `EmvReader` Swift package end-to-end. Mirror of the Android composeApp integration (#55). The previous KMP wizard scaffold (`Image(systemName: "swift")` placeholder) is replaced with a `ReaderScreen` that walks through PPSE → SELECT AID → GPO → READ RECORD and renders the parsed `EmvCard` via a PCI-safe `EmvCardSummary` projection.
 - New `ReaderViewModel: ObservableObject` (main-actor) decouples NFC session lifecycle from the SwiftUI view tree. Dependencies are injected via initialiser closures (`NfcAvailability` protocol + `() -> AsyncStream<ReaderState>` factory), making the type unit-testable without a simulator. The factory closure is the entire reader-stream abstraction — `EmvReader` already owns the `NFCTagReaderSession` lifecycle internally, so iosApp does not re-wrap it.
