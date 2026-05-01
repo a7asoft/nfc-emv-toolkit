@@ -105,6 +105,49 @@ internal enum Mapping {
         fatalError("Unhandled EmvCardResult variant — XCFramework export changed")
     }
 
+    /// Run `EmvParser.parse(aid:tlvNodes:)` on the union of pre-decoded
+    /// TLV nodes (typically `fci.inlineTlv + gpo.inlineTlv + recordTlv`).
+    /// Mirrors the Android `ContactlessReader` parity contract from #59:
+    /// real cards distribute essential tags (`57`, `5A`, `5F24`, `9F12`)
+    /// across the SELECT-AID FCI, the GPO `77` template, AND the AFL
+    /// records. The legacy ``parseEmvCard(aid:_:)`` bridge above only
+    /// fed records, so any card emitting Track 2 inline in the GPO
+    /// (Visa MSD-only mode) failed with `MissingRequiredTag(57)`.
+    ///
+    /// The Kotlin source declares this overload with `@JvmName("parseTlv")`
+    /// — that annotation only mangles the JVM symbol; ObjC interop and
+    /// Swift see the canonical Kotlin signature.
+    static func parseEmvCardFromNodes(aid: Any, tlvNodes: [any Tlv]) -> ParseOutcome<EmvCard> {
+        let result = EmvParser.shared.parse(aid: aid, tlvNodes: tlvNodes)
+        if let ok = result as? EmvCardResultOk {
+            return .ok(ok.card)
+        }
+        if let err = result as? EmvCardResultErr {
+            return .err(err.error)
+        }
+        fatalError("Unhandled EmvCardResult variant — XCFramework export changed")
+    }
+
+    /// Decode a single READ RECORD body to TLV nodes via the lenient
+    /// `TlvDecoder`. Returns an empty array on decode failure — same
+    /// risk-balance as the Android `ContactlessReader.readAllRecordsAsTlv`
+    /// silent-skip policy: a malformed record is dropped rather than
+    /// aborting the whole flow, and `EmvParser` surfaces
+    /// `MissingRequiredTag` if the dropped record carried essential data.
+    static func decodeRecordToTlv(_ body: Data) -> [any Tlv] {
+        let options = TlvOptions(
+            strictness: StrictnessLenient.shared,
+            paddingPolicy: PaddingPolicyTolerated.shared,
+            maxTagBytes: 4,
+            maxDepth: 16
+        )
+        let result = TlvDecoder.shared.parse(input: body.toKotlinByteArray(), options: options)
+        if let ok = result as? TlvParseResultOk {
+            return ok.tlvs
+        }
+        return []
+    }
+
     /// Run `SelectAidFci.parse` on a SELECT AID FCI response body
     /// (status word stripped). Returns the parsed `SelectAidFci`
     /// (which carries optional PDOL bytes) or the boxed

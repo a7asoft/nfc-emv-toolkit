@@ -21,6 +21,11 @@ import io.github.a7asoft.nfcemv.extract.parse
 import io.github.a7asoft.nfcemv.reader.internal.ApduCommands
 import io.github.a7asoft.nfcemv.reader.internal.ApduTransport
 import io.github.a7asoft.nfcemv.reader.internal.IsoDepTransport
+import io.github.a7asoft.nfcemv.tlv.Strictness
+import io.github.a7asoft.nfcemv.tlv.Tlv
+import io.github.a7asoft.nfcemv.tlv.TlvDecoder
+import io.github.a7asoft.nfcemv.tlv.TlvOptions
+import io.github.a7asoft.nfcemv.tlv.TlvParseResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -42,8 +47,16 @@ import kotlin.random.Random
  * - Builds a PDOL response from [TerminalConfig] (or the empty `83 00`
  *   form when the card omits `9F38`) and issues
  *   `GET PROCESSING OPTIONS`.
- * - Walks the AFL, issuing one `READ RECORD` per record.
- * - Hands the accumulated record stream + the AID to [EmvParser].
+ * - Walks the AFL (which may be empty for MSD-only cards), issuing one
+ *   `READ RECORD` per record and decoding each successful body to TLV.
+ * - Unions the SELECT AID FCI inline TLV, the GPO body inline TLV, and
+ *   the AFL READ RECORD TLV nodes; hands the merged node list and the
+ *   AID to [EmvParser.parse].
+ *
+ * MSD-only cards (Visa qVSDC kernel-3) return AIP + Track 2 inline in
+ * the GPO body with NO AFL — those flows produce zero `READ RECORD`
+ * APDUs. See `:shared/extract/Gpo.inlineTlv` for the architectural
+ * union pattern.
  *
  * Exposed as a `Flow<ReaderState>` so consumers can drive a UI off
  * progress states. Terminal states are [ReaderState.Done] (success) and
@@ -75,8 +88,8 @@ public class ContactlessReader internal constructor(
      * Returns a cold flow driving the read with [config] supplying the
      * terminal-side PDOL response defaults (TTQ, country, currency,
      * etc.). Use this overload to override the standard defaults — for
-     * example to flip TTQ bits when validating against a card that
-     * rejects the conservative `36 00 80 00`.
+     * example to set a non-default TTQ when validating against a card
+     * that rejects the conservative `36 00 00 00`.
      */
     public fun read(config: TerminalConfig): Flow<ReaderState> = flow { drive(config) }
         .flowOn(Dispatchers.IO)
@@ -97,10 +110,11 @@ public class ContactlessReader internal constructor(
             val chosen = chooseApplication(ppse) ?: return
             emit(ReaderState.SelectingAid(chosen.aid))
             val fciBody = selectAid(chosen.aid) ?: return
-            val gpoBody = buildGpoBody(fciBody, config) ?: return
+            val (gpoBody, fci) = buildGpoBody(fciBody, config) ?: return
             emit(ReaderState.ReadingRecords)
             val gpo = readGpo(gpoBody) ?: return
-            emitParseOutcome(chosen.aid, readAllRecords(gpo.afl))
+            val recordTlv = readAllRecordsAsTlv(gpo.afl)
+            emitParseOutcome(chosen.aid, fci.inlineTlv + gpo.inlineTlv + recordTlv)
         } catch (e: IOException) {
             emit(ReaderState.Failed(translateIo(e)))
         }
@@ -156,19 +170,20 @@ public class ContactlessReader internal constructor(
     @Suppress("ReturnCount", "CyclomaticComplexMethod")
     // why: each return surfaces a distinct typed reader error per the
     // EMV Book 3 §6.5.5–§6.5.8 SELECT FCI / PDOL / GPO sequence.
-    // Splitting into helpers ferries continuation + collector through
-    // more signatures without reducing real complexity.
+    // Returns the GPO command bytes paired with the parsed FCI so the
+    // caller can union fci.inlineTlv with downstream TLV sources.
     private suspend fun FlowCollector<ReaderState>.buildGpoBody(
         fciBody: ByteArray,
         config: TerminalConfig,
-    ): ByteArray? {
-        val pdolBytes = when (val parsed = SelectAidFci.parse(fciBody)) {
-            is SelectAidFciResult.Ok -> parsed.fci.pdolBytes
+    ): Pair<ByteArray, SelectAidFci>? {
+        val fci = when (val parsed = SelectAidFci.parse(fciBody)) {
+            is SelectAidFciResult.Ok -> parsed.fci
             is SelectAidFciResult.Err -> {
                 emit(ReaderState.Failed(ReaderError.SelectAidFciRejected(parsed.error)))
                 return null
             }
-        } ?: return ApduCommands.gpoCommand(EMPTY_BYTES)
+        }
+        val pdolBytes = fci.pdolBytes ?: return ApduCommands.gpoCommand(EMPTY_BYTES) to fci
         val pdol = when (val parsed = Pdol.parse(pdolBytes)) {
             is PdolResult.Ok -> parsed.pdol
             is PdolResult.Err -> {
@@ -177,7 +192,7 @@ public class ContactlessReader internal constructor(
             }
         }
         val response = PdolResponseBuilder.build(pdol, config, transactionDate(), unpredictableNumber())
-        return ApduCommands.gpoCommand(response)
+        return ApduCommands.gpoCommand(response) to fci
     }
 
     // why: transceive, dispatch on status, parse — each is a distinct EMV
@@ -200,24 +215,25 @@ public class ContactlessReader internal constructor(
         }
     }
 
-    // why: nested for-loops walk the AFL's (entry × record) cross-product
-    // per EMV Book 3 §10.2. The inner branch silently drops non-9000
-    // responses (see comment below). Lifting the inner loop into a helper
-    // moves complexity rather than reducing it.
+    // why: walk AFL × records, transceive each, decode the success bodies
+    // into TLV nodes once. Non-9000 responses silently skipped (same
+    // policy as pre-#59). Returns the flat TLV node list, ready to union
+    // with the GPO body's inline TLV before EmvParser.parse.
     @Suppress("CyclomaticComplexMethod")
-    private fun readAllRecords(afl: Afl): List<ByteArray> {
-        val collected = ArrayList<ByteArray>()
+    private fun readAllRecordsAsTlv(afl: Afl): List<Tlv> {
+        val collected = ArrayList<Tlv>()
         for (entry in afl.entries) {
             for (record in entry.firstRecord..entry.lastRecord) {
                 val response = transport.transceive(ApduCommands.readRecord(record, entry.sfi))
-                // why: a non-9000 READ RECORD is silently skipped rather than aborting
-                // the whole flow. Real cards sometimes advertise records in their AFL
-                // that aren't readable (file-not-activated, end-of-file). EmvParser
-                // surfaces MissingRequiredTag downstream if essential data was in a
-                // skipped record. Trade-off accepted for v0.2.0; see docs/threat-model
-                // and follow-up issue if this turns out to mask real bugs.
-                if (ApduCommands.isSuccess(response)) {
-                    collected += ApduCommands.dataField(response)
+                if (!ApduCommands.isSuccess(response)) continue
+                val body = ApduCommands.dataField(response)
+                when (val parsed = TlvDecoder.parse(body, LENIENT_TLV)) {
+                    is TlvParseResult.Ok -> collected += parsed.tlvs
+                    // why: a record that fails to decode is silently
+                    // dropped — same risk-balance as the pre-#59 non-9000
+                    // skip. EmvParser surfaces MissingRequiredTag if a
+                    // dropped record carried essential data.
+                    is TlvParseResult.Err -> Unit
                 }
             }
         }
@@ -226,9 +242,9 @@ public class ContactlessReader internal constructor(
 
     private suspend fun FlowCollector<ReaderState>.emitParseOutcome(
         chosenAid: Aid,
-        records: List<ByteArray>,
+        nodes: List<Tlv>,
     ) {
-        when (val parsed = EmvParser.parse(chosenAid, records)) {
+        when (val parsed = EmvParser.parse(chosenAid, nodes)) {
             is EmvCardResult.Ok -> emit(ReaderState.Done(parsed.card))
             is EmvCardResult.Err -> emit(ReaderState.Failed(ReaderError.ParseFailed(parsed.error)))
         }
@@ -262,6 +278,7 @@ public class ContactlessReader internal constructor(
         private const val SW_FILE_NOT_FOUND_HI: Byte = 0x6A.toByte()
         private const val SW_FILE_NOT_FOUND_LO: Byte = 0x82.toByte()
         private val EMPTY_BYTES: ByteArray = ByteArray(0)
+        private val LENIENT_TLV: TlvOptions = TlvOptions(strictness = Strictness.Lenient)
 
         // why: BCD-encoded YYMMDD from the current wall clock — UTC for
         // deterministic behavior across devices. Tag 9A is informational

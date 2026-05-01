@@ -78,13 +78,25 @@ public data class TerminalConfig(
 
     public companion object {
         /**
-         * "Standard payment terminal" defaults. TTQ value `36 00 80 00`
-         * matches what most production readers ship: qVSDC mode + Contact
-         * EMV + Online PIN + Signature in byte 1, online cryptogram bit
-         * set in byte 2 (informational; the reader never issues GENERATE
-         * AC). Country / currency default to US/USD. Amounts zero. Type
-         * purchase. Validated against the javaemvreader and nfc-frog
-         * reference implementations.
+         * "Read-only contactless terminal" defaults. TTQ value
+         * `36 00 00 00` matches what a passive reader (no online
+         * authorization, no GENERATE AC, no cryptogram verification)
+         * SHOULD signal:
+         *
+         * - Byte 1 `0x36` — qVSDC + Contact EMV + Online PIN + Signature.
+         * - Byte 2 `0x00` — **online-cryptogram-required bit cleared**.
+         *   Setting this bit (`0x80`) tells the Visa kernel "I will go
+         *   online", which on some issuers (observed: Chase) causes the
+         *   kernel to skip AFL emission in the GPO response and rely on
+         *   the issuer host for static data. A read-only reader has no
+         *   issuer host, so it MUST keep this bit clear or it will
+         *   receive `90 00` with no `94` tag. See issue #59.
+         * - Bytes 3–4 `0x00 0x00` — reserved / RFU.
+         *
+         * Country / currency default to US/USD. Amounts zero. Type
+         * purchase. Callers needing a different TTQ (e.g. to test
+         * issuer behavior under online-only flows) override via
+         * `TerminalConfig.default().copy(terminalTransactionQualifiers = ...)`.
          *
          * Returns a fresh instance per call so callers cannot mutate the
          * shared default arrays.
@@ -95,7 +107,7 @@ public data class TerminalConfig(
         // 0840, EMV terminal-type / capability bit patterns). Naming
         // each constant separately would obscure the wire shape.
         public fun default(): TerminalConfig = TerminalConfig(
-            terminalTransactionQualifiers = byteArrayOf(0x36, 0x00, 0x80.toByte(), 0x00),
+            terminalTransactionQualifiers = byteArrayOf(0x36, 0x00, 0x00, 0x00),
             terminalCountryCode = byteArrayOf(0x08, 0x40),
             transactionCurrencyCode = byteArrayOf(0x08, 0x40),
             amountAuthorised = byteArrayOf(0, 0, 0, 0, 0, 0),

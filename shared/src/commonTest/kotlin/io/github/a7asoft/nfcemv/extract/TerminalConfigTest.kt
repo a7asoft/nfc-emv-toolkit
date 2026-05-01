@@ -9,10 +9,10 @@ import kotlin.test.assertNotSame
 class TerminalConfigTest {
 
     @Test
-    fun `default returns TTQ 36 00 80 00`() {
+    fun `default returns TTQ 36 00 00 00 read-only contactless friendly`() {
         val config = TerminalConfig.default()
         assertContentEquals(
-            byteArrayOf(0x36, 0x00, 0x80.toByte(), 0x00),
+            byteArrayOf(0x36, 0x00, 0x00, 0x00),
             config.terminalTransactionQualifiers,
         )
     }

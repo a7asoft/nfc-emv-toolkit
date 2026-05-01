@@ -56,14 +56,21 @@ class GpoTest {
     }
 
     @Test
-    fun `parse rejects format-2 missing AFL with MissingAfl`() {
+    fun `parse accepts format-2 without AFL when AIP is present`() {
+        // why: real-card observation (#59) — Visa kernel-3 in MSD-only
+        // mode returns format-2 with AIP + Track 2 inline + NO AFL.
+        // EMV Book 3 §10 / EMVCo Book C-3 §5.4.3 treat AFL as OPTIONAL
+        // when application data is delivered inline in the format-2
+        // template. The previous contract (rejecting with MissingAfl)
+        // was a spec violation.
         // 77 04 82 02 00 80
-        val err = assertIs<GpoResult.Err>(
+        val ok = assertIs<GpoResult.Ok>(
             Gpo.parse(
                 byteArrayOf(0x77, 0x04, 0x82.toByte(), 0x02, 0x00, 0x80.toByte()),
             ),
         )
-        assertEquals(GpoError.MissingAfl, err.error)
+        assertEquals(emptyList(), ok.gpo.afl.entries)
+        assertEquals(emptyList(), ok.gpo.inlineTlv)
     }
 
     @Test
@@ -172,6 +179,74 @@ class GpoTest {
                 is GpoResult.Err -> Unit
             }
         }
+    }
+
+    @Test
+    fun `parse format-2 populates inlineTlv with non-AIP non-AFL children`() {
+        // why: real-card observation (#59) shows format-2 GPO bodies often
+        // carry application data (5F20 cardholder, 57 Track 2, 5F34 PAN
+        // sequence, 9F26 cryptogram, ...) inline alongside AIP/AFL.
+        // 77 0F 82 02 00 80 94 04 08 01 01 00 5F 20 02 41 42
+        val ok = assertIs<GpoResult.Ok>(
+            Gpo.parse(
+                byteArrayOf(
+                    0x77, 0x0F,
+                    0x82.toByte(), 0x02, 0x00, 0x80.toByte(),
+                    0x94.toByte(), 0x04, 0x08, 0x01, 0x01, 0x00,
+                    0x5F, 0x20, 0x02, 0x41, 0x42,
+                ),
+            ),
+        )
+        assertEquals(1, ok.gpo.inlineTlv.size)
+        val first = assertIs<io.github.a7asoft.nfcemv.tlv.Tlv.Primitive>(ok.gpo.inlineTlv[0])
+        assertEquals(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F20"), first.tag)
+    }
+
+    @Test
+    fun `parse format-1 returns inlineTlv as empty list`() {
+        // why: format-1 (tag 80) is a fixed-layout payload with no
+        // embedded TLV — only AIP + AFL bytes packed in sequence.
+        // 80 06 00 80 08 01 01 00
+        val ok = assertIs<GpoResult.Ok>(
+            Gpo.parse(byteArrayOf(0x80.toByte(), 0x06, 0x00, 0x80.toByte(), 0x08, 0x01, 0x01, 0x00)),
+        )
+        assertEquals(emptyList(), ok.gpo.inlineTlv)
+    }
+
+    @Test
+    fun `parse format-2 inlineTlv excludes ARQC IAD ATC and CID`() {
+        // why: per docs/threat-model.md §19+§28, ARQC (9F 26), CID
+        // (9F 27), and IAD (9F 10) are single-use cryptographic context
+        // and must never reach a public List<Tlv> surface where a
+        // careless caller could persist them via Tlv.Primitive.copyValue().
+        // ATC (9F 36) is replay-window-relevant. Filter excludes them
+        // alongside AIP (82) and AFL (94) which the parser already
+        // consumes structurally.
+        // 77 24
+        //   82 02 00 80                              (4 bytes)
+        //   94 04 08 01 01 00                        (6 bytes)
+        //   9F 26 04 00 00 00 00                     (7 bytes)
+        //   9F 27 01 80                              (4 bytes)
+        //   9F 10 02 00 00                           (5 bytes)
+        //   9F 36 02 00 01                           (5 bytes)
+        //   5F 20 02 41 42                           (5 bytes)
+        // total inner = 36 = 0x24
+        val ok = assertIs<GpoResult.Ok>(
+            Gpo.parse(
+                byteArrayOf(
+                    0x77, 0x24,
+                    0x82.toByte(), 0x02, 0x00, 0x80.toByte(),
+                    0x94.toByte(), 0x04, 0x08, 0x01, 0x01, 0x00,
+                    0x9F.toByte(), 0x26, 0x04, 0x00, 0x00, 0x00, 0x00,
+                    0x9F.toByte(), 0x27, 0x01, 0x80.toByte(),
+                    0x9F.toByte(), 0x10, 0x02, 0x00, 0x00,
+                    0x9F.toByte(), 0x36, 0x02, 0x00, 0x01,
+                    0x5F, 0x20, 0x02, 0x41, 0x42,
+                ),
+            ),
+        )
+        assertEquals(1, ok.gpo.inlineTlv.size)
+        assertEquals(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F20"), ok.gpo.inlineTlv[0].tag)
     }
 
     private companion object {

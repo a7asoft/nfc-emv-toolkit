@@ -1,6 +1,7 @@
 package io.github.a7asoft.nfcemv.extract
 
 import io.github.a7asoft.nfcemv.extract.internal.findFirst
+import io.github.a7asoft.nfcemv.extract.internal.firstChildByTag
 import io.github.a7asoft.nfcemv.tlv.Strictness
 import io.github.a7asoft.nfcemv.tlv.Tag
 import io.github.a7asoft.nfcemv.tlv.Tlv
@@ -12,28 +13,51 @@ import io.github.a7asoft.nfcemv.tlv.TlvParseResult
 /**
  * Parsed SELECT AID FCI response per EMV Book 1 §11.3.4 / Book 3 §6.5.5.
  *
- * Carries the application's PDOL bytes (`9F38` value) when the card
- * declares one (Visa qVSDC / Discover D-PAS / etc.). Mastercard
- * contactless typically omits `9F38`; in that case [pdolBytes] is
- * `null` and the reader should send the GPO command with empty PDOL
- * data (`83 00`).
- *
- * Only the `9F38` value is exposed in this milestone. Other FCI
- * proprietary template fields (`50` Application Label, `87` Priority,
- * `5F2D` Language, `9F12` Preferred Name, `BF0C` Issuer Discretionary)
- * are intentionally ignored — the reader does not act on them yet.
+ * Carries:
+ * - [pdolBytes] — raw `9F38` value when the card declares one (Visa
+ *   qVSDC / Discover D-PAS / etc.). `null` when the card omits `9F38`
+ *   (typical Mastercard contactless); reader sends GPO with empty PDOL
+ *   data (`83 00`).
+ * - [inlineTlv] — `A5` (FCI Proprietary Template) children excluding
+ *   `9F38` (already consumed). Typically carries `50` Application
+ *   Label, `87` Application Priority Indicator, `5F 2D` Language
+ *   Preference, `9F 11` Issuer Code Table Index, `9F 12` Application
+ *   Preferred Name, `BF 0C` Issuer Discretionary Data. The reader
+ *   unions this list with the GPO body inline TLV and the AFL READ
+ *   RECORD bodies before calling [EmvParser.parse]. Empty when the FCI
+ *   omits the `A5` template entirely (rare) or when `A5` carries only
+ *   `9F 38`. Callers iterating this list and invoking
+ *   [Tlv.Primitive.copyValue] obtain raw bytes — none of the standard
+ *   FCI tags carry PAN, but bespoke issuer extensions may; treat as
+ *   read-only metadata.
  */
 public class SelectAidFci internal constructor(
     /** Raw `9F38` value bytes, or `null` if the FCI lacks the tag. */
     public val pdolBytes: ByteArray?,
+    /**
+     * The `A5` (FCI Proprietary Template) children excluding `9F38`
+     * (which was already consumed by the GPO PDOL response builder).
+     *
+     * Typically carries `50` (Application Label), `87` (Application
+     * Priority Indicator), `5F 2D` (Language Preference), `9F 11`
+     * (Issuer Code Table Index), `9F 12` (Application Preferred Name),
+     * `BF 0C` (Issuer Discretionary Data). The reader unions this list
+     * with the GPO body's inline TLV and the AFL READ RECORD bodies
+     * before passing them to [EmvParser.parse].
+     *
+     * Empty when the FCI omits the `A5` template entirely (rare) or
+     * when the `A5` template carries only `9F 38`.
+     */
+    public val inlineTlv: List<Tlv>,
 ) {
 
     @Suppress("CyclomaticComplexMethod")
-    // why: structural equals over a nullable ByteArray field; auto-equals
-    // would compare references, breaking value semantics.
+    // why: structural equals over a nullable ByteArray + List<Tlv>; auto-equals
+    // would compare ByteArray references, breaking value semantics.
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is SelectAidFci) return false
+        if (inlineTlv != other.inlineTlv) return false
         return when {
             pdolBytes == null && other.pdolBytes == null -> true
             pdolBytes == null || other.pdolBytes == null -> false
@@ -41,9 +65,14 @@ public class SelectAidFci internal constructor(
         }
     }
 
-    override fun hashCode(): Int = pdolBytes?.contentHashCode() ?: 0
+    override fun hashCode(): Int {
+        var result = pdolBytes?.contentHashCode() ?: 0
+        result = 31 * result + inlineTlv.hashCode()
+        return result
+    }
 
-    override fun toString(): String = "SelectAidFci(pdol=${pdolBytes?.size ?: 0} bytes)"
+    override fun toString(): String =
+        "SelectAidFci(pdol=${pdolBytes?.size ?: 0} bytes, inlineTlv.size=${inlineTlv.size})"
 
     public companion object
 }
@@ -83,8 +112,10 @@ public fun SelectAidFci.Companion.parse(bytes: ByteArray): SelectAidFciResult {
     }
     val fciTemplate = findFirst(tlvs, TAG_FCI) as? Tlv.Constructed
         ?: return SelectAidFciResult.Err(SelectAidFciError.MissingFciTemplate)
+    val proprietary = firstChildByTag(fciTemplate, TAG_FCI_PROPRIETARY) as? Tlv.Constructed
     val pdol = (findFirst(listOf(fciTemplate), TAG_PDOL) as? Tlv.Primitive)?.copyValue()
-    return SelectAidFciResult.Ok(SelectAidFci(pdolBytes = pdol))
+    val inline = proprietary?.children?.filter { it.tag != TAG_PDOL } ?: emptyList()
+    return SelectAidFciResult.Ok(SelectAidFci(pdolBytes = pdol, inlineTlv = inline))
 }
 
 /**
@@ -98,4 +129,5 @@ public fun SelectAidFci.Companion.parseOrThrow(bytes: ByteArray): SelectAidFci =
     }
 
 private val TAG_FCI = Tag.fromHex("6F")
+private val TAG_FCI_PROPRIETARY = Tag.fromHex("A5")
 private val TAG_PDOL = Tag.fromHex("9F38")

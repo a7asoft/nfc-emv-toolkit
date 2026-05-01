@@ -4,6 +4,23 @@ All notable changes to this project will be documented here. The format follows 
 
 ## [Unreleased]
 
+### Changed — Real-card support: GPO inline TLV + Track 2 fallbacks + TTQ default (#59)
+Architectural fix for Visa qVSDC kernel-3 cards (Chase Credit + Debit observed). Captured the real-card APDU traffic via diagnostic logging and corrected the model of what `EmvParser` parses.
+
+**Breaking changes (pre-1.0):**
+- **Removed `GpoError.MissingAfl`.** Format-2 GPO responses (template `77`) without an AFL tag are now accepted — the card may be in MSD-only mode and deliver application data inline. `Gpo.afl.entries` is empty in this case. EMV Book 3 §10 / EMVCo Book C-3 (Visa kernel-3) §5.4.3 treat AFL as optional when the application data is inline.
+- **`Gpo` exposes `inlineTlv: List<Tlv>`** carrying the format-2 application-data children (everything except AIP and AFL). Format-1 (`80`) returns `emptyList()`. Additive to the public API.
+- **New `EmvParser.parse(aid: Aid, tlvNodes: List<Tlv>): EmvCardResult`** overload (`@JvmName("parseTlv")` to disambiguate from the `List<ByteArray>` overload at the JVM level) — the canonical TLV-native entry point. `parseOrThrow(aid, tlvNodes)` mirror also added. The existing `parse(aid, apduResponses: List<ByteArray>)` overload still works (decodes then delegates).
+
+**Reader behavior changes:**
+- `ContactlessReader` (Android) now decodes each AFL READ RECORD body to TLV nodes once, concatenates with `gpo.inlineTlv`, and calls the new `EmvParser.parse(aid, nodes)` overload. Cards that ship Track 2 / cardholder name / dates inline in the GPO body — common on Visa qVSDC kernel-3 — now succeed even when their AFL records are empty or carry only supplementary tags (like `5F 28` Issuer Country, `9F 07` Application Usage Control).
+- `EmvParser` now falls back to Track 2's embedded PAN when standalone tag `5A` is absent (canonical per IDTECH KB and EMV Book 3 record layout). Symmetrically, falls back to Track 2's embedded expiry when standalone tag `5F 24` is absent (canonical per ISO 7813 and EMV Book 3). Track 2 is pre-parsed once per call so required-field resolution and optional-field exposure see byte-identical data. New private sealed types `PanOutcome`, `ExpiryOutcome`, `Track2Outcome` keep the dispatch flag-free per CLAUDE.md §3.2.
+- `TerminalConfig.default()` TTQ default lowered from `36 00 80 00` to `36 00 00 00`. The "Online cryptogram required" bit (byte 2, `0x80`) is now cleared so issuer kernels emit the GPO response shape that read-only readers need. iOS `TerminalConfig.default` mirrors the new value. Override via `TerminalConfig.default().copy(terminalTransactionQualifiers = ...)` if a specific issuer kernel needs the legacy bit set.
+
+**Real-card regression coverage:**
+- Sanitized `:android:reader` integration tests for the Visa Credit Chase MSD-only flow (no AFL, all data inline) and the Visa Debit Chase split flow (inline `57` + supplementary AFL record with no PAN-bearing tags).
+- Post-review remediation: `Gpo.inlineTlv` filter curated to exclude single-use cryptographic tags (`9F26` ARQC, `9F27` CID, `9F10` IAD, `9F36` ATC, `9F4B` SDAD) per `docs/threat-model.md` §19. Real-card transcript fixtures sanitized to drop captured ARQC + IAD bytes. iOS `EmvReader` mirrored the Android union-of-TLV-sources refactor (parity per CLAUDE.md §8). Test discipline: `pan.unmasked()` assertions converted to `Pan` value-class equality so failure rendering masks; `parse(aid, tlvNodes)` overload gained property/fuzz coverage (1000 random-input rounds); `5A`-precedence test rewritten with divergent canonical Visa test PANs. Doc hygiene: stale class/method KDocs refreshed across `Gpo`, `SelectAidFci`, `ContactlessReader`. `9F11` Issuer Code Table Index deferral documented in `extractApplicationLabel` + follow-up issue #61 filed. DRY: shared `firstChildByTag` helper extracted to `extract/internal/TlvSearch.kt`.
+
 ### Added — PDOL-aware GPO + EmvParser AID injection (#57)
 - Reader now reads tag `9F38` from the SELECT AID FCI response, parses the DOL format, builds a structurally-valid PDOL response from terminal defaults (TTQ, country, currency, date, type, UN), wraps in `83 [Lc] [response]`, and sends it as the GPO command body. Cards return records instead of `6A 80` / `69 85`.
 - New 2-arg overload `EmvParser.parse(aid: Aid, records: List<ByteArray>)` (and the matching `parseOrThrow`). Real cards put `4F` (AID) in PPSE / SELECT AID FCI but NOT in READ RECORD records — the reader passes the PPSE-extracted AID directly. Existing 1-arg `parse(records)` keeps its behavior for v0.1.x synthetic fixtures.

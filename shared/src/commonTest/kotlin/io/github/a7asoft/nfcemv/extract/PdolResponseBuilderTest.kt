@@ -13,7 +13,7 @@ class PdolResponseBuilderTest {
     fun `build returns the 4 TTQ bytes for a 9F66 04 entry from default config`() {
         val pdol = Pdol.parseOrThrow(byteArrayOf(0x9F.toByte(), 0x66, 0x04))
         val response = PdolResponseBuilder.build(pdol, TerminalConfig.default(), txDate, un)
-        assertContentEquals(byteArrayOf(0x36, 0x00, 0x80.toByte(), 0x00), response)
+        assertContentEquals(byteArrayOf(0x36, 0x00, 0x00, 0x00), response)
     }
 
     @Suppress("LongMethod")
@@ -37,7 +37,7 @@ class PdolResponseBuilderTest {
         val response = PdolResponseBuilder.build(pdol, TerminalConfig.default(), txDate, un)
         val expected = byteArrayOf(
             // 9F66 (4) — TTQ
-            0x36, 0x00, 0x80.toByte(), 0x00,
+            0x36, 0x00, 0x00, 0x00,
             // 9F02 (6) — amount auth
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             // 9F03 (6) — amount other
