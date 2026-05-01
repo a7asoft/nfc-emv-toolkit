@@ -4,6 +4,8 @@ All notable changes to this project will be documented here. The format follows 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-30
+
 ### Changed — Real-card support: GPO inline TLV + Track 2 fallbacks + TTQ default (#59)
 Architectural fix for Visa qVSDC kernel-3 cards (Chase Credit + Debit observed). Captured the real-card APDU traffic via diagnostic logging and corrected the model of what `EmvParser` parses.
 

@@ -15,7 +15,7 @@
     Native Android (Kotlin) + iOS (Swift) · KMP-shared parser          │
 │                                                                      │
 +   ❯ status                                                           │
-    [WIP] v0.1.0 in development · API not stable yet                   │
+    v0.3.0 · real-card support shipped · pre-1.0 (API may break)       │
 │                                                                      │
 +   ❯ license                                                          │
     Apache 2.0                                                         │
@@ -30,7 +30,7 @@
   <img src="https://img.shields.io/badge/Swift-F05138?style=flat-square&logo=swift&logoColor=white" />
   <img src="https://img.shields.io/badge/KMP-7F52FF?style=flat-square&logo=kotlin&logoColor=white" />
   <img src="https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square" />
-  <img src="https://img.shields.io/badge/Status-WIP-orange?style=flat-square" />
+  <img src="https://img.shields.io/badge/Release-v0.3.0-blue?style=flat-square" />
 </p>
 
 ---
