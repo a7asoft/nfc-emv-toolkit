@@ -1,32 +1,13 @@
 import SwiftUI
 
+/// Thin wrapper that hosts ``ReaderScreen`` inside the window. Kept
+/// separate from ``iOSApp`` so the screen can be previewed without
+/// bringing in the production view-model wiring.
 struct ContentView: View {
-    @State private var showContent = false
+
+    @ObservedObject var viewModel: ReaderViewModel
+
     var body: some View {
-        VStack {
-            Button("Click me!") {
-                withAnimation {
-                    showContent = !showContent
-                }
-            }
-
-            if showContent {
-                VStack(spacing: 16) {
-                    Image(systemName: "swift")
-                        .font(.system(size: 200))
-                        .foregroundColor(.accentColor)
-                    Text("nfc-emv-toolkit sample")
-                }
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding()
-    }
-}
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
+        ReaderScreen(viewModel: viewModel)
     }
 }

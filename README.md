@@ -264,6 +264,20 @@ nfc-emv-toolkit/
 
 iOS: open `iosApp/iosApp.xcodeproj` in Xcode and run on a real device (NFC requires hardware).
 
+## iOS development
+
+The iOS sample app (`iosApp/`) consumes the `EmvReader` Swift package via a local SPM reference (`../ios`). The `EmvReader` package's binary target points at `shared/build/XCFrameworks/release/Shared.xcframework` — produced by Gradle, not SPM.
+
+**Branch-switch footgun:** `Shared.xcframework` is a binary artifact local to your working directory. After switching to a branch with a different Kotlin source tree (e.g. `main` ↔ `develop` ↔ feature branches), the on-disk framework may be stale. Re-run:
+
+```bash
+./gradlew :shared:assembleSharedReleaseXCFramework
+```
+
+after every branch switch before opening Xcode, or `iosApp` will link against the previous branch's symbols.
+
+The `iosApp.xcodeproj` "Compile Kotlin Framework" build phase invokes this task automatically on Xcode build, but Xcode's incremental build detection may skip it. Manual invocation guarantees a fresh framework.
+
 ## Threat model
 
 See [`docs/threat-model.md`](./docs/threat-model.md). TL;DR: assume the device is **not** a certified EMV terminal. Never ship this lib as a payment authorizer.
