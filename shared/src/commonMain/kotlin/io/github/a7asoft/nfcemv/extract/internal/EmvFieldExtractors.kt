@@ -109,17 +109,31 @@ internal fun extractExpiry(node: Tlv.Primitive): ExtractResult<YearMonth> {
  * it raw; downstream code should route it through a typed extractor
  * or mask before any persistence / transmission. `EmvCard.toString`
  * enforces this by emitting a length-only placeholder.
+ *
+ * **Limitation — `9F 11` Issuer Code Table Index NOT honored.** EMV
+ * Book 4 §3 specifies that `5F 20` Cardholder Name encoding follows
+ * the issuer-declared `9F 11` Issuer Code Table Index. This extractor
+ * unconditionally decodes as Latin-1. See [extractApplicationLabel]
+ * for the same caveat applied to `9F 12`.
  */
 internal fun extractCardholderName(node: Tlv.Primitive): String? =
     decodeTrimmedLatin1(node.copyValue())
 
 /**
- * Decode tag `50` (Application Label) — `AN` ISO-8859-1 bytes,
- * right-padded with `0x20`. Returns `null` when the value is empty
- * or contains only spaces.
+ * Decode tag `50` (Application Label) or `9F 12` (Application Preferred
+ * Name) value bytes as ISO/IEC 8859-1 trimmed text. Returns null if the
+ * byte array is empty or trims to an empty string.
  *
  * Application Label is operational metadata, not PCI data — safe to
  * log raw.
+ *
+ * **Limitation — `9F 11` Issuer Code Table Index NOT honored.** EMV
+ * Book 4 §3 specifies that `9F 12` (and `5F 20` Cardholder Name)
+ * encoding follows the issuer-declared `9F 11` Issuer Code Table
+ * Index, which may select ISO 8859-2..16. This extractor unconditionally
+ * decodes as Latin-1 (the `9F 11`-absent default). Glyph mis-rendering
+ * may occur for issuers that declare a non-Latin-1 code table.
+ * Honoring `9F 11` is deferred to a future issue.
  */
 internal fun extractApplicationLabel(node: Tlv.Primitive): String? =
     decodeTrimmedLatin1(node.copyValue())
