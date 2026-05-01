@@ -255,6 +255,7 @@ public final class io/github/a7asoft/nfcemv/extract/EmvCard {
 	public final fun getBrand ()Lio/github/a7asoft/nfcemv/brand/EmvBrand;
 	public final fun getCardholderName ()Ljava/lang/String;
 	public final fun getExpiry ()Lkotlinx/datetime/YearMonth;
+	public final fun getMaskedPan ()Ljava/lang/String;
 	public final fun getPan-o5U9eh4 ()Ljava/lang/String;
 	public final fun getTrack2 ()Lio/github/a7asoft/nfcemv/extract/Track2;
 	public fun hashCode ()I

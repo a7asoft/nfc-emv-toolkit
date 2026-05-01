@@ -43,6 +43,22 @@ public data class EmvCard internal constructor(
     public val track2: Track2?,
     public val aid: Aid,
 ) {
+    /**
+     * PCI-DSS-compliant masked PAN — first 6 (BIN) + asterisks + last 4.
+     *
+     * **Why this exists:** Kotlin/Native's ObjC bridge unboxes
+     * [Pan] (a `@JvmInline value class<String>`) to a plain `NSString`
+     * carrying the raw PAN. Swift code calling `String(describing:
+     * card.pan)` would receive the raw PAN, bypassing [Pan]'s
+     * `toString()` masking. This getter exposes the masked form as a
+     * regular [String] that survives the ObjC bridge intact (issue #68).
+     *
+     * Kotlin call sites should prefer `pan.toString()` directly — the
+     * value class boxes correctly when `toString` is called on a
+     * Kotlin reference.
+     */
+    public val maskedPan: String get() = pan.toString()
+
     override fun toString(): String =
         "EmvCard(pan=$pan, expiry=$expiry, cardholderName=${maskCardholderName(cardholderName)}, " +
             "brand=$brand, applicationLabel=$applicationLabel, track2=$track2, aid=$aid)"

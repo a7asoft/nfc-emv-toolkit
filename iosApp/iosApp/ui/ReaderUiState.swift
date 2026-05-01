@@ -47,15 +47,22 @@ public enum ReaderUiState: @unchecked Sendable {
 /// PCI-safe display projection of ``Shared/EmvCard``.
 ///
 /// Stores already-stringified fields so the UI never has access to the
-/// unmasked PAN. The `pan` field carries the result of
-/// `String(describing:)` on the Kotlin `Pan` value class — that
-/// `toString()` masks per PCI DSS Req 3.4 (first-6 + last-4).
+/// unmasked PAN. The `pan` field carries `EmvCard.maskedPan` — a
+/// regular Kotlin `String` getter that calls `Pan.toString()` on the
+/// Kotlin side (where the `@JvmInline value class` boxes correctly)
+/// and exposes the PCI DSS Req 3.4 first-6 + last-4 mask intact across
+/// the ObjC bridge (issue #68).
+///
+/// `String(describing: card.pan)` MUST NOT be used: Kotlin/Native
+/// unboxes `Pan` through the ObjC bridge to a plain `NSString` carrying
+/// the raw PAN, bypassing the masking contract.
 ///
 /// NEVER call `card.pan.unmasked()` when constructing a summary — the
 /// sample app explicitly does not show raw PAN even with the card in
 /// hand (mirrors the Android `CardSummary` discipline).
 public struct EmvCardSummary: Equatable {
-    /// Masked PAN string from the Kotlin `Pan.toString()`.
+    /// Masked PAN string from `EmvCard.maskedPan` (Kotlin-side
+    /// `Pan.toString()` proxy that survives the ObjC bridge).
     public let pan: String
     /// Brand display name (e.g. "Visa", "Mastercard", "Unknown").
     public let brand: String
@@ -76,12 +83,14 @@ public struct EmvCardSummary: Equatable {
 extension EmvCardSummary {
     /// Build a summary from the bridged Kotlin ``Shared/EmvCard``.
     ///
-    /// All field accesses go through the Kotlin `description` (i.e.
-    /// `toString()`) because that path is the one with the masking
-    /// contract baked in.
+    /// `pan` is read via `card.maskedPan`, a Kotlin-side `String`
+    /// getter that proxies `Pan.toString()` so the masking contract
+    /// survives the ObjC bridge (#68). Other PAN-bearing fields go
+    /// through the Kotlin `description` (`toString()`) which has
+    /// masking baked in.
     public static func from(_ card: EmvCard) -> EmvCardSummary {
         return EmvCardSummary(
-            pan: String(describing: card.pan),
+            pan: card.maskedPan,
             brand: card.brand.displayName,
             expiry: String(describing: card.expiry),
             cardholderName: card.cardholderName,
