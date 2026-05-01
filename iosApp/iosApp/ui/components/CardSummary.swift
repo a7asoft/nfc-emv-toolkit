@@ -27,7 +27,7 @@ public struct CardSummary: View {
             field(label: "Cardholder", value: card.cardholderName ?? "<not provided>")
             field(label: "Label", value: card.applicationLabel ?? "<not provided>")
             field(label: "AID", value: card.aidHex)
-            field(label: "Track 2", value: card.hasTrack2 ? "present (masked)" : "<not provided>")
+            field(label: "Track 2", value: card.hasTrack2 ? "present" : "<not provided>")
             Button("Read another card", action: onTryAgain)
                 .buttonStyle(.borderedProminent)
                 .frame(maxWidth: .infinity)

@@ -11,7 +11,7 @@ import Shared
 ///
 /// The associated ``EmvCardSummary`` is a PCI-safe display projection
 /// of ``Shared/EmvCard`` — it never carries the unmasked PAN.
-public enum ReaderUiState {
+public enum ReaderUiState: @unchecked Sendable {
 
     /// Device has no NFC hardware (or runs on simulator). Permanent
     /// "this app needs NFC" message; no actionable CTA.

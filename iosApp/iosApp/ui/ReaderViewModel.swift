@@ -24,6 +24,14 @@ public final class ReaderViewModel: ObservableObject {
     private let readerFactory: () -> AsyncStream<ReaderState>
     private var activeTask: Task<Void, Never>?
 
+    #if DEBUG
+    /// Test-only handle on the in-flight scan task so callers can
+    /// `await viewModel.currentScanTask?.value` for deterministic
+    /// completion instead of polling. Replaces the earlier
+    /// `Task.sleep`-based `waitUntil` busy loop in tests.
+    internal var currentScanTask: Task<Void, Never>? { activeTask }
+    #endif
+
     /// Build a view-model with explicit dependencies.
     ///
     /// - Parameters:
@@ -62,11 +70,22 @@ public final class ReaderViewModel: ObservableObject {
     /// each ``ReaderState`` is mapped into the UI state.
     public func startScan() {
         guard case .idle = uiState else { return }
+        // why: cancel any prior in-flight scan BEFORE mutating uiState or
+        // building a new stream. Otherwise a still-running prior task can
+        // write its terminal state to uiState after the new scan has
+        // already moved on (silent state-clobber on rapid double-tap).
+        activeTask?.cancel()
+        activeTask = nil
         uiState = .scanning
         let stream = readerFactory()
-        activeTask?.cancel()
-        activeTask = Task { [weak self] in
-            await self?.consume(stream)
+        // why: strong stream capture so the AsyncStream is owned by the
+        // running Task. A prior `[weak self]` capture could drop the
+        // stream silently if self deallocated, leaving the NFC session
+        // active with no consumer to invalidate it. `self` is implicitly
+        // strongly captured here, which is safe because the VM is owned
+        // by an @StateObject and outlives any of its scan tasks.
+        activeTask = Task { [stream] in
+            await self.consume(stream)
         }
     }
 

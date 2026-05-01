@@ -23,7 +23,7 @@ public struct ReaderScreen: View {
             }
             .padding(24)
         }
-        .onAppear { viewModel.refreshAvailability() }
+        .task { viewModel.refreshAvailability() }
     }
 
     @ViewBuilder
