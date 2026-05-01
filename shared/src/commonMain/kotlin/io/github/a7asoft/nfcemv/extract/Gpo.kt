@@ -14,6 +14,13 @@ import io.github.a7asoft.nfcemv.tlv.TlvParseResult
  * Carries:
  * - [applicationInterchangeProfile] — EMV tag `82` raw value (always 2 bytes).
  * - [afl] — already-validated [Afl] derived from the response payload.
+ * - [inlineTlv] — format-2 (`77` template) application-data children
+ *   excluding AIP, AFL, and sensitive cryptographic tags (ARQC `9F26`,
+ *   CID `9F27`, IAD `9F10`, ATC `9F36`, SDAD `9F4B`). Format-1 (`80`)
+ *   returns an empty list. Callers iterating this list and invoking
+ *   [Tlv.Primitive.copyValue] obtain raw bytes — for tag `57` (Track 2)
+ *   those bytes carry an embedded PAN and MUST be treated as PCI scope.
+ *   Prefer consuming the parsed [EmvCard] surfaces.
  *
  * Construction goes through [Gpo.parse] / [Gpo.parseOrThrow]. Both
  * response formats (tag `80` format-1 and tag `77` format-2) are handled.
@@ -87,6 +94,22 @@ private val TAG_AIP = Tag.fromHex("82")
 private val TAG_AFL = Tag.fromHex("94")
 private const val AIP_BYTES: Int = 2
 
+// why: per docs/threat-model.md §19+§28, ARQC / CID / IAD / ATC / SDAD
+// are single-use cryptographic context and must never reach a public
+// List<Tlv> surface where Tlv.Primitive.copyValue() would expose raw
+// bytes. AIP (82) and AFL (94) are already extracted to dedicated
+// typed fields. Excluding them all from inlineTlv keeps the public
+// surface to display-safe application data only.
+private val INLINE_TLV_EXCLUSIONS: Set<Tag> = setOf(
+    TAG_AIP,                   // 82  — extracted to Gpo.applicationInterchangeProfile
+    TAG_AFL,                   // 94  — extracted to Gpo.afl
+    Tag.fromHex("9F26"),       // ARQC
+    Tag.fromHex("9F27"),       // Cryptogram Information Data (CID)
+    Tag.fromHex("9F10"),       // Issuer Application Data (IAD)
+    Tag.fromHex("9F36"),       // Application Transaction Counter (ATC)
+    Tag.fromHex("9F4B"),       // Signed Dynamic Application Data (SDAD)
+)
+
 /**
  * Parse [bytes] (the data field of a `GET PROCESSING OPTIONS` response,
  * status-word stripped) into a typed [GpoResult].
@@ -129,6 +152,12 @@ private fun parseFormat1(node: Tlv.Primitive): GpoResult {
     return composeGpo(aip, aflBytes, inlineTlv = emptyList())
 }
 
+// why: per EMV Contactless Book C-3 (Visa kernel-3) §5.4 GPO response
+// processing — when AIP indicates MSD-only mode and application data
+// is delivered inline in the format-2 template, AFL is OPTIONAL.
+// Treating absent AFL as Afl(emptyList()) lets MSD-only flows succeed
+// without READ RECORD, matching the Visa Chase real-card capture
+// (issue #59).
 @Suppress("ReturnCount", "CyclomaticComplexMethod")
 private fun parseFormat2(node: Tlv.Constructed): GpoResult {
     val aipNode = findChild(node, TAG_AIP) ?: return GpoResult.Err(GpoError.MissingAip)
@@ -136,12 +165,12 @@ private fun parseFormat2(node: Tlv.Constructed): GpoResult {
     if (aip.size != AIP_BYTES) return GpoResult.Err(GpoError.InvalidAipLength(aip.size))
     val aflNode = findChild(node, TAG_AFL)
     val aflBytes = aflNode?.copyValue() ?: ByteArray(0)
-    val inline = node.children.filter { it.tag != TAG_AIP && it.tag != TAG_AFL }
+    val inline = node.children.filter { it.tag !in INLINE_TLV_EXCLUSIONS }
     return composeGpo(aip, aflBytes, inline)
 }
 
 // why: empty-AFL fast-path is a spec invariant (EMV Book 3 §10 / EMVCo
-// Book C-3 §5.4.3 — AFL is OPTIONAL when format-2 carries application
+// Book C-3 §5.4 — AFL is OPTIONAL when format-2 carries application
 // data inline). The `when` arms then cover the AFL parse outcomes.
 @Suppress("CyclomaticComplexMethod")
 private fun composeGpo(aip: ByteArray, aflBytes: ByteArray, inlineTlv: List<Tlv>): GpoResult {

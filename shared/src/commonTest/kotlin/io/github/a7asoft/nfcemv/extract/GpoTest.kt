@@ -213,6 +213,42 @@ class GpoTest {
         assertEquals(emptyList(), ok.gpo.inlineTlv)
     }
 
+    @Test
+    fun `parse format-2 inlineTlv excludes ARQC IAD ATC and CID`() {
+        // why: per docs/threat-model.md §19+§28, ARQC (9F 26), CID
+        // (9F 27), and IAD (9F 10) are single-use cryptographic context
+        // and must never reach a public List<Tlv> surface where a
+        // careless caller could persist them via Tlv.Primitive.copyValue().
+        // ATC (9F 36) is replay-window-relevant. Filter excludes them
+        // alongside AIP (82) and AFL (94) which the parser already
+        // consumes structurally.
+        // 77 24
+        //   82 02 00 80                              (4 bytes)
+        //   94 04 08 01 01 00                        (6 bytes)
+        //   9F 26 04 00 00 00 00                     (7 bytes)
+        //   9F 27 01 80                              (4 bytes)
+        //   9F 10 02 00 00                           (5 bytes)
+        //   9F 36 02 00 01                           (5 bytes)
+        //   5F 20 02 41 42                           (5 bytes)
+        // total inner = 36 = 0x24
+        val ok = assertIs<GpoResult.Ok>(
+            Gpo.parse(
+                byteArrayOf(
+                    0x77, 0x24,
+                    0x82.toByte(), 0x02, 0x00, 0x80.toByte(),
+                    0x94.toByte(), 0x04, 0x08, 0x01, 0x01, 0x00,
+                    0x9F.toByte(), 0x26, 0x04, 0x00, 0x00, 0x00, 0x00,
+                    0x9F.toByte(), 0x27, 0x01, 0x80.toByte(),
+                    0x9F.toByte(), 0x10, 0x02, 0x00, 0x00,
+                    0x9F.toByte(), 0x36, 0x02, 0x00, 0x01,
+                    0x5F, 0x20, 0x02, 0x41, 0x42,
+                ),
+            ),
+        )
+        assertEquals(1, ok.gpo.inlineTlv.size)
+        assertEquals(io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F20"), ok.gpo.inlineTlv[0].tag)
+    }
+
     private companion object {
         const val GPO_FUZZ_SEED: Int = 0x6_F0
         const val FUZZ_ITERATIONS: Int = 1_000
