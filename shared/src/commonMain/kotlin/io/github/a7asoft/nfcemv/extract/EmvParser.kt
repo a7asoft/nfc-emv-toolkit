@@ -116,6 +116,12 @@ public object EmvParser {
      *
      * Returns [EmvCardResult.Err]\([EmvCardError.EmptyInput]) when
      * [tlvNodes] is empty.
+     *
+     * On the JVM the `@JvmName("parseTlv")` annotation disambiguates this
+     * overload from the `parse(aid, apduResponses: List<ByteArray>)`
+     * variant — both erase to `List` at the JVM signature level because
+     * `Aid` is a `@JvmInline value class<String>`. Kotlin call sites see
+     * `parse`; Java consumers see `parseTlv`.
      */
     @JvmName("parseTlv")
     public fun parse(aid: Aid, tlvNodes: List<Tlv>): EmvCardResult {
@@ -147,6 +153,11 @@ public object EmvParser {
     /**
      * Parse [tlvNodes] using [aid] or throw [IllegalArgumentException].
      * Mirrors [parseOrThrow] for the TLV-native overload.
+     *
+     * On the JVM the `@JvmName("parseOrThrowTlv")` annotation disambiguates
+     * this overload from the `parseOrThrow(aid, apduResponses: List<ByteArray>)`
+     * variant — see [parse] for the underlying reason. Kotlin call sites
+     * see `parseOrThrow`; Java consumers see `parseOrThrowTlv`.
      */
     @JvmName("parseOrThrowTlv")
     public fun parseOrThrow(aid: Aid, tlvNodes: List<Tlv>): EmvCard =
@@ -183,10 +194,7 @@ public object EmvParser {
             is RequiredOutcome.Ok -> r.fields
             is RequiredOutcome.Err -> return EmvCardResult.Err(r.error)
         }
-        val optional = when (val r = extractOptionalFields(nodes, track2)) {
-            is OptionalOutcome.Ok -> r.fields
-            is OptionalOutcome.Err -> return EmvCardResult.Err(r.error)
-        }
+        val optional = extractOptionalFields(nodes, track2)
         return EmvCardResult.Ok(composeCard(required, optional))
     }
 
@@ -218,11 +226,6 @@ public object EmvParser {
     private sealed interface RequiredOutcome {
         data class Ok(val fields: RequiredFields) : RequiredOutcome
         data class Err(val error: EmvCardError) : RequiredOutcome
-    }
-
-    private sealed interface OptionalOutcome {
-        data class Ok(val fields: OptionalFields) : OptionalOutcome
-        data class Err(val error: EmvCardError) : OptionalOutcome
     }
 
     private sealed interface AidOutcome {
@@ -298,12 +301,14 @@ public object EmvParser {
      * Resolve PAN with the EMV-canonical fallback chain:
      *
      * 1. If standalone tag `5A` is present, decode it via [extractPan].
-     * 2. Else if [track2] was successfully parsed from tag `57`, use
-     *    its embedded `pan`. Per IDTECH knowledge base "Why aren't tags
-     *    57 and 5A returned" and the EMV Book 3 record layout, tag
-     *    `5A` is OPTIONAL when tag `57` is present — the embedded PAN
-     *    is the canonical source.
+     * 2. Else if [track2] was successfully parsed from tag `57`, use its
+     *    embedded `pan`. Per EMV Book 3 §6.5.10 / Annex A, when tag `57`
+     *    is present its embedded PAN is canonical; tag `5A` MAY be omitted
+     *    in practice (observed: Visa Chase MSD-only flow per issue #59).
      * 3. Else fail `MissingRequiredTag(5A)`.
+     *
+     * The parser does NOT cross-validate `5A` ≡ Track 2 PAN even when
+     * both are present (see class KDoc out-of-scope list).
      */
     @Suppress("CyclomaticComplexMethod")
     // why: 5-branch fallback chain (5A present / extractor Ok / extractor
@@ -326,10 +331,10 @@ public object EmvParser {
      * Resolve expiry with the EMV-canonical fallback chain:
      *
      * 1. If standalone tag `5F 24` is present, decode it via [extractExpiry].
-     * 2. Else if [track2] was successfully parsed from tag `57`, use
-     *    its [Track2.expiry]. Per ISO 7813 + EMV Book 3, the expiry in
-     *    Track 2 (positions YYMM after the `D` separator) is canonical
-     *    when standalone `5F 24` is absent.
+     * 2. Else if [track2] was successfully parsed from tag `57`, use its
+     *    [Track2.expiry]. Per ISO/IEC 7813 §3.2 (Track 2 layout), the
+     *    expiry occupies positions YYMM after the `D` separator and is
+     *    canonical when standalone `5F 24` is absent.
      * 3. Else fail `MissingRequiredTag(5F24)`.
      */
     @Suppress("CyclomaticComplexMethod")
@@ -349,13 +354,10 @@ public object EmvParser {
         return ExpiryOutcome.Err(EmvCardError.MissingRequiredTag("5F24"))
     }
 
-    private fun extractOptionalFields(
-        nodes: List<Tlv>,
-        track2: Track2?,
-    ): OptionalOutcome {
+    private fun extractOptionalFields(nodes: List<Tlv>, track2: Track2?): OptionalFields {
         val cardholderName = (findFirst(nodes, TAG_CARDHOLDER) as? Tlv.Primitive)?.let { extractCardholderName(it) }
         val applicationLabel = resolveApplicationLabel(nodes)
-        return OptionalOutcome.Ok(OptionalFields(cardholderName, applicationLabel, track2))
+        return OptionalFields(cardholderName, applicationLabel, track2)
     }
 
     /**
