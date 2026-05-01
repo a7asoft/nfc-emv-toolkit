@@ -4,6 +4,14 @@ All notable changes to this project will be documented here. The format follows 
 
 ## [Unreleased]
 
+### Added — iOS sample app integration (#65)
+- `iosApp/` now ships a working SwiftUI sample app that drives the `EmvReader` Swift package end-to-end. Mirror of the Android composeApp integration (#55). The previous KMP wizard scaffold (`Image(systemName: "swift")` placeholder) is replaced with a `ReaderScreen` that walks through PPSE → SELECT AID → GPO → READ RECORD and renders the parsed `EmvCard` via a PCI-safe `EmvCardSummary` projection.
+- New `ReaderViewModel: ObservableObject` (main-actor) decouples NFC session lifecycle from the SwiftUI view tree. Dependencies are injected via initialiser closures (`NfcAvailability` protocol + `() -> AsyncStream<ReaderState>` factory), making the type unit-testable without a simulator. The factory closure is the entire reader-stream abstraction — `EmvReader` already owns the `NFCTagReaderSession` lifecycle internally, so iosApp does not re-wrap it.
+- Four new SwiftUI components — `StatusHeader`, `ReadingProgress`, `CardSummary`, `ErrorPanel` — render the per-state UI with parity to the Android composeApp. `CardSummary` displays only masked PAN (via `Pan.toString()`); the unmasked accessor is never invoked.
+- `iosApp.entitlements` declares `com.apple.developer.nfc.readersession.formats = ["TAG"]`. `Info.plist` declares `NFCReaderUsageDescription` and the PPSE select identifier `325041592E5359532E4444463031` per `com.apple.developer.nfc.readersession.iso7816.select-identifiers` (Apple's iOS 13+ requirement).
+- The Xcode project now consumes `EmvReader` via a local Swift package reference (`../ios`); `Shared.xcframework` is transitively embedded by SPM. The `Compile Kotlin Framework` shell phase now invokes `:shared:assembleSharedReleaseXCFramework` to produce the binary target SPM resolves against (no longer `embedAndSignAppleFrameworkForXcode`, since SPM handles embedding).
+- Out-of-scope per CLAUDE.md §1: no kernel certification, no online auth, no ARQC validation. The sample is a read-only display for parsed contactless EMV data.
+
 ## [0.3.0] - 2026-04-30
 
 ### Changed — Real-card support: GPO inline TLV + Track 2 fallbacks + TTQ default (#59)

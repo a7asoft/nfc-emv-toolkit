@@ -4,5 +4,11 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NFCReaderUsageDescription</key>
+	<string>Read contactless EMV card data via NFC for parsing and display. The app does not transmit, store, or authorize transactions.</string>
+	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+	<array>
+		<string>325041592E5359532E4444463031</string>
+	</array>
 </dict>
 </plist>
