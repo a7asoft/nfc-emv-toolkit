@@ -2,6 +2,7 @@ package io.github.a7asoft.nfcemv.reader
 
 import io.github.a7asoft.nfcemv.brand.Aid
 import io.github.a7asoft.nfcemv.extract.EmvCardError
+import io.github.a7asoft.nfcemv.extract.Pan
 import io.github.a7asoft.nfcemv.extract.TerminalConfig
 import io.github.a7asoft.nfcemv.reader.internal.ApduCommands
 import io.github.a7asoft.nfcemv.reader.internal.FakeApduTransport
@@ -241,7 +242,7 @@ class ContactlessReaderTest {
         val states = ContactlessReader(transport).read().toList()
         val done = assertIs<ReaderState.Done>(states.last())
         assertEquals(Aid.fromHex("A0000000031010"), done.card.aid)
-        assertEquals("4111111111111111", done.card.pan.unmasked())
+        assertEquals(Pan.parseOrThrow("4111111111111111"), done.card.pan)
     }
 
     @Test
@@ -324,7 +325,8 @@ class ContactlessReaderTest {
         val states = ContactlessReader(transport).read().toList()
         val done = assertIs<ReaderState.Done>(states.last())
         assertEquals(Aid.fromHex("A0000000031010"), done.card.aid)
-        assertEquals("4111111111111111", done.card.pan.unmasked())
+        assertEquals(Pan.parseOrThrow("4111111111111111"), done.card.pan)
+        assertTrue(transport.closed)
     }
 
     @Test
@@ -347,7 +349,8 @@ class ContactlessReaderTest {
         val states = ContactlessReader(transport).read().toList()
         val done = assertIs<ReaderState.Done>(states.last())
         assertEquals(Aid.fromHex("A0000000031010"), done.card.aid)
-        assertEquals("4012888888881881", done.card.pan.unmasked())
+        assertEquals(Pan.parseOrThrow("4012888888881881"), done.card.pan)
+        assertTrue(transport.closed)
     }
 
     // ---- helpers -------------------------------------------------------

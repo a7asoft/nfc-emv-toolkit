@@ -47,8 +47,16 @@ import kotlin.random.Random
  * - Builds a PDOL response from [TerminalConfig] (or the empty `83 00`
  *   form when the card omits `9F38`) and issues
  *   `GET PROCESSING OPTIONS`.
- * - Walks the AFL, issuing one `READ RECORD` per record.
- * - Hands the accumulated record stream + the AID to [EmvParser].
+ * - Walks the AFL (which may be empty for MSD-only cards), issuing one
+ *   `READ RECORD` per record and decoding each successful body to TLV.
+ * - Unions the SELECT AID FCI inline TLV, the GPO body inline TLV, and
+ *   the AFL READ RECORD TLV nodes; hands the merged node list and the
+ *   AID to [EmvParser.parse].
+ *
+ * MSD-only cards (Visa qVSDC kernel-3) return AIP + Track 2 inline in
+ * the GPO body with NO AFL — those flows produce zero `READ RECORD`
+ * APDUs. See `:shared/extract/Gpo.inlineTlv` for the architectural
+ * union pattern.
  *
  * Exposed as a `Flow<ReaderState>` so consumers can drive a UI off
  * progress states. Terminal states are [ReaderState.Done] (success) and
@@ -80,8 +88,8 @@ public class ContactlessReader internal constructor(
      * Returns a cold flow driving the read with [config] supplying the
      * terminal-side PDOL response defaults (TTQ, country, currency,
      * etc.). Use this overload to override the standard defaults — for
-     * example to flip TTQ bits when validating against a card that
-     * rejects the conservative `36 00 80 00`.
+     * example to set a non-default TTQ when validating against a card
+     * that rejects the conservative `36 00 00 00`.
      */
     public fun read(config: TerminalConfig): Flow<ReaderState> = flow { drive(config) }
         .flowOn(Dispatchers.IO)
