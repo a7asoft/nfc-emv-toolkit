@@ -1,5 +1,6 @@
 package io.github.a7asoft.nfcemv.extract
 
+import io.github.a7asoft.nfcemv.extract.internal.firstChildByTag
 import io.github.a7asoft.nfcemv.tlv.Strictness
 import io.github.a7asoft.nfcemv.tlv.Tag
 import io.github.a7asoft.nfcemv.tlv.Tlv
@@ -160,10 +161,11 @@ private fun parseFormat1(node: Tlv.Primitive): GpoResult {
 // (issue #59).
 @Suppress("ReturnCount", "CyclomaticComplexMethod")
 private fun parseFormat2(node: Tlv.Constructed): GpoResult {
-    val aipNode = findChild(node, TAG_AIP) ?: return GpoResult.Err(GpoError.MissingAip)
+    val aipNode = (firstChildByTag(node, TAG_AIP) as? Tlv.Primitive)
+        ?: return GpoResult.Err(GpoError.MissingAip)
     val aip = aipNode.copyValue()
     if (aip.size != AIP_BYTES) return GpoResult.Err(GpoError.InvalidAipLength(aip.size))
-    val aflNode = findChild(node, TAG_AFL)
+    val aflNode = firstChildByTag(node, TAG_AFL) as? Tlv.Primitive
     val aflBytes = aflNode?.copyValue() ?: ByteArray(0)
     val inline = node.children.filter { it.tag !in INLINE_TLV_EXCLUSIONS }
     return composeGpo(aip, aflBytes, inline)
@@ -179,17 +181,6 @@ private fun composeGpo(aip: ByteArray, aflBytes: ByteArray, inlineTlv: List<Tlv>
         is AflResult.Ok -> GpoResult.Ok(Gpo(aip, parsed.afl, inlineTlv))
         is AflResult.Err -> GpoResult.Err(GpoError.AflRejected(parsed.error))
     }
-}
-
-// why: scan-and-return loop; CC includes the type-test plus tag-match
-// guard. Splitting into a helper would just ferry `parent` and `tag`
-// through a second signature.
-@Suppress("CyclomaticComplexMethod")
-private fun findChild(parent: Tlv.Constructed, tag: Tag): Tlv.Primitive? {
-    for (child in parent.children) {
-        if (child is Tlv.Primitive && child.tag == tag) return child
-    }
-    return null
 }
 
 // why: exhaustive `when` over the sealed [GpoError] catalogue (CLAUDE.md §3.2).
