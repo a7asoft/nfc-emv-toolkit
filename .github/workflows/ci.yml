@@ -36,7 +36,7 @@ jobs:
     name: KMP build & test
     needs: lint
     runs-on: macos-14
-    timeout-minutes: 30
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-java@v5
