@@ -4,7 +4,9 @@ import io.github.a7asoft.nfcemv.brand.Aid
 import io.github.a7asoft.nfcemv.brand.EmvBrand
 import kotlinx.datetime.YearMonth
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -36,7 +38,7 @@ class EmvParserTest {
     @Test
     fun `parse extracts the PAN from the canonical fixture`() {
         val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
-        assertEquals("4111111111111111", ok.card.pan.unmasked())
+        assertEquals(Pan.parseOrThrow("4111111111111111"), ok.card.pan)
     }
 
     @Test
@@ -73,7 +75,7 @@ class EmvParserTest {
     fun `parse extracts the Track 2 PAN when tag 57 is present`() {
         val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
         val track2 = assertNotNull(ok.card.track2)
-        assertEquals("4111111111111111", track2.pan.unmasked())
+        assertEquals(Pan.parseOrThrow("4111111111111111"), track2.pan)
     }
 
     @Test
@@ -180,7 +182,7 @@ class EmvParserTest {
     @Test
     fun `parseOrThrow returns the EmvCard for the canonical fixture`() {
         val card = EmvParser.parseOrThrow(listOf(canonicalRecord))
-        assertEquals("4111111111111111", card.pan.unmasked())
+        assertEquals(Pan.parseOrThrow("4111111111111111"), card.pan)
     }
 
     @Test
@@ -281,7 +283,7 @@ class EmvParserTest {
         )
         val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(first, second)))
         val card = ok.card
-        assertEquals("4111111111111111", card.pan.unmasked())
+        assertEquals(Pan.parseOrThrow("4111111111111111"), card.pan)
         assertEquals(YearMonth(2028, 12), card.expiry)
         assertEquals("VISA TEST", card.cardholderName)
         assertEquals("VISA", card.applicationLabel)
@@ -373,6 +375,371 @@ class EmvParserTest {
         val err = assertIs<EmvCardResult.Err>(EmvParser.parse(listOf(raw)))
         val malformed = assertIs<EmvCardError.MalformedPanNibble>(err.error)
         assertEquals(3, malformed.offset)
+    }
+
+    /**
+     * Real-card record: 4F removed, outer 70 length recomputed.
+     * Original canonical inner = 0x3B = 59 bytes. Removing the 9-byte
+     * 4F entry → inner = 50 bytes → 70 32.
+     */
+    private val recordWithoutAid: ByteArray = byteArrayOf(
+        0x70, 0x32,
+        0x5A, 0x08, 0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        0x5F, 0x20, 0x09, 0x56, 0x49, 0x53, 0x41, 0x20, 0x54, 0x45, 0x53, 0x54,
+        0x50, 0x04, 0x56, 0x49, 0x53, 0x41,
+        0x57, 0x0E,
+        0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+    )
+
+    @Test
+    fun `parse with aid uses the injected aid even when records lack 4F`() {
+        val aid = Aid.fromHex("A0000000031010")
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(aid, listOf(recordWithoutAid)))
+        assertEquals(aid, ok.card.aid)
+        assertEquals(EmvBrand.VISA, ok.card.brand)
+    }
+
+    @Test
+    fun `parse with aid still extracts PAN from records`() {
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), listOf(recordWithoutAid)),
+        )
+        assertEquals(Pan.parseOrThrow("4111111111111111"), ok.card.pan)
+    }
+
+    @Test
+    fun `parse 1-arg overload preserves existing fixture behavior`() {
+        // why: pinning back-compat — the canonical fixture (with 4F inline)
+        // continues to parse via the 1-arg overload.
+        val ok = assertIs<EmvCardResult.Ok>(EmvParser.parse(listOf(canonicalRecord)))
+        assertEquals(Aid.fromHex("A0000000031010"), ok.card.aid)
+    }
+
+    @Test
+    fun `parse with aid prefers the injected aid over any 4F in records`() {
+        // why: documented contract — when both are available the injected aid wins.
+        val mastercardAid = Aid.fromHex("A0000000041010")
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(mastercardAid, listOf(canonicalRecord)),
+        )
+        assertEquals(mastercardAid, ok.card.aid)
+    }
+
+    @Test
+    fun `parseOrThrow with aid returns the EmvCard on a valid input`() {
+        val aid = Aid.fromHex("A0000000031010")
+        val card = EmvParser.parseOrThrow(aid, listOf(recordWithoutAid))
+        assertEquals(aid, card.aid)
+    }
+
+    /**
+     * Visa-style record: `4F` AID + `5F24` expiry + `5F20` cardholder
+     * + `50` label + `57` Track 2. NO standalone `5A` PAN. Mirrors
+     * the Visa Chase Debit failure observed in real-card QA (#59).
+     *
+     * Length math (entry size = tag + length + value):
+     *   4F (1+1+7=9) + 5F24 (2+1+3=6) + 5F20 (2+1+9=12)
+     *   + 50 (1+1+4=6) + 57 (1+1+14=16) = 49 bytes inner → 70 31.
+     * (The plan's documented 0x2F undercounted the two-byte tag headers
+     * on 5F24 and 5F20 — recomputed here.)
+     */
+    private val recordWithoutPanTagButWithTrack2: ByteArray = byteArrayOf(
+        0x70, 0x31,
+        0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+        0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        0x5F, 0x20, 0x09, 0x56, 0x49, 0x53, 0x41, 0x20, 0x54, 0x45, 0x53, 0x54,
+        0x50, 0x04, 0x56, 0x49, 0x53, 0x41,
+        0x57, 0x0E,
+        0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+    )
+
+    /**
+     * Same as [recordWithoutPanTagButWithTrack2] minus the `57` entry.
+     * Both `5A` and `57` are absent — must fail MissingRequiredTag(5A).
+     *
+     * Length math: 49 - 16 (57 entry) = 33 bytes inner → 70 21.
+     */
+    private val recordWithoutPanTagAndWithoutTrack2: ByteArray = byteArrayOf(
+        0x70, 0x21,
+        0x4F, 0x07, 0xA0.toByte(), 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+        0x5F, 0x24, 0x03, 0x28, 0x12, 0x31,
+        0x5F, 0x20, 0x09, 0x56, 0x49, 0x53, 0x41, 0x20, 0x54, 0x45, 0x53, 0x54,
+        0x50, 0x04, 0x56, 0x49, 0x53, 0x41,
+    )
+
+    @Test
+    fun `parse falls back to Track2 PAN when tag 5A is absent and tag 57 is present`() {
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(listOf(recordWithoutPanTagButWithTrack2)),
+        )
+        assertEquals(Pan.parseOrThrow("4111111111111111"), ok.card.pan)
+        assertEquals(EmvBrand.VISA, ok.card.brand)
+    }
+
+    @Test
+    fun `parse uses tag 5A directly when both 5A and 57 are present with divergent PANs`() {
+        // why: pin 5A precedence over Track 2 by giving each source a
+        // DIFFERENT canonical Visa test PAN. If resolvePan were inverted
+        // (Track 2 winning), this test would fail. EmvParser KDoc
+        // out-of-scope documents that the parser does NOT cross-validate
+        // the two sources even though EMV Book 3 §6.5.13 mandates
+        // equality on real cards.
+        val track2Bytes = byteArrayOf(
+            0x40, 0x12, 0x88.toByte(), 0x88.toByte(), 0x88.toByte(), 0x88.toByte(), 0x18, 0x81.toByte(),
+            0xD3.toByte(), 0x00, 0x52, 0x20, 0x10, 0x00,
+        )
+        val standalonePan = byteArrayOf(0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11)
+        val expiryBytes = byteArrayOf(0x28, 0x12, 0x31)
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5A"), standalonePan,
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F24"), expiryBytes,
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        assertEquals(Pan.parseOrThrow("4111111111111111"), ok.card.pan)
+    }
+
+    @Test
+    fun `parse fails MissingRequiredTag 5A when both 5A and 57 are absent`() {
+        val err = assertIs<EmvCardResult.Err>(
+            EmvParser.parse(listOf(recordWithoutPanTagAndWithoutTrack2)),
+        )
+        val cause = assertIs<EmvCardError.MissingRequiredTag>(err.error)
+        assertEquals("5A", cause.tagHex)
+    }
+
+    @Test
+    fun `parse with aid and TLV nodes resolves PAN from inline tag 57 alone`() {
+        // why: simulates the union of (GPO format-2 body inline tags) + 0
+        // record TLV — the MSD-only flow where Track 2 is the ONLY
+        // PAN-bearing tag (no 5A, no records). Mirrors Visa Credit Chase
+        // (#59) at the parser level.
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+        )
+        val expiryBytes = byteArrayOf(0x28, 0x12, 0x31)
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F24"), expiryBytes,
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        assertEquals(Pan.parseOrThrow("4111111111111111"), ok.card.pan)
+    }
+
+    @Test
+    fun `parse with aid and TLV nodes returns EmptyInput when nodes list is empty`() {
+        val err = assertIs<EmvCardResult.Err>(
+            EmvParser.parse(
+                Aid.fromHex("A0000000031010"),
+                emptyList<io.github.a7asoft.nfcemv.tlv.Tlv>(),
+            ),
+        )
+        assertEquals(EmvCardError.EmptyInput, err.error)
+    }
+
+    @Test
+    fun `parse falls back to Track2 expiry when tag 5F24 is absent and tag 57 is present`() {
+        // why: real-card observation (#59) — Visa Chase cards omit
+        // standalone tag 5F24 and carry expiry only in Track 2 (positions
+        // YYMM after the D separator). ISO 7813 + EMV Book 3 treat the
+        // Track 2 expiry as canonical when 5F24 is absent.
+        // Track2: PAN 4111111111111111, separator D, expiry 3005 (May 2030),
+        // service 220, discretionary 1000.
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD3.toByte(), 0x00, 0x52, 0x20, 0x10, 0x00,
+        )
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        assertEquals(kotlinx.datetime.YearMonth(2030, 5), ok.card.expiry)
+    }
+
+    @Test
+    fun `parse uses tag 5F24 directly when both 5F24 and 57 are present`() {
+        // why: pin 5F24 precedence over Track2 expiry — they CAN diverge
+        // (parser does not cross-validate per EmvParser KDoc).
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD3.toByte(), 0x00, 0x52, 0x20, 0x10, 0x00,
+        )
+        val expiryBytes = byteArrayOf(0x28, 0x12, 0x31)  // YYMMDD 28-12-31 → Dec 2028
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F24"), expiryBytes,
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        // 5F24 wins (Dec 2028), not Track2 expiry (May 2030).
+        assertEquals(kotlinx.datetime.YearMonth(2028, 12), ok.card.expiry)
+    }
+
+    @Test
+    fun `parse fails MissingRequiredTag 5F24 when both 5F24 and 57 are absent`() {
+        // why: when neither source provides expiry, fail with the
+        // canonical missing-tag error. Mirrors the PAN three-cell matrix.
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5A"),
+                byteArrayOf(0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11),
+            ),
+        )
+        val err = assertIs<EmvCardResult.Err>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        val cause = assertIs<EmvCardError.MissingRequiredTag>(err.error)
+        assertEquals("5F24", cause.tagHex)
+    }
+
+    @Test
+    fun `parse uses 9F12 Application Preferred Name when both 9F12 and 50 are present`() {
+        // why: EMV Book 1 §12.2.2 — preferred name wins over label when
+        // both are present. Real-card observation (#59) — Capital One MC
+        // ships 50="MASTERCARD" + 9F12="CAPITAL ONE" in the FCI A5
+        // template; UI should show "CAPITAL ONE".
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD3.toByte(), 0x00, 0x52, 0x20, 0x10, 0x00,
+        )
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("50"),
+                "MASTERCARD".encodeToByteArray(),
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("9F12"),
+                "CAPITAL ONE".encodeToByteArray(),
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000041010"), nodes),
+        )
+        assertEquals("CAPITAL ONE", ok.card.applicationLabel)
+    }
+
+    @Test
+    fun `parse falls back to tag 50 when 9F12 is absent`() {
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD3.toByte(), 0x00, 0x52, 0x20, 0x10, 0x00,
+        )
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("50"),
+                "VISA CREDIT".encodeToByteArray(),
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        assertEquals("VISA CREDIT", ok.card.applicationLabel)
+    }
+
+    @Test
+    fun `parse returns null applicationLabel when both 9F12 and 50 are absent`() {
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD3.toByte(), 0x00, 0x52, 0x20, 0x10, 0x00,
+        )
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+        )
+        val ok = assertIs<EmvCardResult.Ok>(
+            EmvParser.parse(Aid.fromHex("A0000000031010"), nodes),
+        )
+        assertEquals(null, ok.card.applicationLabel)
+    }
+
+    @Test
+    fun `parseOrThrow with aid and TLV nodes returns EmvCard on valid input`() {
+        val track2Bytes = byteArrayOf(
+            0x41, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+            0xD2.toByte(), 0x81.toByte(), 0x22, 0x01, 0x00, 0x00,
+        )
+        val expiryBytes = byteArrayOf(0x28, 0x12, 0x31)
+        val nodes = listOf(
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("57"), track2Bytes,
+            ),
+            io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                io.github.a7asoft.nfcemv.tlv.Tag.fromHex("5F24"), expiryBytes,
+            ),
+        )
+        val card = EmvParser.parseOrThrow(Aid.fromHex("A0000000031010"), nodes)
+        assertEquals(Pan.parseOrThrow("4111111111111111"), card.pan)
+    }
+
+    @Test
+    fun `parseOrThrow with aid and TLV nodes throws IllegalArgumentException when nodes is empty`() {
+        val ex = assertFailsWith<IllegalArgumentException> {
+            EmvParser.parseOrThrow(
+                Aid.fromHex("A0000000031010"),
+                emptyList<io.github.a7asoft.nfcemv.tlv.Tlv>(),
+            )
+        }
+        assertContains(ex.message ?: "", "empty")
+    }
+
+    // why: ensure the new TLV-native overload never crashes on random Tlv
+    // inputs. Generates Tlv.Primitive nodes with random tag bytes and
+    // random value bytes. Asserts result is always Ok or Err — no escape.
+    @Suppress("CyclomaticComplexMethod")
+    @Test
+    fun `parse with aid and TLV nodes never crashes on random nodes`() {
+        val rng = kotlin.random.Random(seed = 0x59_F0)
+        val aid = Aid.fromHex("A0000000031010")
+        val tagPool = listOf("4F", "5A", "5F24", "5F20", "50", "57", "9F12", "9F38", "9F26", "9F10")
+        repeat(times = 1_000) {
+            val nodeCount = rng.nextInt(0, 10)
+            val nodes = List(nodeCount) {
+                val tagHex = tagPool[rng.nextInt(tagPool.size)]
+                val valueLen = rng.nextInt(0, 32)
+                val bytes = ByteArray(valueLen).also { rng.nextBytes(it) }
+                io.github.a7asoft.nfcemv.tlv.Tlv.Primitive(
+                    io.github.a7asoft.nfcemv.tlv.Tag.fromHex(tagHex), bytes,
+                )
+            }
+            when (val result = EmvParser.parse(aid, nodes)) {
+                is EmvCardResult.Ok -> assertEquals(aid, result.card.aid)
+                is EmvCardResult.Err -> Unit
+            }
+        }
     }
 
     private companion object {

@@ -121,8 +121,38 @@ class EmvTagsTest {
     // ---- Dictionary structural invariants ----
 
     @Test
-    fun `dictionary contains exactly 27 entries`() {
-        assertEquals(27, EmvTags.all.size)
+    fun `dictionary contains exactly 37 entries`() {
+        assertEquals(37, EmvTags.all.size)
+    }
+
+    @Test
+    fun `tag 9F38 PDOL is registered with B format Variable 252 and PUBLIC sensitivity`() {
+        val pdol = assertNotNull(EmvTags.lookup(Tag.fromHex("9F38")))
+        assertEquals(EmvTagFormat.B, pdol.format)
+        assertEquals(EmvTagLength.Variable(252), pdol.length)
+        assertEquals(TagSensitivity.PUBLIC, pdol.sensitivity)
+    }
+
+    @Test
+    fun `tag 9F66 TTQ is registered with B format Fixed 4 and PUBLIC sensitivity`() {
+        val ttq = assertNotNull(EmvTags.lookup(Tag.fromHex("9F66")))
+        assertEquals(EmvTagFormat.B, ttq.format)
+        assertEquals(EmvTagLength.Fixed(4), ttq.length)
+        assertEquals(TagSensitivity.PUBLIC, ttq.sensitivity)
+    }
+
+    @Test
+    fun `tag 9A Transaction Date is registered with N format Fixed 3`() {
+        val date = assertNotNull(EmvTags.lookup(Tag.fromHex("9A")))
+        assertEquals(EmvTagFormat.N, date.format)
+        assertEquals(EmvTagLength.Fixed(3), date.length)
+    }
+
+    @Test
+    fun `tag 9C Transaction Type is registered with N format Fixed 1`() {
+        val txType = assertNotNull(EmvTags.lookup(Tag.fromHex("9C")))
+        assertEquals(EmvTagFormat.N, txType.format)
+        assertEquals(EmvTagLength.Fixed(1), txType.length)
     }
 
     @Test

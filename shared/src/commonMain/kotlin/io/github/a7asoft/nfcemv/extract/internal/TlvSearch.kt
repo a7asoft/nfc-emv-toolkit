@@ -23,3 +23,19 @@ internal fun findFirst(tlvs: List<Tlv>, target: Tag): Tlv? {
     }
     return null
 }
+
+/**
+ * Return the first direct child of [parent] whose tag matches [tag],
+ * or null if absent. Shallow search (does NOT recurse into nested
+ * constructed children). Use [findFirst] when DFS recursion is needed.
+ *
+ * Matches the search semantics needed by FCI / GPO format-2 template
+ * lookups where the desired child sits one level deep inside a known
+ * constructed wrapper (`6F`, `A5`, `77`).
+ */
+internal fun firstChildByTag(parent: Tlv.Constructed, tag: Tag): Tlv? {
+    for (child in parent.children) {
+        if (child.tag == tag) return child
+    }
+    return null
+}

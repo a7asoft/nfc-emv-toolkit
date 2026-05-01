@@ -20,6 +20,9 @@ public enum ApduCommandError: Error, Sendable {
     case sfiOutOfRange(value: Int)
     /// Response shorter than 2 bytes — no status word present.
     case responseMissingStatusWord
+    /// PDOL response exceeds short-form Lc capacity (max 253 bytes
+    /// after the 2-byte `83 LL` template overhead).
+    case gpoResponseTooLarge(byteCount: Int)
 }
 
 /// APDU command builders + status-word helpers per ISO/IEC 7816-4 §5.
@@ -49,6 +52,37 @@ internal enum ApduCommands {
     /// `80 A8 00 00 02 83 00 00`
     static var gpoDefault: Data {
         Data([0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00, 0x00])
+    }
+
+    /// Build a GET PROCESSING OPTIONS command per EMV Book 3 §6.5.8
+    /// wrapping `pdolResponse` in the standard `83 [LL] [response]`
+    /// template. Mirrors the Kotlin `ApduCommands.gpoCommand`.
+    ///
+    /// For an empty `pdolResponse`, produces the classic
+    /// `80 A8 00 00 02 83 00 00` shape (cards without `9F38`).
+    ///
+    /// Throws ``ApduCommandError/aidLengthOutOfRange(byteCount:)`` is
+    /// not appropriate here; instead, an out-of-range PDOL response
+    /// raises `ApduCommandError.recordNumberOutOfRange(value:)` is
+    /// also not appropriate. We add a dedicated case to keep the API
+    /// surface tight.
+    static func gpoCommand(pdolResponse: Data) throws -> Data {
+        guard pdolResponse.count <= 253 else {
+            throw ApduCommandError.gpoResponseTooLarge(byteCount: pdolResponse.count)
+        }
+        let lc = 2 + pdolResponse.count
+        var command = Data(count: 5 + 2 + pdolResponse.count + 1)
+        command[0] = 0x80
+        command[1] = 0xA8
+        command[2] = 0x00
+        command[3] = 0x00
+        command[4] = UInt8(lc)
+        command[5] = 0x83
+        command[6] = UInt8(pdolResponse.count)
+        if !pdolResponse.isEmpty {
+            command.replaceSubrange(7..<(7 + pdolResponse.count), with: pdolResponse)
+        }
+        return command
     }
 
     /// Build a SELECT-by-AID command per ISO/IEC 7816-4 §5.4.1 from

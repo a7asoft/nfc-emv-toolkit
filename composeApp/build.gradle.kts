@@ -18,6 +18,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(projects.android.reader)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -32,6 +33,11 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.test)
+            }
         }
     }
 }
