@@ -36,7 +36,7 @@ jobs:
     name: KMP build & test
     needs: lint
     runs-on: macos-14
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-java@v5
@@ -52,8 +52,8 @@ jobs:
         run: ./gradlew :shared:allTests --stacktrace
       - name: Build and test android-reader module
         run: ./gradlew :android:reader:assembleDebug :android:reader:check --stacktrace
-      - name: Build Android sample
-        run: ./gradlew :composeApp:assembleDebug --stacktrace
+      - name: Build and test Android sample
+        run: ./gradlew :composeApp:testDebugUnitTest :composeApp:assembleDebug --stacktrace
 
   ios:
     name: iOS build & test

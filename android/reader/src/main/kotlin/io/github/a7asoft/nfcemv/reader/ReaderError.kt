@@ -2,7 +2,9 @@ package io.github.a7asoft.nfcemv.reader
 
 import io.github.a7asoft.nfcemv.extract.EmvCardError
 import io.github.a7asoft.nfcemv.extract.GpoError
+import io.github.a7asoft.nfcemv.extract.PdolError
 import io.github.a7asoft.nfcemv.extract.PpseError
+import io.github.a7asoft.nfcemv.extract.SelectAidFciError
 
 /**
  * Typed reasons a [ContactlessReader] read terminated in [ReaderState.Failed].
@@ -40,6 +42,12 @@ public sealed interface ReaderError {
 
     /** GPO response was malformed. */
     public data class GpoRejected(val cause: GpoError) : ReaderError
+
+    /** SELECT AID FCI body was malformed. */
+    public data class SelectAidFciRejected(val cause: SelectAidFciError) : ReaderError
+
+    /** PDOL bytes from SELECT AID FCI failed structural parse. */
+    public data class PdolRejected(val cause: PdolError) : ReaderError
 
     /** `EmvParser.parse` rejected the assembled record stream. */
     public data class ParseFailed(val cause: EmvCardError) : ReaderError

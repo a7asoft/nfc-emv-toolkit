@@ -49,6 +49,37 @@ internal object ApduCommands {
             0x83.toByte(), 0x00, 0x00,
         )
 
+    /**
+     * Build a `GET PROCESSING OPTIONS` command per EMV Book 3 §6.5.8
+     * wrapping [pdolResponse] in the standard `83 [LL] [response]`
+     * template. Returns the full APDU including header and Le.
+     *
+     * For an empty PDOL response, produces the classic
+     * `80 A8 00 00 02 83 00 00` shape (cards without `9F38`, e.g.
+     * Mastercard contactless). [GPO_DEFAULT] is the constant equivalent
+     * for that empty case.
+     *
+     * Throws [IllegalArgumentException] when [pdolResponse] is too long
+     * to fit a single short-form Lc (max `0xFD = 253` after the 2-byte
+     * `83 LL` template overhead).
+     */
+    fun gpoCommand(pdolResponse: ByteArray): ByteArray {
+        val responseLen = pdolResponse.size
+        require(responseLen <= MAX_GPO_RESPONSE_LEN) {
+            "PDOL response too large: $responseLen bytes (max $MAX_GPO_RESPONSE_LEN)"
+        }
+        val command = ByteArray(GPO_HEADER_BYTES + GPO_TEMPLATE_HEADER + responseLen + LE_BYTES)
+        command[0] = 0x80.toByte()
+        command[1] = 0xA8.toByte()
+        command[2] = 0x00
+        command[3] = 0x00
+        command[LC_INDEX] = (GPO_TEMPLATE_HEADER + responseLen).toByte()
+        command[GPO_HEADER_BYTES] = 0x83.toByte()
+        command[GPO_HEADER_BYTES + 1] = responseLen.toByte()
+        pdolResponse.copyInto(command, destinationOffset = GPO_HEADER_BYTES + GPO_TEMPLATE_HEADER)
+        return command
+    }
+
     /** Build a `SELECT` by AID command per ISO/IEC 7816-4 §5.4.1. */
     fun selectAid(aid: Aid): ByteArray {
         val aidBytes = aid.toBytes()
@@ -100,6 +131,9 @@ internal object ApduCommands {
     private const val LC_INDEX: Int = 4
     private const val LE_BYTES: Int = 1
     private const val SW_BYTES: Int = 2
+    private const val GPO_HEADER_BYTES: Int = 5
+    private const val GPO_TEMPLATE_HEADER: Int = 2
+    private const val MAX_GPO_RESPONSE_LEN: Int = 253
 
     // why: ISO/IEC 7816-4 §7.3.3 reserves P1 = 0xFF for combined record
     // number / first-occurrence modes. For "READ RECORD by record number"

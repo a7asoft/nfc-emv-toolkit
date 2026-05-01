@@ -40,6 +40,16 @@ public enum ReaderError: @unchecked Sendable {
     /// surfaced an error. The associated value is the Kotlin
     /// `EmvCardError` sealed interface boxed as `Any`.
     case parseFailed(Any)
+
+    /// SELECT AID FCI body was `90 00` but failed `SelectAidFci.parse`.
+    /// The associated value is the Kotlin `SelectAidFciError` boxed
+    /// as `Any`.
+    case selectAidFciRejected(Any)
+
+    /// PDOL bytes (extracted from the SELECT AID FCI) failed
+    /// `Pdol.parse`. The associated value is the Kotlin `PdolError`
+    /// boxed as `Any`.
+    case pdolRejected(Any)
 }
 
 /// Categorical I/O failure reason for ``ReaderError/ioFailure(_:)``.

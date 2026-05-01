@@ -82,9 +82,20 @@ internal enum Mapping {
     /// (status word already stripped). Returns ``ParseOutcome/ok(_:)``
     /// with the composed `EmvCard` or ``ParseOutcome/err(_:)`` carrying
     /// the boxed `EmvCardError`.
-    static func parseEmvCard(_ records: [Data]) -> ParseOutcome<EmvCard> {
+    ///
+    /// When `aid` is non-nil, the 2-arg `EmvParser.parse(aid:apduResponses:)`
+    /// overload runs — matching the real-card flow where AID lives only in
+    /// PPSE / SELECT FCI (not in records). When `aid` is nil, the 1-arg
+    /// overload runs, used for synthetic transcripts that include `4F`
+    /// inline.
+    static func parseEmvCard(aid: Any? = nil, _ records: [Data]) -> ParseOutcome<EmvCard> {
         let kotlinRecords = records.map { $0.toKotlinByteArray() }
-        let result = EmvParser.shared.parse(apduResponses: kotlinRecords)
+        let result: Any
+        if let aid = aid {
+            result = EmvParser.shared.parse(aid: aid, apduResponses: kotlinRecords)
+        } else {
+            result = EmvParser.shared.parse(apduResponses: kotlinRecords)
+        }
         if let ok = result as? EmvCardResultOk {
             return .ok(ok.card)
         }
@@ -92,6 +103,116 @@ internal enum Mapping {
             return .err(err.error)
         }
         fatalError("Unhandled EmvCardResult variant — XCFramework export changed")
+    }
+
+    /// Run `EmvParser.parse(aid:tlvNodes:)` on the union of pre-decoded
+    /// TLV nodes (typically `fci.inlineTlv + gpo.inlineTlv + recordTlv`).
+    /// Mirrors the Android `ContactlessReader` parity contract from #59:
+    /// real cards distribute essential tags (`57`, `5A`, `5F24`, `9F12`)
+    /// across the SELECT-AID FCI, the GPO `77` template, AND the AFL
+    /// records. The legacy ``parseEmvCard(aid:_:)`` bridge above only
+    /// fed records, so any card emitting Track 2 inline in the GPO
+    /// (Visa MSD-only mode) failed with `MissingRequiredTag(57)`.
+    ///
+    /// The Kotlin source declares this overload with `@JvmName("parseTlv")`
+    /// — that annotation only mangles the JVM symbol; ObjC interop and
+    /// Swift see the canonical Kotlin signature.
+    static func parseEmvCardFromNodes(aid: Any, tlvNodes: [any Tlv]) -> ParseOutcome<EmvCard> {
+        let result = EmvParser.shared.parse(aid: aid, tlvNodes: tlvNodes)
+        if let ok = result as? EmvCardResultOk {
+            return .ok(ok.card)
+        }
+        if let err = result as? EmvCardResultErr {
+            return .err(err.error)
+        }
+        fatalError("Unhandled EmvCardResult variant — XCFramework export changed")
+    }
+
+    /// Decode a single READ RECORD body to TLV nodes via the lenient
+    /// `TlvDecoder`. Returns an empty array on decode failure — same
+    /// risk-balance as the Android `ContactlessReader.readAllRecordsAsTlv`
+    /// silent-skip policy: a malformed record is dropped rather than
+    /// aborting the whole flow, and `EmvParser` surfaces
+    /// `MissingRequiredTag` if the dropped record carried essential data.
+    static func decodeRecordToTlv(_ body: Data) -> [any Tlv] {
+        let options = TlvOptions(
+            strictness: StrictnessLenient.shared,
+            paddingPolicy: PaddingPolicyTolerated.shared,
+            maxTagBytes: 4,
+            maxDepth: 16
+        )
+        let result = TlvDecoder.shared.parse(input: body.toKotlinByteArray(), options: options)
+        if let ok = result as? TlvParseResultOk {
+            return ok.tlvs
+        }
+        return []
+    }
+
+    /// Run `SelectAidFci.parse` on a SELECT AID FCI response body
+    /// (status word stripped). Returns the parsed `SelectAidFci`
+    /// (which carries optional PDOL bytes) or the boxed
+    /// `SelectAidFciError`.
+    static func parseSelectAidFci(_ bytes: Data) -> ParseOutcome<SelectAidFci> {
+        let kotlinBytes = bytes.toKotlinByteArray()
+        let result = SelectAidFci.companion.parse(bytes: kotlinBytes)
+        if let ok = result as? SelectAidFciResultOk {
+            return .ok(ok.fci)
+        }
+        if let err = result as? SelectAidFciResultErr {
+            return .err(err.error)
+        }
+        fatalError("Unhandled SelectAidFciResult variant — XCFramework export changed")
+    }
+
+    /// Run `Pdol.parse` on PDOL bytes (the value of tag `9F38`).
+    /// Returns the parsed `Pdol` or the boxed `PdolError`.
+    static func parsePdol(_ bytes: Data) -> ParseOutcome<Pdol> {
+        let kotlinBytes = bytes.toKotlinByteArray()
+        let result = Pdol.companion.parse(bytes: kotlinBytes)
+        if let ok = result as? PdolResultOk {
+            return .ok(ok.pdol)
+        }
+        if let err = result as? PdolResultErr {
+            return .err(err.error)
+        }
+        fatalError("Unhandled PdolResult variant — XCFramework export changed")
+    }
+
+    /// Build the GPO PDOL response bytes per EMV Book 3 §5.4.
+    static func buildPdolResponse(
+        pdol: Pdol,
+        config: TerminalConfig,
+        transactionDate: Data,
+        unpredictableNumber: Data
+    ) -> Data {
+        let kotlinConfig = toKotlinTerminalConfig(config)
+        let bytes = PdolResponseBuilder.shared.build(
+            pdol: pdol,
+            config: kotlinConfig,
+            transactionDate: transactionDate.toKotlinByteArray(),
+            unpredictableNumber: unpredictableNumber.toKotlinByteArray()
+        )
+        return bytes.toData()
+    }
+
+    /// Bridge a Swift ``TerminalConfig`` to the Kotlin
+    /// `Shared.TerminalConfig` data class. Uses the public
+    /// designated initializer auto-generated by the Kotlin/Native
+    /// ObjC bridge.
+    static func toKotlinTerminalConfig(_ config: TerminalConfig) -> Shared.TerminalConfig {
+        return Shared.TerminalConfig(
+            terminalTransactionQualifiers: config.terminalTransactionQualifiers.toKotlinByteArray(),
+            terminalCountryCode: config.terminalCountryCode.toKotlinByteArray(),
+            transactionCurrencyCode: config.transactionCurrencyCode.toKotlinByteArray(),
+            amountAuthorised: config.amountAuthorised.toKotlinByteArray(),
+            amountOther: config.amountOther.toKotlinByteArray(),
+            terminalVerificationResults: config.terminalVerificationResults.toKotlinByteArray(),
+            transactionType: Int8(bitPattern: config.transactionType),
+            terminalType: Int8(bitPattern: config.terminalType),
+            terminalCapabilities: config.terminalCapabilities.toKotlinByteArray(),
+            additionalTerminalCapabilities: config.additionalTerminalCapabilities.toKotlinByteArray(),
+            applicationVersionNumber: config.applicationVersionNumber.toKotlinByteArray()
+        )
     }
 
     // MARK: - Error mapping
@@ -137,5 +258,17 @@ extension Data {
             bytes.set(index: Int32(i), value: Int8(bitPattern: byte))
         }
         return bytes
+    }
+}
+
+extension KotlinByteArray {
+    /// `KotlinByteArray` → `Data`. Used to surface bytes returned from
+    /// bridged Kotlin builders (e.g. `PdolResponseBuilder.build`).
+    func toData() -> Data {
+        var data = Data(count: Int(size))
+        for i in 0..<Int(size) {
+            data[i] = UInt8(bitPattern: get(index: Int32(i)))
+        }
+        return data
     }
 }
