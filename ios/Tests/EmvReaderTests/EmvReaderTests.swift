@@ -333,6 +333,69 @@ final class EmvReaderTests: XCTestCase {
         }
     }
 
+    // MARK: Real-card transcripts (#59) — FCI + GPO + records TLV union
+
+    func testReadReturnsDoneForVisaCreditChaseMsdOnlyTranscript() async {
+        // why: MSD-only mode — GPO format-2 carries inline Track 2 + AIP,
+        // no AFL. Reader MUST union FCI inline TLV + GPO inline TLV (no
+        // records issued because Afl is empty). Pre-#59 record-only flow
+        // surfaced MissingRequiredTag(57) here.
+        let transport = FakeIso7816Transport(script: [
+            (ApduCommands.ppseSelect, Transcripts.visaCreditChasePpseResponse),
+            (selectVisaPrefix(), Transcripts.visaCreditChaseSelectAidFci),
+            (gpoCommandHeaderForFullPdol(), Transcripts.visaCreditChaseGpoResponse),
+        ])
+        let states = await collectStates(transport: transport)
+        guard case .done(let card) = states.last else {
+            return XCTFail("Expected .done for Visa Credit Chase, got \(String(describing: states.last))")
+        }
+        XCTAssertEqual(Mapping.aidHex(card.aid), "A0000000031010")
+        // why: EmvCard.toString() interpolates `pan` through Pan.toString,
+        // which masks (first 6 + asterisks + last 4). Asserting the masked
+        // form appears proves the parser resolved the inline 57 from the
+        // GPO body — not via the legacy record-only path which would have
+        // surfaced MissingRequiredTag(57) and never reached .done.
+        XCTAssertTrue(String(describing: card).contains("411111******1111"),
+                      "Expected masked PAN in card description; got \(String(describing: card))")
+    }
+
+    func testReadReturnsDoneForVisaDebitChaseSplitTranscript() async {
+        // why: split-data mode — GPO format-2 carries inline Track 2 +
+        // AIP + AFL pointing at SFI 1 record 6. Record 6 itself carries
+        // only 5F28 + 9F07 (no 5A, no 57). Reader MUST union all three
+        // sources for EmvParser to resolve PAN. Pre-#59 record-only flow
+        // surfaced MissingRequiredTag(57) here.
+        let transport = FakeIso7816Transport(script: [
+            (ApduCommands.ppseSelect, Transcripts.visaDebitChasePpseResponse),
+            (selectVisaPrefix(), Transcripts.visaDebitChaseSelectAidFci),
+            (gpoCommandHeaderForFullPdol(), Transcripts.visaDebitChaseGpoResponse),
+            (readRecord6Sfi1Prefix(), Transcripts.visaDebitChaseRecord6Sfi1),
+        ])
+        let states = await collectStates(transport: transport)
+        guard case .done(let card) = states.last else {
+            return XCTFail("Expected .done for Visa Debit Chase, got \(String(describing: states.last))")
+        }
+        XCTAssertEqual(Mapping.aidHex(card.aid), "A0000000031010")
+        // why: canonical Visa test PAN 4012888888881881 → masked form.
+        // Asserting the masked PAN in card.toString proves union worked:
+        // PAN lived inline in the GPO 57 tag (record 6 carried only 5F28
+        // + 9F07), so a record-only flow would surface MissingRequiredTag.
+        XCTAssertTrue(String(describing: card).contains("401288******1881"),
+                      "Expected masked PAN in card description; got \(String(describing: card))")
+    }
+
+    // why: 5-byte GPO command header with Lc = 0x23 (35 = 2-byte template
+    // wrapper + 33-byte PDOL response). Used as a prefix matcher because
+    // the trailing PDOL response varies with the unpredictable number and
+    // current date — both untestable as deterministic exact bytes.
+    private func gpoCommandHeaderForFullPdol() -> Data {
+        Data([0x80, 0xA8, 0x00, 0x00, 0x23])
+    }
+
+    private func readRecord6Sfi1Prefix() -> Data {
+        Data([0x00, 0xB2, 0x06, 0x0C])
+    }
+
     // MARK: PCI regression — done(card) bridged description must not leak PAN
 
     func testDoneStateStringDescribingDoesNotLeakRawPan() async {

@@ -50,7 +50,7 @@ public final class EmvReader {
     /// to seed the GPO PDOL response (TTQ, country, currency, etc.).
     /// Use this overload to override the standard defaults — for
     /// example to flip TTQ bits when validating against a card that
-    /// rejects the conservative `36 00 80 00`.
+    /// rejects the conservative `36 00 00 00`.
     public func read(config: TerminalConfig) -> AsyncStream<ReaderState> {
         let transport = transportFactory()
         return AsyncStream { continuation in
@@ -89,11 +89,16 @@ public final class EmvReader {
         guard let chosenAid = chooseApplication(ppse: ppse, continuation: continuation) else { return }
         continuation.yield(.selectingAid(chosenAid))
         guard let fciBody = try await runSelectAid(aid: chosenAid, transport: transport, continuation: continuation) else { return }
-        guard let gpoBody = buildGpoBody(fciBody: fciBody, config: config, continuation: continuation) else { return }
+        guard let prepared = buildGpoBody(fciBody: fciBody, config: config, continuation: continuation) else { return }
         continuation.yield(.readingRecords)
-        guard let gpo = try await runGpo(gpoBody: gpoBody, transport: transport, continuation: continuation) else { return }
-        let records = try await readAllRecords(afl: gpo.afl, transport: transport)
-        yieldParseOutcome(aid: chosenAid, records: records, continuation: continuation)
+        guard let gpo = try await runGpo(gpoBody: prepared.gpoBody, transport: transport, continuation: continuation) else { return }
+        let recordTlv = try await readAllRecordsAsTlv(afl: gpo.afl, transport: transport)
+        // why: union FCI inline TLV + GPO inline TLV (format-2 `77` template
+        // children) + decoded records, mirroring Android ContactlessReader
+        // (#59). Real cards distribute essential tags (`57`, `5A`, `5F24`,
+        // `9F12`) across all three sources.
+        let allNodes = prepared.fci.inlineTlv + gpo.inlineTlv + recordTlv
+        yieldParseOutcome(aid: chosenAid, tlvNodes: allNodes, continuation: continuation)
     }
 
     private func runPpse(
@@ -163,24 +168,33 @@ public final class EmvReader {
         return nil
     }
 
+    /// Pairs the GPO command bytes ready for transceive with the parsed
+    /// `SelectAidFci` so the caller can union `fci.inlineTlv` with the
+    /// downstream TLV sources before calling `EmvParser.parse`.
+    private struct PreparedGpo {
+        let gpoBody: Data
+        let fci: SelectAidFci
+    }
+
     private func buildGpoBody(
         fciBody: Data,
         config: TerminalConfig,
         continuation: AsyncStream<ReaderState>.Continuation
-    ) -> Data? {
-        let pdolBytes: Data?
+    ) -> PreparedGpo? {
+        let fci: SelectAidFci
         switch Mapping.parseSelectAidFci(fciBody) {
-        case .ok(let fci):
-            pdolBytes = fci.pdolBytes?.toData()
+        case .ok(let parsed):
+            fci = parsed
         case .err(let error):
             continuation.yield(.failed(.selectAidFciRejected(error)))
             return nil
         }
-        guard let pdolBytes = pdolBytes else {
+        guard let pdolBytes = fci.pdolBytes?.toData() else {
             // why: empty PDOL → 83 00 GPO body (Mastercard contactless
             // pattern). Force-try because gpoCommand only throws on
             // > 253 byte input — empty Data is always valid.
-            return try! ApduCommands.gpoCommand(pdolResponse: Data())
+            let body = try! ApduCommands.gpoCommand(pdolResponse: Data())
+            return PreparedGpo(gpoBody: body, fci: fci)
         }
         let pdol: Pdol
         switch Mapping.parsePdol(pdolBytes) {
@@ -199,7 +213,8 @@ public final class EmvReader {
         // why: gpoCommand only throws on > 253 byte input. PdolResponseBuilder
         // emits at most sum-of-PDOL-lengths bytes; even a maximally-padded PDOL
         // (252 bytes) stays under the limit.
-        return try! ApduCommands.gpoCommand(pdolResponse: response)
+        let body = try! ApduCommands.gpoCommand(pdolResponse: response)
+        return PreparedGpo(gpoBody: body, fci: fci)
     }
 
     private func runGpo(
@@ -250,18 +265,18 @@ public final class EmvReader {
         return bytes
     }
 
-    private func readAllRecords(afl: Afl, transport: Iso7816Transport) async throws -> [Data] {
-        var collected: [Data] = []
+    private func readAllRecordsAsTlv(afl: Afl, transport: Iso7816Transport) async throws -> [any Tlv] {
+        var collected: [any Tlv] = []
         for entry in afl.entries {
-            try await readEntryRecords(entry: entry, transport: transport, into: &collected)
+            try await readEntryRecordsAsTlv(entry: entry, transport: transport, into: &collected)
         }
         return collected
     }
 
-    private func readEntryRecords(
+    private func readEntryRecordsAsTlv(
         entry: AflEntry,
         transport: Iso7816Transport,
-        into collected: inout [Data]
+        into collected: inout [any Tlv]
     ) async throws {
         let first = Int(entry.firstRecord)
         let last = Int(entry.lastRecord)
@@ -278,17 +293,17 @@ public final class EmvReader {
             // readable. EmvParser surfaces MissingRequiredTag downstream if essential
             // data was in a skipped record. Mirrors the Android reader contract (#48).
             if ApduCommands.isSuccess(response) {
-                collected.append(ApduCommands.dataField(response))
+                collected.append(contentsOf: Mapping.decodeRecordToTlv(ApduCommands.dataField(response)))
             }
         }
     }
 
     private func yieldParseOutcome(
         aid: Any,
-        records: [Data],
+        tlvNodes: [any Tlv],
         continuation: AsyncStream<ReaderState>.Continuation
     ) {
-        switch Mapping.parseEmvCard(aid: aid, records) {
+        switch Mapping.parseEmvCardFromNodes(aid: aid, tlvNodes: tlvNodes) {
         case .ok(let card):
             continuation.yield(.done(card))
         case .err(let error):
