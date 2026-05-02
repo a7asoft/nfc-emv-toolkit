@@ -8,7 +8,32 @@
 	<string>Read contactless EMV card data via NFC for parsing and display. The app does not transmit, store, or authorize transactions.</string>
 	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
 	<array>
+		<!-- PPSE 2PAY.SYS.DDF01 — EMV directory file -->
 		<string>325041592E5359532E4444463031</string>
+		<!-- Visa (Credit/Debit, Electron, V Pay) -->
+		<string>A0000000031010</string>
+		<string>A0000000032010</string>
+		<string>A0000000032020</string>
+		<!-- Mastercard (Credit/Debit, Maestro, World) -->
+		<string>A0000000041010</string>
+		<string>A0000000042010</string>
+		<string>A0000000043060</string>
+		<!-- American Express (ExpressPay, Centurion) -->
+		<string>A00000002501</string>
+		<string>A000000025010402</string>
+		<string>A000000025010701</string>
+		<string>A000000025010801</string>
+		<!-- Discover / Diners Club International -->
+		<string>A0000001523010</string>
+		<string>A0000003241010</string>
+		<!-- JCB -->
+		<string>A0000000651010</string>
+		<!-- UnionPay -->
+		<string>A000000333010101</string>
+		<string>A000000333010102</string>
+		<string>A000000333010103</string>
+		<!-- Interac -->
+		<string>A0000002771010</string>
 	</array>
 </dict>
 </plist>
