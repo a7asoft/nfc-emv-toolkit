@@ -6,34 +6,5 @@
 	<array>
 		<string>TAG</string>
 	</array>
-	<!--
-	  iOS NFC entitlement validation requires the select-identifiers list
-	  to be in the .entitlements file (NOT just Info.plist). When only in
-	  Info.plist, iOS silently strips at signing-validation time, leaving
-	  the runtime list empty — every tag is filtered out before didDetect.
-	  Confirmed via real-device QA on iOS 26.4 (issue #70).
-	  Keep this list in sync with iosApp/iosApp/Info.plist.
-	-->
-	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
-	<array>
-		<string>325041592E5359532E4444463031</string>
-		<string>A0000000031010</string>
-		<string>A0000000032010</string>
-		<string>A0000000032020</string>
-		<string>A0000000041010</string>
-		<string>A0000000042010</string>
-		<string>A0000000043060</string>
-		<string>A00000002501</string>
-		<string>A000000025010402</string>
-		<string>A000000025010701</string>
-		<string>A000000025010801</string>
-		<string>A0000001523010</string>
-		<string>A0000003241010</string>
-		<string>A0000000651010</string>
-		<string>A000000333010101</string>
-		<string>A000000333010102</string>
-		<string>A000000333010103</string>
-		<string>A0000002771010</string>
-	</array>
 </dict>
 </plist>
