@@ -1,5 +1,9 @@
 import Foundation
+import os
 import Shared
+
+// DIAGNOSTIC ONLY — DO NOT MERGE.
+private let diag = Logger(subsystem: "io.github.a7asoft.nfc-emv-toolkit", category: "EmvDiag")
 
 /// Top-level Swift entry point for reading a contactless EMV card on iOS.
 ///
@@ -52,12 +56,16 @@ public final class EmvReader {
     /// example to flip TTQ bits when validating against a card that
     /// rejects the conservative `36 00 00 00`.
     public func read(config: TerminalConfig) -> AsyncStream<ReaderState> {
+        diag.notice("EmvReader.read(config:) called — opening AsyncStream")
         let transport = transportFactory()
         return AsyncStream { continuation in
             let task = Task {
+                diag.notice("drive task launched")
                 await drive(transport: transport, config: config, continuation: continuation)
+                diag.notice("drive task returned")
             }
-            continuation.onTermination = { _ in
+            continuation.onTermination = { reason in
+                diag.notice("AsyncStream onTermination — reason=\(String(describing: reason), privacy: .public)")
                 task.cancel()
                 Task { await transport.close() }
             }
@@ -70,12 +78,17 @@ public final class EmvReader {
         continuation: AsyncStream<ReaderState>.Continuation
     ) async {
         do {
+            diag.notice("drive: awaiting transport.connect()")
             try await transport.connect()
+            diag.notice("drive: transport.connect() returned successfully — yielding tagDetected")
             continuation.yield(.tagDetected)
             try await runFlow(transport: transport, config: config, continuation: continuation)
+            diag.notice("drive: runFlow returned successfully")
         } catch {
+            diag.error("drive: caught error — \(String(describing: error), privacy: .public)")
             continuation.yield(.failed(.ioFailure(Mapping.ioReason(from: error))))
         }
+        diag.notice("drive: finishing continuation + closing transport")
         continuation.finish()
         await transport.close()
     }
